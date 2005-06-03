@@ -32,3 +32,11 @@
    :list-has-many
    :list-many-to-many))
 
+
+(defpackage :mewa 
+  (:use :ucw :common-lisp)
+  (:export :mewa :mewa-object-presentation :mewa-one-line-presentation :find-attribute :set-default-attributes :make-presentation :call-presentation :label :set-attribute :find-class-attributes :default-attributes))
+
+
+(defpackage :lisp-on-lines
+  (:use :mewa :meta-model :common-lisp :it.bese.ucw))
