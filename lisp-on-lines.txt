@@ -1,0 +1,172 @@
+LISP-ON-LINES 0.1
+
+
+Components:
+	
+Meta Model Protocol - A  Protocol for introspection on relational objects.
+Mewa Presentations : A Mewa-like[1] layer for UncommonWeb[2] Presentations.
+
+Description:		 
+
+LISP-ON-LINES (LOL) is a framework for rapid development of complex data-driven web appilcations. 
+Introduction:
+
+
+Example:
+
+First we start with the data model. The Meta Model Protocol (MMP) is used to provide information on the data objects and how they relate to one another. Its is currently implemented as a layer over CLSQL[3], although support is planned for other backends (CLOS,Elephant[4], whatever).
+
+The MMP shares its definition syntax with CLSQL's Object Oriented Data Definition Language (OODDL). The macro to define view-classes is named DEF-VIEW-CLASS/META, and takes the same arguments as DEF-VIEW-CLASS from CLSQL. For the purposes of this simple example, we will only need two functions from the MMP beyond what CLSQL provides : LIST-SLOTS and LIST-SLOT-TYPES[5].
+
+We'll define a simple class to hold a user.
+LISP-ON-LINES> (def-view-class/meta user () 
+		 ((userid  :initarg :userid :accessor userid :type integer :db-kind :key)
+		  (username :initarg :username :accessor username  :type string :db-kind :base)
+		  (password :initarg :password :accessor password :type string :db-kind :base)))
+STYLE-WARNING: redefining META-MODEL.METADATA (USER) in DEFMETHOD
+#<CLSQL-SYS::STANDARD-DB-CLASS USER>
+LISP-ON-LINES> (defparameter user (make-instance 'user :userid 1 :username "drewc" :password "p@ssw0rd"))
+USER
+LISP-ON-LINES> (list-slots user)
+(USERID USERNAME PASSWORD)
+LISP-ON-LINES> (list-slot-types user)
+((USERID INTEGER) (USERNAME STRING) (PASSWORD STRING))
+; compiling file "/tmp/fileQQsHyN" (written 03 JUN 2005 03:20:06 PM):
+
+; /tmp/fileQQsHyN.fasl written
+; compilation finished in 0:00:00
+LISP-ON-LINES> (default-attributes user)
+((USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+ (USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+ (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD))
+LISP-ON-LINES> (set-default-attributes user)
+((USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+ (USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+ (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD))
+LISP-ON-LINES> (find-class-attributes user)
+(USER (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)
+      (USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+      (USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+      COMMON-LISP:NIL)
+LISP-ON-LINES> ;;;; note that the mewa functions (find-attribute, set-attribute etc) can take either an instance, or a class-name as a symbol , ie :
+; No value
+LISP-ON-LINES> (find-class-attributes 'user)
+(USER (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)
+      (USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+      (USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+      COMMON-LISP:NIL)
+LISP-ON-LINES> (find-class-attributes (make-instance 'user))
+(USER (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)
+      (USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+      (USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+      COMMON-LISP:NIL)
+LISP-ON-LINES> 
+
+Using that information, we have enough to create an interface to the object. UncommonWeb includes a powerful presentation system, but it is not quite dynamic enough for our needs. Mewa defines an approach to presentations that suits our purposes, but the paper is written from a smalltalk point of view. A mixture of the two , Mewa Presentations(MP), is described here.
+
+MP introduces to UCW the concept of attributes. an attribute is essentially a named version of the defpresentation slot-like arguments. for example in :
+
+(defpresentation person-editor (object-presentation)
+  ((string :label "First Name" :slot-name 'first-name :max-length 30)))
+
+  the (string :label "First Name" ...) form is an attribute definiton. Attributes are accessed through FIND-ATTIRIBUTES, and are composed at run time (where the current system is done at compile time) to display the object. This allows a very flexible system of displaying objects which is reminiscent of CSS. I discovered this, rather than invent or design it, so there are some rough edges, but its a good start.
+
+Its much easier to show this then to tell. Lets present our user class. Currently in UCW, you'd define a presentation as such :
+
+(defpresentation user-presentation (object-presentation)
+((INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+ (STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+ (STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)))
+
+which could be presented using PRESENT-OBJECT :
+
+(present-object user :using 'user-presentation)
+
+The equiv approach using mewa presentations is actually longer and more verbose(!) but it serves to demonstrate how the MP system works.
+
+Mewa Presentations adds a set of attributes to a class, keyed off the class name. Attributes are inherited, so if you define an attribute on T, you can use it with any class.
+
+MP stores named attributes keyed on a class name. to achieve the same functionality as the above using mp would look like this :
+
+LISP-ON-LINES> (setf (find-attribute 'user :viewer) '(mewa-object-presentation :attributes (userid username password) :global-properties (:editablep nil)))
+(:VIEWER MEWA-OBJECT-PRESENTATION
+         :ATTRIBUTES
+         (USERID USERNAME PASSWORD)
+         :GLOBAL-PROPERTIES
+         (:EDITABLEP NIL))
+LISP-ON-LINES> (setf (find-attribute 'user 'userid) '(INTEGER :LABEL "USERID" :SLOT-NAME USERID))
+(USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+LISP-ON-LINES> (setf (find-attribute 'user 'username) '(STRING :LABEL "USERNAME" :SLOT-NAME USERNAME))
+(USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+LISP-ON-LINES> (setf (find-attribute 'user 'password) '(STRING :LABEL "USERNAME" :SLOT-NAME PASSWORD))
+(PASSWORD STRING :LABEL "USERNAME" :SLOT-NAME PASSWORD)
+
+LISP-ON-LINES> (find-class-attributes 'user)				      
+(USER (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)
+      (USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+      (USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+      (:VIEWER MEWA-OBJECT-PRESENTATION
+               :ATTRIBUTES
+               (USERID USERNAME PASSWORD)
+               :GLOBAL-PROPERTIES
+               (:EDITABLEP NIL))
+      COMMON-LISP:NIL)
+
+
+this is all turned into a UCW presentation at runtime using MAKE-PRESENTATION :
+
+(defmethod render-on ((res response) (e presentations-index))
+  "
+As you'll see, nothing is exported from the LISP-ON-LINES package. 
+if you wish to use LOL in your own package (or in UCW-USER or whatever),
+you simply need to use the MEWA and META-MODEL packages"  
+  (<ucw:render-component :component (lisp-on-lines::make-presentation lisp-on-lines::user :type :viewer)))
+
+
+SET-ATTRIBUTE can be used in place of (setf (find-attribute)) when you want to "inherit" the properties of an existing attribute definition :
+
+LISP-ON-LINES> (set-attribute 'user 'password '(string :label "password: (must be at leat 8 chars)"))
+(PASSWORD STRING
+          :LABEL
+          "password: (must be at leat 8 chars)"
+          :SLOT-NAME
+          PASSWORD)
+
+
+Now we want to create a presentation with which to edit the username. we will use the existing attributes on a subclass of mewa-object-presetation :
+
+LISP-ON-LINES> (defcomponent user-editor (mewa-object-presentation)
+		 ()
+		 (:default-initargs 
+		     :attributes '((username :label "Enter your New Username") password)
+		     :global-properties '(:editablep t)))
+USER-EDITOR
+LISP-ON-LINES> (setf (find-attribute 'user :editor) '(user-editor))
+(:EDITOR USER-EDITOR)
+LISP-ON-LINES> 
+
+
+which we then can display below our earlier example :
+
+(defmethod render-on ((res response) (e presentations-index))
+  "
+As you'll see, nothing is exported from the LISP-ON-LINES package. 
+if you wish to use LOL in your own package (or in UCW-USER or whatever),
+you simply need to use the MEWA and META-MODEL packages"  
+  (<ucw:render-component :component (lisp-on-lines::make-presentation lisp-on-lines::user :type :viewer))
+  (<ucw:render-component :component (lisp-on-lines::make-presentation lisp-on-lines::user :type :editor)))
+
+
+
+that should give you some idea on how it works .. ask me when you get confused :)
+
+
+
+
+
+
+
+
+
+
+

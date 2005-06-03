@@ -1,0 +1,151 @@
+(in-package :it.bese.ucw)
+
+
+(defslot-presentation clsql-wall-time-slot-presentation ()
+       ()
+       (:type-name clsql-sys:wall-time))
+
+(defmethod presentation-slot-value ((slot clsql-wall-time-slot-presentation) instance)
+  (let ((date (call-next-method)))
+    (when date (multiple-value-bind (y m d) (clsql:time-ymd date)
+      (format nil "~a/~a/~a" m d y)))))
+
+(defmethod (setf presentation-slot-value) ((value string) (slot clsql-wall-time-slot-presentation) instance)
+  (setf (presentation-slot-value slot instance) (clsql:parse-date-time (remove #\Space value))))
+
+(defmethod present-slot ((slot clsql-wall-time-slot-presentation) instance)
+  (let ((date (presentation-slot-value slot instance))
+	(input-id (string (gensym))))
+    (if (and date (not (editablep slot)))
+	(<:span (<:as-html date)))
+    (when (editablep slot)
+      (<ucw:input :accessor (presentation-slot-value slot instance) :id input-id)
+      (<:script :type "text/javascript" 
+		(<:as-is (format nil " 
+      Calendar.setup({
+        inputField     :    \"~a\",
+        ifFormat       :    \"%m/%d/%Y\",
+      });" input-id))))))
+
+(defslot-presentation  mewa-relation-slot-presentation ()
+  ((slot-name :accessor slot-name :initarg :slot-name)
+   (foreign-instance :accessor foreign-instance)
+   (linkedp :accessor linkedp :initarg :linkedp :initform t))
+  (:type-name relation))
+
+(defmethod present-relation ((slot mewa-relation-slot-presentation) instance)
+ ;;;;(<:as-html (slot-name slot) "=> " (foreign-instance slot) " from " instance )
+  (let* ((e (getf (mewa::global-properties (parent slot)) :editablep))
+	 (i (foreign-instance slot))
+	 (pres (mewa::make-presentation 
+		i
+		:type :one-line 
+		:initargs (list 
+			   :global-properties 
+			   (list :editablep nil :linkedp (linkedp slot))))))
+      (when (ucw::parent slot) (setf (component.place pres) (component.place (ucw::parent slot))))
+      (flet ((render () (when i (<ucw:render-component :component pres))))
+      (cond 
+	((editablep slot)
+	 (render)
+	 (<ucw:a :action (search-records slot i) (<:as-html " (search)"))
+	 (<ucw:a :action (create-record slot i) (<:as-html " (new)")))
+	((linkedp slot)
+	 (<ucw:a :action (view-instance slot i) 
+		 (render)))
+	(t       
+	 (render))))))
+
+(defmethod present-slot ((slot mewa-relation-slot-presentation) instance)
+  (present-relation slot instance))
+
+(defslot-presentation foreign-key-slot-presentation (mewa-relation-slot-presentation)
+  ()
+  (:type-name foreign-key)
+  (:default-initargs))
+
+(defaction view-instance ((self component) instance &rest initargs)
+  (call-component (parent self) (apply #'mewa:make-presentation instance initargs)))
+
+(defmethod  present-slot :before ((slot foreign-key-slot-presentation) instance)
+  (setf (foreign-instance slot) (meta-model:explode-foreign-key instance (slot-name slot))))
+
+;;;; HAS MANY 
+(defslot-presentation has-many-slot-presentation (mewa-relation-slot-presentation)
+  ()
+  (:type-name has-many))
+
+(defmethod present-slot ((slot has-many-slot-presentation) instance)
+  (let ((i (get-foreign-instances slot instance))
+	(linkedp (linkedp slot)))
+  (<:ul 
+   (dolist (s i)
+     (let ((s s))
+     (setf (foreign-instance slot) s)
+     (<ucw:a :action (view-instance slot s :initargs `(:global-properties ,(list :linkedp t :editablep nil)))
+     (<:li   (setf (linkedp slot) nil)
+	     (present-relation slot instance))))))))
+
+
+(defmethod get-foreign-instances ((slot has-many-slot-presentation) instance)
+  (slot-value instance (slot-name slot)))
+
+(defslot-presentation has-very-many-slot-presentation (has-many-slot-presentation)
+  ((number-to-display :accessor number-to-display :initarg :number-to-display :initform 10)
+   (current :accessor current :initform 0)
+   (len :accessor len )
+   (instances :accessor instances))
+
+  (:type-name has-very-many))
+
+(defmethod list-next ((slot has-very-many-slot-presentation))
+  (setf (current slot) (incf (current slot) (number-to-display slot)))
+  (when (< (len slot) (current slot))
+    (setf (current slot) (- (number-to-display slot) (len slot)))))
+
+(defmethod list-prev ((slot has-very-many-slot-presentation))
+  (setf (current slot) (decf (current slot) (number-to-display slot)))
+  (when  (> 0 (current slot))
+    ;;what to do here is open to debate
+    (setf (current slot) (- (len slot)(number-to-display slot)  ))))
+
+
+(defmethod present-slot ((slot has-very-many-slot-presentation) instance)
+  ;;(<:as-html "isance: " instance)
+  (<ucw:a :action (list-prev slot) (<:as-html "<<"))
+  (let ((self (parent slot)))
+    (<ucw:a :action (call-component self (mewa:make-presentation (car (slot-value instance (slot-name slot))) :type :listing :initargs (list :instances (instances slot))))
+	    (<:as-html  (label slot) (format nil " ~a-~a " (current slot) (+ (current slot) (number-to-display slot))))))
+  (<ucw:a :action (list-next slot) (<:as-html ">>"))
+  (call-next-method)
+  (<:as-html "total :" (len slot))) 
+
+(defmethod get-foreign-instances :around ((slot has-very-many-slot-presentation) instance)
+  (let ((f (call-next-method)))
+    (setf (len slot) (length f))
+    (setf (instances slot) f)
+  (loop for cons on (nthcdr (current slot) f)
+		   for i from 0 upto (number-to-display slot)
+		   collect (car cons))))
+
+(defslot-presentation has-a-slot-presentation (one-of-presentation)
+  ((key :initarg :key :accessor key))
+  (:type-name has-a))
+
+(defmethod get-foreign-slot-value ((slot has-a-slot-presentation) (object t) (slot-name t))
+  (slot-value object slot-name))
+
+(defmethod present-slot ((slot has-a-slot-presentation) instance)
+      (<:as-html (presentation-slot-value slot instance))
+  (if (editablep slot)
+      (<ucw:select :accessor (presentation-slot-value slot instance) :test #'equalp
+        (when (allow-nil-p slot)
+	  (<ucw:option :value nil (<:as-html (none-label slot))))
+	(dolist (option (get-foreign-instances (presentation slot) instance))
+	  (setf (instance (presentation slot)) option)
+	  (<ucw:option :value (get-foreign-slot-value slot option (key slot)) (present (presentation slot)))))
+      (if (presentation-slot-value slot instance)
+	  (progn
+	    (setf (instance (presentation slot)) (presentation-slot-value slot instance))
+	    (present (presentation slot)))
+	  (<:as-html "--"))))
