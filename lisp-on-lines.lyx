@@ -26,6 +26,17 @@
 \layout Title
 
 LISP-ON-LINES
+\layout Author
+
+Drew Crapmsie, José Pablo Ezequiel 
+\begin_inset Quotes eld
+\end_inset 
+
+Pupeno
+\begin_inset Quotes erd
+\end_inset 
+
+ Fernández Silva
 \layout Section
 
 Components
@@ -129,16 +140,9 @@ We'll define a simple class to hold a user.
 
    (password :initarg :password :accessor password :type string :db-kind
  :base)))
-\layout LyX-Code
+\layout Standard
 
-\layout LyX-Code
-
-STYLE-WARNING: redefining META-MODEL.METADATA (USER) in DEFMETHOD
-\layout LyX-Code
-
-#<CLSQL-SYS::STANDARD-DB-CLASS USER>
-\layout LyX-Code
-
+and now we create a user:
 \layout LyX-Code
 
 (defparameter user (make-instance 'user :userid 1 
@@ -148,44 +152,61 @@ STYLE-WARNING: redefining META-MODEL.METADATA (USER) in DEFMETHOD
 \layout LyX-Code
 
                                         :password "p@ssw0rd"))
+\layout Standard
+
+We can see the slots of users running:
 \layout LyX-Code
 
-\layout LyX-Code
+(lisp-on-lines::list-slots user)
+\layout Standard
 
-USER
-\layout LyX-Code
-
-\layout LyX-Code
-
-LISP-ON-LINES> (list-slots user)
+which returns:
 \layout LyX-Code
 
 (USERID USERNAME PASSWORD)
+\layout Standard
+
+or the types with:
 \layout LyX-Code
 
-LISP-ON-LINES> (list-slot-types user)
+(lisp-on-lines::list-slot-types user)
+\layout Standard
+
+which returns:
 \layout LyX-Code
 
 ((USERID INTEGER) (USERNAME STRING) (PASSWORD STRING))
+\layout Standard
+
+We can run:
 \layout LyX-Code
 
-; compiling file "/tmp/fileQQsHyN" (written 03 JUN 2005 03:20:06 PM):
+(lisp-on-lines::default-attributes user)
+\layout Standard
+
+which returns:
 \layout LyX-Code
 
-; /tmp/fileQQsHyN.fasl written
+((userid integer :label "User ID" :slot-name 'userid)
 \layout LyX-Code
 
-; compilation finished in 0:00:00
+ (username string :label "User name" :slot-name 'username)
+\layout LyX-Code
+
+ (password string :label "Password" :slot-name 'password))
+\layout Standard
+
+fdsa
+\layout LyX-Code
+
+(set-default-attributes user)
 \layout LyX-Code
 
 \layout LyX-Code
 
 \layout LyX-Code
 
-(default-attributes user)
-\layout LyX-Code
-
-  ((userid integer :label "User ID" :slot-name 'userid)
+((userid integer :label "User ID" :slot-name 'userid)
 \layout LyX-Code
 
    (username string :label "User name" :slot-name 'username)
@@ -196,19 +217,7 @@ LISP-ON-LINES> (list-slot-types user)
 
 \layout LyX-Code
 
-LISP-ON-LINES> (set-default-attributes user)
-\layout LyX-Code
-
-((USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
-\layout LyX-Code
-
-(USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
-\layout LyX-Code
-
-(PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD))
-\layout LyX-Code
-
-LISP-ON-LINES> (find-class-attributes user)
+(find-class-attributes user)
 \layout LyX-Code
 
 (USER (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)
