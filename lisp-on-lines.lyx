@@ -1,0 +1,512 @@
+#LyX 1.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 221
+\textclass article
+\language english
+\inputencoding auto
+\fontscheme default
+\graphics default
+\paperfontsize default
+\papersize Default
+\paperpackage a4
+\use_geometry 0
+\use_amsmath 0
+\use_natbib 0
+\use_numerical_citations 0
+\paperorientation portrait
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\defskip medskip
+\quotes_language english
+\quotes_times 2
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+
+\layout Title
+
+LISP-ON-LINES
+\layout Section
+
+Components
+\layout Description
+
+Meta\SpecialChar ~
+Model\SpecialChar ~
+Protocol A Protocol for introspection on relational objects.
+\layout Description
+
+Mewa\SpecialChar ~
+Presentations A Mewa-like
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+http://www.adrian-lienhard.ch/files/mewa.pdf
+\end_inset 
+
+ layer for UncommonWeb
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+http://common-lisp.net/project/ucw/
+\end_inset 
+
+ Presentations.
+\layout Section
+
+Description
+\layout Standard
+
+LISP-ON-LINES (LOL) is a framework for rapid development of complex data-driven
+ web appilcations.
+ 
+\layout Section
+
+Introduction:
+\layout Section
+
+Example:
+\layout Standard
+
+First we start with the data model.
+ The Meta Model Protocol (MMP) is used to provide information on the data
+ objects and how they relate to one another.
+ Its is currently implemented as a layer over CLSQL
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+http://clsql.b9.com/
+\end_inset 
+
+, although support is planned for other backends (CLOS, Elephant[4], whatever).
+\layout Standard
+
+The MMP shares its definition syntax with CLSQL's Object Oriented Data Definitio
+n Language (OODDL)
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+http://clsql.b9.com/manual/ref-ooddl.html
+\begin_inset Note
+collapsed true
+
+\layout Standard
+
+Shouldn't this footnote be a bibliographical entry ? or something like that
+ ?
+\end_inset 
+
+
+\end_inset 
+
+.
+ The macro to define view-classes is named DEF-VIEW-CLASS/META, and takes
+ the same arguments as DEF-VIEW-CLASS from CLSQL.
+ For the purposes of this simple example, we will only need two functions
+ from the MMP beyond what CLSQL provides : LIST-SLOTS and LIST-SLOT-TYPES[5].
+\layout Standard
+
+We'll define a simple class to hold a user.
+\layout LyX-Code
+
+(def-view-class/meta user () 
+\layout LyX-Code
+
+  ((userid :initarg :userid :accessor userid :type integer :db-kind :key)
+\layout LyX-Code
+
+   (username :initarg :username :accessor username :type string :db-kind
+ :base)
+\layout LyX-Code
+
+   (password :initarg :password :accessor password :type string :db-kind
+ :base)))
+\layout LyX-Code
+
+\layout LyX-Code
+
+STYLE-WARNING: redefining META-MODEL.METADATA (USER) in DEFMETHOD
+\layout LyX-Code
+
+#<CLSQL-SYS::STANDARD-DB-CLASS USER>
+\layout LyX-Code
+
+\layout LyX-Code
+
+(defparameter user (make-instance 'user :userid 1 
+\layout LyX-Code
+
+                                        :username "drewc"
+\layout LyX-Code
+
+                                        :password "p@ssw0rd"))
+\layout LyX-Code
+
+\layout LyX-Code
+
+USER
+\layout LyX-Code
+
+\layout LyX-Code
+
+LISP-ON-LINES> (list-slots user)
+\layout LyX-Code
+
+(USERID USERNAME PASSWORD)
+\layout LyX-Code
+
+LISP-ON-LINES> (list-slot-types user)
+\layout LyX-Code
+
+((USERID INTEGER) (USERNAME STRING) (PASSWORD STRING))
+\layout LyX-Code
+
+; compiling file "/tmp/fileQQsHyN" (written 03 JUN 2005 03:20:06 PM):
+\layout LyX-Code
+
+; /tmp/fileQQsHyN.fasl written
+\layout LyX-Code
+
+; compilation finished in 0:00:00
+\layout LyX-Code
+
+\layout LyX-Code
+
+\layout LyX-Code
+
+(default-attributes user)
+\layout LyX-Code
+
+  ((userid integer :label "User ID" :slot-name 'userid)
+\layout LyX-Code
+
+   (username string :label "User name" :slot-name 'username)
+\layout LyX-Code
+
+   (password string :label "Password" :slot-name 'password))
+\layout LyX-Code
+
+\layout LyX-Code
+
+LISP-ON-LINES> (set-default-attributes user)
+\layout LyX-Code
+
+((USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+\layout LyX-Code
+
+(USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+\layout LyX-Code
+
+(PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD))
+\layout LyX-Code
+
+LISP-ON-LINES> (find-class-attributes user)
+\layout LyX-Code
+
+(USER (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)
+\layout LyX-Code
+
+(USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+\layout LyX-Code
+
+(USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+\layout LyX-Code
+
+COMMON-LISP:NIL)
+\layout LyX-Code
+
+LISP-ON-LINES> ;;;; note that the mewa functions (find-attribute, set-attribute
+ etc) can take either an instance, or a class-name as a symbol , ie :
+\layout LyX-Code
+
+; No value
+\layout LyX-Code
+
+LISP-ON-LINES> (find-class-attributes 'user)
+\layout LyX-Code
+
+(USER (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)
+\layout LyX-Code
+
+(USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+\layout LyX-Code
+
+(USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+\layout LyX-Code
+
+COMMON-LISP:NIL)
+\layout LyX-Code
+
+LISP-ON-LINES> (find-class-attributes (make-instance 'user))
+\layout LyX-Code
+
+(USER (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)
+\layout LyX-Code
+
+(USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+\layout LyX-Code
+
+(USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+\layout LyX-Code
+
+COMMON-LISP:NIL)
+\layout LyX-Code
+
+LISP-ON-LINES> 
+\layout Standard
+
+Using that information, we have enough to create an interface to the object.
+ UncommonWeb includes a powerful presentation system, but it is not quite
+ dynamic enough for our needs.
+ Mewa defines an approach to presentations that suits our purposes, but
+ the paper is written from a smalltalk point of view.
+ A mixture of the two , Mewa Presentations(MP), is described here.
+\layout Standard
+
+MP introduces to UCW the concept of attributes.
+ an attribute is essentially a named version of the defpresentation slot-like
+ arguments.
+ for example in :
+\layout Standard
+
+(defpresentation person-editor (object-presentation)
+\layout Standard
+
+((string :label "First Name" :slot-name 'first-name :max-length 30)))
+\layout Standard
+
+the (string :label "First Name" ...) form is an attribute definiton.
+ Attributes are accessed through FIND-ATTIRIBUTES, and are composed at run
+ time (where the current system is done at compile time) to display the
+ object.
+ This allows a very flexible system of displaying objects which is reminiscent
+ of CSS.
+ I discovered this, rather than invent or design it, so there are some rough
+ edges, but its a good start.
+\layout Standard
+
+Its much easier to show this then to tell.
+ Lets present our user class.
+ Currently in UCW, you'd define a presentation as such :
+\layout Standard
+
+(defpresentation user-presentation (object-presentation)
+\layout Standard
+
+((INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+\layout Standard
+
+(STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+\layout Standard
+
+(STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)))
+\layout Standard
+
+which could be presented using PRESENT-OBJECT :
+\layout Standard
+
+(present-object user :using 'user-presentation)
+\layout Standard
+
+The equiv approach using mewa presentations is actually longer and more
+ verbose(!) but it serves to demonstrate how the MP system works.
+\layout Standard
+
+Mewa Presentations adds a set of attributes to a class, keyed off the class
+ name.
+ Attributes are inherited, so if you define an attribute on T, you can use
+ it with any class.
+\layout Standard
+
+MP stores named attributes keyed on a class name.
+ to achieve the same functionality as the above using mp would look like
+ this :
+\layout Standard
+
+LISP-ON-LINES> (setf (find-attribute 'user :viewer) '(mewa-object-presentation
+ :attributes (userid username password) :global-properties (:editablep nil)))
+\layout Standard
+
+(:VIEWER MEWA-OBJECT-PRESENTATION
+\layout Standard
+
+:ATTRIBUTES
+\layout Standard
+
+(USERID USERNAME PASSWORD)
+\layout Standard
+
+:GLOBAL-PROPERTIES
+\layout Standard
+
+(:EDITABLEP NIL))
+\layout Standard
+
+LISP-ON-LINES> (setf (find-attribute 'user 'userid) '(INTEGER :LABEL "USERID"
+ :SLOT-NAME USERID))
+\layout Standard
+
+(USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+\layout Standard
+
+LISP-ON-LINES> (setf (find-attribute 'user 'username) '(STRING :LABEL "USERNAME"
+ :SLOT-NAME USERNAME))
+\layout Standard
+
+(USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+\layout Standard
+
+LISP-ON-LINES> (setf (find-attribute 'user 'password) '(STRING :LABEL "USERNAME"
+ :SLOT-NAME PASSWORD))
+\layout Standard
+
+(PASSWORD STRING :LABEL "USERNAME" :SLOT-NAME PASSWORD)
+\layout Standard
+
+LISP-ON-LINES> (find-class-attributes 'user) 
+\layout Standard
+
+(USER (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)
+\layout Standard
+
+(USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+\layout Standard
+
+(USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+\layout Standard
+
+(:VIEWER MEWA-OBJECT-PRESENTATION
+\layout Standard
+
+:ATTRIBUTES
+\layout Standard
+
+(USERID USERNAME PASSWORD)
+\layout Standard
+
+:GLOBAL-PROPERTIES
+\layout Standard
+
+(:EDITABLEP NIL))
+\layout Standard
+
+COMMON-LISP:NIL)
+\layout Standard
+
+this is all turned into a UCW presentation at runtime using MAKE-PRESENTATION
+ :
+\layout Standard
+
+(defmethod render-on ((res response) (e presentations-index))
+\layout Standard
+
+"
+\layout Standard
+
+As you'll see, nothing is exported from the LISP-ON-LINES package.
+ 
+\layout Standard
+
+if you wish to use LOL in your own package (or in UCW-USER or whatever),
+\layout Standard
+
+you simply need to use the MEWA and META-MODEL packages" 
+\layout Standard
+
+(<ucw:render-component :component (lisp-on-lines::make-presentation lisp-on-line
+s::user :type :viewer)))
+\layout Standard
+
+SET-ATTRIBUTE can be used in place of (setf (find-attribute)) when you want
+ to "inherit" the properties of an existing attribute definition :
+\layout Standard
+
+LISP-ON-LINES> (set-attribute 'user 'password '(string :label "password:
+ (must be at leat 8 chars)"))
+\layout Standard
+
+(PASSWORD STRING
+\layout Standard
+
+:LABEL
+\layout Standard
+
+"password: (must be at leat 8 chars)"
+\layout Standard
+
+:SLOT-NAME
+\layout Standard
+
+PASSWORD)
+\layout Standard
+
+Now we want to create a presentation with which to edit the username.
+ we will use the existing attributes on a subclass of mewa-object-presetation
+ :
+\layout Standard
+
+LISP-ON-LINES> (defcomponent user-editor (mewa-object-presentation)
+\layout Standard
+
+()
+\layout Standard
+
+(:default-initargs 
+\layout Standard
+
+:attributes '((username :label "Enter your New Username") password)
+\layout Standard
+
+:global-properties '(:editablep t)))
+\layout Standard
+
+USER-EDITOR
+\layout Standard
+
+LISP-ON-LINES> (setf (find-attribute 'user :editor) '(user-editor))
+\layout Standard
+
+(:EDITOR USER-EDITOR)
+\layout Standard
+
+LISP-ON-LINES> 
+\layout Standard
+
+which we then can display below our earlier example :
+\layout Standard
+
+(defmethod render-on ((res response) (e presentations-index))
+\layout Standard
+
+"
+\layout Standard
+
+As you'll see, nothing is exported from the LISP-ON-LINES package.
+ 
+\layout Standard
+
+if you wish to use LOL in your own package (or in UCW-USER or whatever),
+\layout Standard
+
+you simply need to use the MEWA and META-MODEL packages" 
+\layout Standard
+
+(<ucw:render-component :component (lisp-on-lines::make-presentation lisp-on-line
+s::user :type :viewer))
+\layout Standard
+
+(<ucw:render-component :component (lisp-on-lines::make-presentation lisp-on-line
+s::user :type :editor)))
+\layout Standard
+
+that should give you some idea on how it works ..
+ ask me when you get confused :)
+\the_end
