@@ -15,7 +15,7 @@
 
 (defun plist-nunion (new-props plist)
   (loop for cons on new-props
-	for i from 1 to (length new-props)
+	for i from 1
 	when (oddp i)
 	do (setf (getf plist (first cons)) (second cons))
 	finally (return plist)))
