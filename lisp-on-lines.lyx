@@ -276,7 +276,16 @@ or the types with:
 ((USERID INTEGER) (USERNAME STRING) (PASSWORD STRING))
 \layout Standard
 
-We can run:
+To see the default attributes of a class
+\begin_inset Marginal
+collapsed true
+
+\layout Standard
+
+Is this correct ? Drew, please, check.
+\end_inset 
+
+ we run.
 \layout LyX-Code
 
 > 
@@ -293,7 +302,7 @@ We can run:
  (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD))
 \layout Standard
 
-What does this do ?
+To set the attributes of a class to the default values we use:
 \layout LyX-Code
 
 > 
@@ -308,6 +317,11 @@ What does this do ?
 \layout LyX-Code
 
  (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD))
+\layout Standard
+
+which takes an object of the class we are working with.
+ This is going to be change so we can do this action directly on the class.
+ It is on the TODO file.
 \layout Standard
 
 Class attributes?
