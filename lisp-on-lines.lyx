@@ -6,8 +6,9 @@
 \fontscheme default
 \graphics default
 \paperfontsize default
-\papersize Default
-\paperpackage a4
+\spacing single 
+\papersize a4paper
+\paperpackage widemarginsa4
 \use_geometry 0
 \use_amsmath 0
 \use_natbib 0
@@ -62,6 +63,18 @@ Common Lisp
 \layout Section
 
 Introduction
+\layout Standard
+
+
+\noun on 
+Lisp-On-Lines
+\noun default 
+ was founded and developed and continues to be developed and mantained by
+ 
+\noun on 
+Drew Crapmsie
+\noun default 
+.
 \layout Subsection
 
 Conventions
@@ -97,16 +110,13 @@ Lisp-On-Lines
 \layout Itemize
 
 Sections marked with 
-\series bold 
 \color red
 ToDo
-\series default 
 \color default
  require further revision.
 \layout Standard
 
 
-\series bold 
 \color red
 ToDo: Add more conventions as they are needed, possible classes of text:
  names of concepts, name of programming entities, like variables, functions,
@@ -359,60 +369,121 @@ note that the mewa functions (find-attribute, set-attribute etc) can take
 \layout Standard
 
 Using that information, we have enough to create an interface to the object.
- UncommonWeb includes a powerful presentation system, but it is not quite
- dynamic enough for our needs.
- Mewa defines an approach to presentations that suits our purposes, but
- the paper is written from a smalltalk point of view.
+ 
+\noun on 
+UnCommon Web
+\noun default 
+ includes a powerful presentation system
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+To see this system in action, we strongly recomend to study the presentations
+ example which comes with 
+\noun on 
+UnCommon Web
+\noun default 
+.
+ Reading components/presentations.lisp can help understand a lot about how
+ presentations are built.
+\end_inset 
+
+, but it is not dynamic enough for some of the most advanced applications.
+ Mewa defines an approach to presentations that solves that problem, but
+ the paper is written from a 
+\noun on 
+Smalltalk
+\noun default 
+ point of view.
  A mixture of the two , Mewa Presentations(MP), is described here.
 \layout Standard
 
-MP introduces to UCW the concept of attributes.
- an attribute is essentially a named version of the defpresentation slot-like
- arguments.
- for example in :
-\layout Standard
+MP introduces to 
+\noun on 
+UnCommon Web
+\noun default 
+ the concept of 
+\emph on 
+attributes
+\emph default 
+.
+ An attribute is essentially a named version of the DEFPRESENTATION slot-like
+ arguments, for example in :
+\layout LyX-Code
 
+> 
+\series bold 
 (defpresentation person-editor (object-presentation)
-\layout Standard
+\layout LyX-Code
 
-((string :label "First Name" :slot-name 'first-name :max-length 30)))
+
+\series bold 
+   ((string :label "First Name" :slot-name 'first-name :max-length 30)))
 \layout Standard
 
 the (string :label "First Name" ...) form is an attribute definiton.
  Attributes are accessed through FIND-ATTIRIBUTES, and are composed at run
- time (where the current system is done at compile time) to display the
- object.
+ time (where the 
+\noun on 
+UnCommon Web
+\noun default 
+'s presentation system is done at compile time) to display the object.
  This allows a very flexible system of displaying objects which is reminiscent
- of CSS.
- I discovered this, rather than invent or design it, so there are some rough
+ of 
+\noun on 
+CSS
+\noun default 
+
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+
+\noun on 
+Drew Crapmsie
+\noun default 
+ discovered this, rather than invent or design it, so there are some rough
  edges, but its a good start.
+\end_inset 
+
+.
 \layout Standard
 
-Its much easier to show this then to tell.
+Its much easier to show this than to tell.
  Lets present our user class.
- Currently in UCW, you'd define a presentation as such :
-\layout Standard
+ Currently in 
+\noun on 
+UnCommon Web
+\noun default 
+, you'd define a presentation as such :
+\layout LyX-Code
 
+> 
+\series bold 
 (defpresentation user-presentation (object-presentation)
-\layout Standard
+\layout LyX-Code
 
 ((INTEGER :LABEL "USERID" :SLOT-NAME USERID)
-\layout Standard
+\layout LyX-Code
 
-(STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
-\layout Standard
+ (STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+\layout LyX-Code
 
-(STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)))
+ (STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)))
 \layout Standard
 
 which could be presented using PRESENT-OBJECT :
-\layout Standard
+\layout LyX-Code
 
+> 
+\series bold 
 (present-object user :using 'user-presentation)
 \layout Standard
 
-The equiv approach using mewa presentations is actually longer and more
- verbose(!) but it serves to demonstrate how the MP system works.
+The equivalent approach using mewa presentations is actually longer and
+ more verbose(!) but it serves to demonstrate how the MP system works.
 \layout Standard
 
 Mewa Presentations adds a set of attributes to a class, keyed off the class
@@ -422,78 +493,132 @@ Mewa Presentations adds a set of attributes to a class, keyed off the class
 \layout Standard
 
 MP stores named attributes keyed on a class name.
- to achieve the same functionality as the above using mp would look like
+ To achieve the same functionality as the above using mp would look like
  this :
+\layout LyX-Code
+
+> 
+\series bold 
+(setf (lisp-on-lines::find-attribute 'user :viewer)
+\begin_inset Marginal
+collapsed true
+
 \layout Standard
 
-LISP-ON-LINES> (setf (find-attribute 'user :viewer) '(mewa-object-presentation
- :attributes (userid username password) :global-properties (:editablep nil)))
-\layout Standard
+Isn't this too imperative (in contrast to functional, lispy).
+\end_inset 
+
+
+\layout LyX-Code
+
+
+\series bold 
+        '(mewa-object-presentation :attributes (userid username password)
+\layout LyX-Code
+
+
+\series bold 
+                                   :global-properties (:editablep nil)))
+\layout LyX-Code
 
 (:VIEWER MEWA-OBJECT-PRESENTATION
+\layout LyX-Code
+
+         :ATTRIBUTES
+\layout LyX-Code
+
+         (USERID USERNAME PASSWORD)
+\layout LyX-Code
+
+         :GLOBAL-PROPERTIES
+\layout LyX-Code
+
+         (:EDITABLEP NIL))
+\layout LyX-Code
+
+> 
+\series bold 
+(setf (lisp-on-lines::find-attribute 'user 'userid)
+\begin_inset Marginal
+collapsed false
+
 \layout Standard
 
-:ATTRIBUTES
-\layout Standard
+Are this setfs to 'userid, 'username and 'password needed ? I (Pupeno) inspected
+ they contents at of this moment and they seem to already contain what they
+ are being set to.
+\end_inset 
 
-(USERID USERNAME PASSWORD)
-\layout Standard
 
-:GLOBAL-PROPERTIES
-\layout Standard
+\layout LyX-Code
 
-(:EDITABLEP NIL))
-\layout Standard
 
-LISP-ON-LINES> (setf (find-attribute 'user 'userid) '(INTEGER :LABEL "USERID"
- :SLOT-NAME USERID))
-\layout Standard
+\series bold 
+        '(integer :label "userid" :slot-name userid))
+\layout LyX-Code
 
 (USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
-\layout Standard
+\layout LyX-Code
 
-LISP-ON-LINES> (setf (find-attribute 'user 'username) '(STRING :LABEL "USERNAME"
- :SLOT-NAME USERNAME))
-\layout Standard
+> 
+\series bold 
+(setf (find-attribute 'user 'username)
+\layout LyX-Code
+
+
+\series bold 
+        '(STRING :LABEL "USERNAME" :SLOT-NAME USERNAME))
+\layout LyX-Code
 
 (USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
-\layout Standard
+\layout LyX-Code
 
-LISP-ON-LINES> (setf (find-attribute 'user 'password) '(STRING :LABEL "USERNAME"
- :SLOT-NAME PASSWORD))
-\layout Standard
+> 
+\series bold 
+(setf (find-attribute 'user 'password)
+\layout LyX-Code
+
+
+\series bold 
+        '(STRING :LABEL "USERNAME" :SLOT-NAME PASSWORD))
+\layout LyX-Code
 
 (PASSWORD STRING :LABEL "USERNAME" :SLOT-NAME PASSWORD)
-\layout Standard
+\layout LyX-Code
 
-LISP-ON-LINES> (find-class-attributes 'user) 
-\layout Standard
+> 
+\series bold 
+(find-class-attributes 'user)
+\layout LyX-Code
 
-(USER (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)
-\layout Standard
+(USER
+\layout LyX-Code
 
-(USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
-\layout Standard
+ (:VIEWER MEWA-OBJECT-PRESENTATION
+\layout LyX-Code
 
-(USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
-\layout Standard
+          :ATTRIBUTES
+\layout LyX-Code
 
-(:VIEWER MEWA-OBJECT-PRESENTATION
-\layout Standard
+          (USERID USERNAME PASSWORD)
+\layout LyX-Code
 
-:ATTRIBUTES
-\layout Standard
+          :GLOBAL-PROPERTIES
+\layout LyX-Code
 
-(USERID USERNAME PASSWORD)
-\layout Standard
+          (:EDITABLEP NIL))
+\layout LyX-Code
 
-:GLOBAL-PROPERTIES
-\layout Standard
+ (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)
+\layout LyX-Code
 
-(:EDITABLEP NIL))
-\layout Standard
+ (USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+\layout LyX-Code
 
-COMMON-LISP:NIL)
+ (USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+\layout LyX-Code
+
+ NIL)
 \layout Standard
 
 this is all turned into a UCW presentation at runtime using MAKE-PRESENTATION
