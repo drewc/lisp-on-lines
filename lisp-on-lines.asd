@@ -26,10 +26,11 @@
 
 (defsystem :mewa
   :components ((:module :src 
-		:pathname "src/"
+		:pathname "src/mewa/"
 		:components 
 		  ((:file "mewa")
-		   (:file "ucw" :depends-on ("mewa")))))
+		   (:file "presentations" :depends-on ("mewa"))
+		   (:file "slot-presentations" :depends-on ("presentations")))))
   :depends-on (:ucw :meta-model))
 	  
 (defsystem :lisp-on-lines

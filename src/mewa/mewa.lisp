@@ -1,5 +1,3 @@
-
-
 (in-package :mewa)
  
 (defparameter *default-type* :ucw)
@@ -88,8 +86,28 @@ attributes is an alist keyed on the attribute nreeame."
 	    definition)))
 
 
+(defmethod default-attributes ((model t))
+  (append (mapcar #'(lambda (s) (cons (car s) (gen-pslot (if (meta-model:foreign-key-p model (car s))
+						   'ucw::foreign-key
+						   (cadr s))
+						 (string (car s)) (car s)))) 
+	  (meta-model:list-slot-types model))
+	  (mapcar #'(lambda (s) (cons s (append (gen-pslot 'ucw::has-many (string s) s) `(:presentation (make-presentation ,model :type :one-line)))))
+		  (meta-model:list-has-many model))))
+
+(defmethod set-default-attributes ((model t))
+  (mapcar #'(lambda (x) 
+	      (setf (find-attribute model (car x)) (cdr x)))
+	  (default-attributes model)))
+
+
 (defgeneric attributes-getter (model))
 	  
+;;;presentations 
+
+
+
+
 (defcomponent mewa ()
   ((attributes
     :initarg :attributes
@@ -114,25 +132,18 @@ attributes is an alist keyed on the attribute nreeame."
    (initializedp :initform nil)
    (modifiedp :accessor modifiedp :initform nil)))
 
-(defcomponent mewa-object-presentation (mewa object-presentation) ())
-
-(defcomponent mewa-one-line-presentation (mewa one-line-presentation)
-  ()
-  (:default-initargs :attributes-getter #'one-line-attributes-getter))
 
 (defmethod attributes :around ((self mewa))
   (let ((a (call-next-method)))
     (or a (funcall (attributes-getter self) self))))
+
+(defgeneric get-attributes (mewa))
 
 (defmethod get-attributes ((self mewa))
   (if (instance self)
   (append (meta-model:list-slots (instance self))
 	  (meta-model:list-has-many (instance self)))
   nil))
-
-(defmethod one-line-attributes-getter ((self mewa))
-  (or (meta-model:list-keys (instance self))))
-
 
 
 (defmethod find-instance-classes ((self mewa))
@@ -196,31 +207,6 @@ attributes is an alist keyed on the attribute nreeame."
 		     (append (cddr s) (list :parent self)))))
 	  (find-applicable-attributes self)))
 
-(defmethod default-attributes ((model t))
-  (append (mapcar #'(lambda (s) (cons (car s) (gen-pslot (if (meta-model:foreign-key-p model (car s))
-						   'ucw::foreign-key
-						   (cadr s))
-						 (string (car s)) (car s)))) 
-	  (meta-model:list-slot-types model))
-	  (mapcar #'(lambda (s) (cons s (append (gen-pslot 'ucw::has-many (string s) s) `(:presentation (make-presentation ,model :type :one-line)))))
-		  (meta-model:list-has-many model))))
-
-(defmethod set-default-attributes ((model t))
-  (mapcar #'(lambda (x) 
-	      (setf (find-attribute model (car x)) (cdr x)))
-	  (default-attributes model)))
-
-
-(defcomponent mewa-object-presentation (mewa ucw:object-presentation) ())
-
-(defcomponent mewa-list-presentation (mewa ucw:list-presentation) 
-  ((it.bese.ucw::instances :accessor instances :initarg :instances :initform nil)
-      (instance :accessor instance))) ;to make make-presentation happy
-
-(defmethod get-all-instances ((self mewa-list-presentation))
-  (instances self))
-
-
 
 
 (defmethod initialize-slots ((self mewa))
@@ -247,6 +233,27 @@ attributes is an alist keyed on the attribute nreeame."
 	 (i (apply #'make-instance (second a) (plist-union initargs (cddr a)))))
     (setf (slot-value i 'instance) object)
     i))
+
+(defmethod make-presentation ((object t) &key (type :viewer) (initargs nil))
+  (let* ((p (make-instance 'mewa-object-presentation))
+	 (a (progn (setf (slot-value p 'instance) object)
+		   (initialize-slots p) 
+		   (assoc type (find-all-attributes p))))
+	 
+	 (i (apply #'make-instance (or (second a)
+				       ;; if we didnt find the type, 
+				       ;; use the symbol as a class. 
+				       (if (eql (symbol-package type) 
+						(find-package 'keyword))
+					   (symbol-name type)
+					   type))
+				       (plist-union initargs (cddr a)))))
+    (setf (slot-value i 'instance) object)
+    i))
+
+
+
+
 
 (defmethod call-component :before ((from standard-component) (to mewa))
   (unless (slot-value to 'initializedp)

@@ -13,6 +13,9 @@
 (defmethod (setf presentation-slot-value) ((value string) (slot clsql-wall-time-slot-presentation) instance)
   (setf (presentation-slot-value slot instance) (clsql:parse-date-time (remove #\Space value))))
 
+(defmethod label :around ((slot clsql-wall-time-slot-presentation))
+  (concatenate 'string (call-next-method) "  (mm/dd/yyyy)"))
+
 (defmethod present-slot ((slot clsql-wall-time-slot-presentation) instance)
   (let ((date (presentation-slot-value slot instance))
 	(input-id (string (gensym))))
@@ -35,14 +38,13 @@
 
 (defmethod present-relation ((slot mewa-relation-slot-presentation) instance)
  ;;;;(<:as-html (slot-name slot) "=> " (foreign-instance slot) " from " instance )
-  (let* ((e (getf (mewa::global-properties (parent slot)) :editablep))
-	 (i (foreign-instance slot))
+  (let* ((i (foreign-instance slot))
 	 (pres (mewa::make-presentation 
 		i
 		:type :one-line 
 		:initargs (list 
 			   :global-properties 
-			   (list :editablep nil :linkedp (linkedp slot))))))
+			   (list :editablep nil :linkedp nil)))))
       (when (ucw::parent slot) (setf (component.place pres) (component.place (ucw::parent slot))))
       (flet ((render () (when i (<ucw:render-component :component pres))))
       (cond 
