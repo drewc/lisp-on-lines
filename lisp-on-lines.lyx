@@ -298,7 +298,7 @@ What does this do ?
 
 > 
 \series bold 
-(set-default-attributes user)
+(lisp-on-lines::set-default-attributes user)
 \layout LyX-Code
 
 ((USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)

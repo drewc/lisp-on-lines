@@ -1,0 +1,3 @@
+- Rename def-view-class/table to def-view-class-with-table.
+
+- Make set-default-attributes work on classes (or rather symbols indentifing classes) instead of instances of those clsses.
