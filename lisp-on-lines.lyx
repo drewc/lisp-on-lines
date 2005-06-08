@@ -513,12 +513,17 @@ Isn't this too imperative (in contrast to functional, lispy).
 
 
 \series bold 
-        '(mewa-object-presentation :attributes (userid username password)
+        '(lisp-on-lines::mewa-object-presentation
 \layout LyX-Code
 
 
 \series bold 
-                                   :global-properties (:editablep nil)))
+          :attributes (userid username password)
+\layout LyX-Code
+
+
+\series bold 
+          :global-properties (:editablep nil)))
 \layout LyX-Code
 
 (:VIEWER MEWA-OBJECT-PRESENTATION
@@ -540,7 +545,7 @@ Isn't this too imperative (in contrast to functional, lispy).
 \series bold 
 (setf (lisp-on-lines::find-attribute 'user 'userid)
 \begin_inset Marginal
-collapsed false
+collapsed true
 
 \layout Standard
 
@@ -562,7 +567,7 @@ Are this setfs to 'userid, 'username and 'password needed ? I (Pupeno) inspected
 
 > 
 \series bold 
-(setf (find-attribute 'user 'username)
+(setf (lisp-on-lines::find-attribute 'user 'username)
 \layout LyX-Code
 
 
@@ -575,7 +580,7 @@ Are this setfs to 'userid, 'username and 'password needed ? I (Pupeno) inspected
 
 > 
 \series bold 
-(setf (find-attribute 'user 'password)
+(setf (lisp-on-lines::find-attribute 'user 'password)
 \layout LyX-Code
 
 
@@ -588,7 +593,7 @@ Are this setfs to 'userid, 'username and 'password needed ? I (Pupeno) inspected
 
 > 
 \series bold 
-(find-class-attributes 'user)
+(lisp-on-lines::find-class-attributes 'user)
 \layout LyX-Code
 
 (USER
@@ -621,28 +626,54 @@ Are this setfs to 'userid, 'username and 'password needed ? I (Pupeno) inspected
  NIL)
 \layout Standard
 
-this is all turned into a UCW presentation at runtime using MAKE-PRESENTATION
- :
-\layout Standard
+this is all turned into a 
+\noun on 
+UnCommon Web
+\noun default 
+ presentation at runtime using MAKE-PRESENTATION, for example, the following
+ code should be enough to show what's built so far attached to the examples
+ application:
+\layout LyX-Code
 
-(defmethod render-on ((res response) (e presentations-index))
-\layout Standard
+> 
+\series bold 
+(defcomponent lol-example (window-component)
+\layout LyX-Code
 
-"
+
+\series bold 
+   ())
+\layout LyX-Code
+
+> 
+\series bold 
+(defmethod render-on ((res response) (lol-example lol-example))
+\layout LyX-Code
+
+
+\series bold 
+    (<:h1 "User")
+\layout LyX-Code
+
+
+\series bold 
+    (<ucw:render-component :component (lisp-on-lines::make-presentation
+ user :type :viewer)))
+\layout LyX-Code
+
+> 
+\series bold 
+(defentry-point "lol.ucw" (:application *example-application*) ()
+\layout LyX-Code
+
+
+\series bold 
+    (call 'products-presentation))
 \layout Standard
 
 As you'll see, nothing is exported from the LISP-ON-LINES package.
- 
-\layout Standard
-
-if you wish to use LOL in your own package (or in UCW-USER or whatever),
-\layout Standard
-
-you simply need to use the MEWA and META-MODEL packages" 
-\layout Standard
-
-(<ucw:render-component :component (lisp-on-lines::make-presentation lisp-on-line
-s::user :type :viewer)))
+ If you wish to use LOL in your own package (or in UCW-USER or whatever),
+ you simply need to use the MEWA and META-MODEL packages.
 \layout Standard
 
 SET-ATTRIBUTE can be used in place of (setf (find-attribute)) when you want
