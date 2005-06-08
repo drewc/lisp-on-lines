@@ -28,7 +28,13 @@
 LISP-ON-LINES
 \layout Author
 
-Drew Crapmsie, José Pablo Ezequiel 
+
+\noun on 
+Drew Crapmsie
+\noun default 
+, 
+\noun on 
+José Pablo Ezequiel 
 \begin_inset Quotes eld
 \end_inset 
 
@@ -37,6 +43,74 @@ Pupeno
 \end_inset 
 
  Fernández Silva
+\layout Abstract
+
+
+\noun on 
+Lisp-On-Lines
+\noun default 
+ is a very useful module that works on top of the 
+\noun on 
+UnCommon Web
+\noun default 
+ framework to do rapid developing of complex data-driven web appilcations
+ (on 
+\noun on 
+Common Lisp
+\noun default 
+, of course).
+\layout Section
+
+Introduction
+\layout Subsection
+
+Conventions
+\layout Standard
+
+The conventions used in this manual are:
+\layout Itemize
+
+Lisp code is shown as a monospace font.
+ It is assumed that the user is working in an interactive environment and
+ what the user should type appears as bold, for example:
+\begin_deeper 
+\layout LyX-Code
+
+> 
+\series bold 
+(+ 5 10)
+\layout LyX-Code
+
+15
+\end_deeper 
+\layout Itemize
+
+Names of people or products are show as small caps, like 
+\noun on 
+Drew Crapmsie
+\noun default 
+ or 
+\noun on 
+Lisp-On-Lines
+\noun default 
+.
+\layout Itemize
+
+Sections marked with 
+\series bold 
+\color red
+ToDo
+\series default 
+\color default
+ require further revision.
+\layout Standard
+
+
+\series bold 
+\color red
+ToDo: Add more conventions as they are needed, possible classes of text:
+ names of concepts, name of programming entities, like variables, functions,
+ etc (which are embedded in text, should they be shown monospaced ?).
 \layout Section
 
 Components
@@ -69,18 +143,7 @@ http://common-lisp.net/project/ucw/
  Presentations.
 \layout Section
 
-Description
-\layout Standard
-
-LISP-ON-LINES (LOL) is a framework for rapid development of complex data-driven
- web appilcations.
- 
-\layout Section
-
-Introduction:
-\layout Section
-
-Example:
+Example
 \layout Standard
 
 First we start with the data model.
@@ -95,11 +158,24 @@ collapsed true
 http://clsql.b9.com/
 \end_inset 
 
-, although support is planned for other backends (CLOS, Elephant[4], whatever).
+, although support is planned for other backends (
+\noun on 
+CLOS
+\noun default 
+, 
+\noun on 
+Elephant
+\noun default 
+[4], whatever).
 \layout Standard
 
-The MMP shares its definition syntax with CLSQL's Object Oriented Data Definitio
-n Language (OODDL)
+The MMP shares its definition syntax with 
+\emph on 
+\noun on 
+CLSQL
+\emph default 
+\noun default 
+'s Object Oriented Data Definition Language (OODDL)
 \begin_inset Foot
 collapsed true
 
@@ -128,39 +204,52 @@ Shouldn't this footnote be a bibliographical entry ? or something like that
 We'll define a simple class to hold a user.
 \layout LyX-Code
 
+> 
+\series bold 
 (def-view-class/meta user () 
 \layout LyX-Code
 
-  ((userid :initarg :userid :accessor userid :type integer :db-kind :key)
+
+\series bold 
+   ((userid :initarg :userid :accessor userid :type integer :db-kind :key)
 \layout LyX-Code
 
-   (username :initarg :username :accessor username :type string :db-kind
+
+\series bold 
+    (username :initarg :username :accessor username :type string :db-kind
  :base)
 \layout LyX-Code
 
-   (password :initarg :password :accessor password :type string :db-kind
+
+\series bold 
+    (password :initarg :password :accessor password :type string :db-kind
  :base)))
 \layout Standard
 
 and now we create a user:
 \layout LyX-Code
 
+> 
+\series bold 
 (defparameter user (make-instance 'user :userid 1 
 \layout LyX-Code
 
-                                        :username "drewc"
+
+\series bold 
+                                          :username "drewc"
 \layout LyX-Code
 
-                                        :password "p@ssw0rd"))
+
+\series bold 
+                                          :password "p@ssw0rd"))
 \layout Standard
 
 We can see the slots of users running:
 \layout LyX-Code
 
+> 
+\series bold 
 (lisp-on-lines::list-slots user)
-\layout Standard
-
-which returns:
 \layout LyX-Code
 
 (USERID USERNAME PASSWORD)
@@ -169,10 +258,9 @@ which returns:
 or the types with:
 \layout LyX-Code
 
+> 
+\series bold 
 (lisp-on-lines::list-slot-types user)
-\layout Standard
-
-which returns:
 \layout LyX-Code
 
 ((USERID INTEGER) (USERNAME STRING) (PASSWORD STRING))
@@ -181,95 +269,93 @@ which returns:
 We can run:
 \layout LyX-Code
 
+> 
+\series bold 
 (lisp-on-lines::default-attributes user)
+\layout LyX-Code
+
+((USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+\layout LyX-Code
+
+ (USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+\layout LyX-Code
+
+ (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD))
 \layout Standard
 
-which returns:
+What does this do ?
 \layout LyX-Code
 
-((userid integer :label "User ID" :slot-name 'userid)
-\layout LyX-Code
-
- (username string :label "User name" :slot-name 'username)
-\layout LyX-Code
-
- (password string :label "Password" :slot-name 'password))
-\layout Standard
-
-fdsa
-\layout LyX-Code
-
+> 
+\series bold 
 (set-default-attributes user)
 \layout LyX-Code
 
+((USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
 \layout LyX-Code
 
+ (USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
 \layout LyX-Code
 
-((userid integer :label "User ID" :slot-name 'userid)
+ (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD))
+\layout Standard
+
+Class attributes?
 \layout LyX-Code
 
-   (username string :label "User name" :slot-name 'username)
-\layout LyX-Code
-
-   (password string :label "Password" :slot-name 'password))
-\layout LyX-Code
-
-\layout LyX-Code
-
-(find-class-attributes user)
-\layout LyX-Code
-
-(USER (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)
-\layout LyX-Code
-
-(USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
-\layout LyX-Code
-
-(USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
-\layout LyX-Code
-
-COMMON-LISP:NIL)
-\layout LyX-Code
-
-LISP-ON-LINES> ;;;; note that the mewa functions (find-attribute, set-attribute
- etc) can take either an instance, or a class-name as a symbol , ie :
-\layout LyX-Code
-
-; No value
-\layout LyX-Code
-
-LISP-ON-LINES> (find-class-attributes 'user)
+> 
+\series bold 
+(lisp-on-lines::find-class-attributes user)
 \layout LyX-Code
 
 (USER (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)
 \layout LyX-Code
 
-(USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+      (USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
 \layout LyX-Code
 
-(USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+      (USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
 \layout LyX-Code
 
-COMMON-LISP:NIL)
+      NIL)
+\layout Standard
+
+note that the mewa functions (find-attribute, set-attribute etc) can take
+ either an instance, or a class-name as a symbol:
 \layout LyX-Code
 
-LISP-ON-LINES> (find-class-attributes (make-instance 'user))
+> 
+\series bold 
+(lisp-on-lines::find-class-attributes 'user)
 \layout LyX-Code
 
 (USER (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)
 \layout LyX-Code
 
-(USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+      (USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
 \layout LyX-Code
 
-(USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+      (USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
 \layout LyX-Code
 
-COMMON-LISP:NIL)
+      NIL)
 \layout LyX-Code
 
-LISP-ON-LINES> 
+> 
+\series bold 
+(lisp-on-lines::find-class-attributes (make-instance 'user))
+\layout LyX-Code
+
+(USER (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)
+\layout LyX-Code
+
+      (USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+\layout LyX-Code
+
+      (USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+\layout LyX-Code
+
+      NIL)
 \layout Standard
 
 Using that information, we have enough to create an interface to the object.
