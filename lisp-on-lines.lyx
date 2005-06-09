@@ -83,9 +83,10 @@ Conventions
 The conventions used in this manual are:
 \layout Itemize
 
-Lisp code is shown as a monospace font.
- It is assumed that the user is working in an interactive environment and
- what the user should type appears as bold, for example:
+Dode is shown as a monospace font.
+ When it is expected that the user is working in an interactive environment
+ what the user should type appears as bold, while the computer result appears
+ non-bold, for example:
 \begin_deeper 
 \layout LyX-Code
 
@@ -774,4 +775,217 @@ s::user :type :editor)))
 
 that should give you some idea on how it works ..
  ask me when you get confused :)
+\layout Section
+
+Pupeno's Example
+\layout Standard
+
+This is Pupeno's view of how to do rapid developing of a database-driven
+ web application.
+ It currently is going to assume a very specific case but latter it may
+ be made bigger.
+\layout Standard
+
+We first start with a 
+\noun on 
+PostgreSQL
+\noun default 
+ connection of CLSQL which is set up with one line:
+\layout LyX-Code
+
+> 
+\series bold 
+(clsql:connect '("localhost" "geo" "geo" "geogeo"))
+\layout Standard
+
+which connect us to the server on 
+\family typewriter 
+localhost
+\family default 
+, to the database 
+\family typewriter 
+geo
+\family default 
+ as user 
+\begin_inset Quotes eld
+\end_inset 
+
+geo
+\begin_inset Quotes erd
+\end_inset 
+
+ with password 
+\begin_inset Quotes eld
+\end_inset 
+
+geogeo
+\begin_inset Quotes erd
+\end_inset 
+
+ (this is not a smart way to generate password, don't do this).
+ To have a nice SQL environment, we also want:
+\layout LyX-Code
+
+> 
+\series bold 
+(clsql:locally-enable-sql-reader-syntax)
+\layout LyX-Code
+
+> 
+\series bold 
+(setf clsql:*default-caching* nil)
+\layout Standard
+
+Actually, it is more than a nice environmnet, without those lines the rest
+ of the code won't work.
+\layout Standard
+
+On the 
+\family typewriter 
+geo
+\family default 
+ database, there's a table called 
+\family typewriter 
+product
+\family default 
+ which has the following structure:
+\layout LyX-Code
+
+
+\series bold 
+CREATE TABLE product (
+\layout LyX-Code
+
+
+\series bold 
+    id serial NOT NULL,
+\layout LyX-Code
+
+
+\series bold 
+    name text NOT NULL,
+\layout LyX-Code
+
+
+\series bold 
+    details text,
+\layout LyX-Code
+
+
+\series bold 
+    description text,
+\layout LyX-Code
+
+
+\series bold 
+    cost double precision,
+\layout LyX-Code
+
+
+\series bold 
+    CONSTRAINT product_cost_check CHECK ((cost > (0)::double precision))
+\layout LyX-Code
+
+
+\series bold 
+);
+\layout LyX-Code
+
+
+\series bold 
+ALTER TABLE ONLY product ADD CONSTRAINT product_name_key UNIQUE (name);
+\layout LyX-Code
+
+
+\series bold 
+ALTER TABLE ONLY product ADD CONSTRAINT product_pkey PRIMARY KEY (id);
+\layout Standard
+
+
+\color red
+ToDo: express the table structure in a better way.
+\layout Standard
+
+Now we'll create the class that represents a product, mirroring the database
+ structure:
+\layout LyX-Code
+
+> 
+\series bold 
+(lisp-on-lines::def-view-class/table "product")
+\layout Standard
+
+and then we generate the default attributes (from 
+\family typewriter 
+product
+\family default 
+'s slots) and assign it to 
+\family typewriter 
+product
+\family default 
+:
+\layout LyX-Code
+
+> 
+\series bold 
+(lisp-on-lines::set-default-attributes (make-instance 'product))
+\begin_inset Marginal
+collapsed true
+
+\layout Standard
+
+set-default-attributes is marked to be renamed to set-generated-attributes.
+\end_inset 
+
+
+\layout Standard
+
+As you can see, we instantiate 
+\family typewriter 
+product
+\family default 
+ to pass it to 
+\family typewriter 
+set-default-attributes
+\family default 
+, because it expects an object instead of a class.
+ We don't need the object anymore, so we don't save any reference to it.
+ In the future we might have a 
+\family typewriter 
+set-default-attributes
+\family default 
+ that can use a class directly.
+ Now we set a the attribute 
+\family typewriter 
+:viewer
+\family default 
+ to contain the 
+\family typewriter 
+mewa-object-presentation
+\family default 
+ exposing the attributes we like the user to work with:
+\layout LyX-Code
+
+> 
+\series bold 
+(setf (lisp-on-lines::find-attribute (make-instance 'product) :viewer)
+\layout LyX-Code
+
+
+\series bold 
+        '(lisp-on-lines::mewa-object-presentation 
+\layout LyX-Code
+
+
+\series bold 
+          :attributes (name details description cost)
+\layout LyX-Code
+
+
+\series bold 
+          :global-properties (:editablep nil)))
+\layout Standard
+
+The last parameter shows that it is not editable, which makes sense for
+ a viewer.
 \the_end
