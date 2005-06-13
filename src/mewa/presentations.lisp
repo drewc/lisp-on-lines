@@ -33,7 +33,7 @@
 
 ;;;lists
 (defcomponent mewa-list-presentation (mewa ucw:list-presentation) 
-  ((instances :accessor instances :initarg :instances :initform nil)
+  ((ucw::instances :accessor instances :initarg :instances :initform nil)
    (instance :accessor instance)
    (select-label :accessor select-label :initform "select" :initarg :select-label)
    (selectablep :accessor selectablep :initform t :initarg :selectablep)))
