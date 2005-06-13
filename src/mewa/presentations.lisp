@@ -11,6 +11,26 @@
 ;;;objects
 (defcomponent mewa-object-presentation (mewa ucw:object-presentation) ())
 
+(defcomponent two-column-presentation (mewa-object-presentation) ())
+
+(defmethod present ((pres two-column-presentation))
+  
+  (<:table :class (css-class pres)
+	   (loop for slot on (slots pres) by #'cddr
+		 do 
+		 (<:tr :class "presentation-slot-row"
+		       (<:td :class "presentation-slot-label" 
+			     (<:as-html (label (first slot))))
+		       (<:td :class "presentation-slot-value" 
+			     (present-slot (first slot) (instance pres)))
+		       (when (second slot)
+			 (<:td :class "presentation-slot-label" 
+			       (<:as-html (label (second slot))))
+			 (<:td :class "presentation-slot-value" 
+			       (present-slot (second slot) (instance pres))))))
+	   (render-options pres (instance pres))))
+
+
 ;;;lists
 (defcomponent mewa-list-presentation (mewa ucw:list-presentation) 
   ((instances :accessor instances :initarg :instances :initform nil)
