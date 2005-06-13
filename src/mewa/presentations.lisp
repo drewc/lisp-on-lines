@@ -62,8 +62,7 @@
 		      :value (select-label listing)))))
     (dolist (slot (slots listing))
       (<:td :class "data-cell" (present-slot slot object)))
-    (<:td :class "index-number-cell"
-      (<:i (<:as-html index)))
+    (<:td :class "index-number-cell")
     ))
 
 (defmethod get-all-instances ((self mewa-list-presentation))
