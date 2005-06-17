@@ -1,7 +1,7 @@
 (in-package :it.bese.ucw)
 
 
-(defslot-presentation clsql-wall-time-slot-presentation ()
+(defslot-presentation clsql-wall-time-slot-presentation (mewa-relation-slot-presentation)
        ()
        (:type-name clsql-sys:wall-time))
 
@@ -11,7 +11,13 @@
       (format nil "~a/~a/~a" m d y)))))
 
 (defmethod (setf presentation-slot-value) ((value string) (slot clsql-wall-time-slot-presentation) instance)
-  (setf (presentation-slot-value slot instance) (clsql:parse-date-time (remove #\Space value))))
+  (let ((new-time (clsql:parse-date-time (remove #\Space value)))
+	(old-time (when (slot-boundp instance (slot-name slot))
+		    (slot-value instance (slot-name slot)))))
+    (unless (or (eql old-time new-time)
+		(and (null old-time) new-time)
+		 (equal :equal (clsql:time-compare new-time old-time)))
+      (setf (presentation-slot-value slot instance) new-time ))))
 
 (defmethod label :around ((slot clsql-wall-time-slot-presentation))
   (concatenate 'string (call-next-method) "  (mm/dd/yyyy)"))
