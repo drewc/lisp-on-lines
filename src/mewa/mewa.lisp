@@ -215,7 +215,6 @@ attributes is an alist keyed on the attribute nreeame."
   (setf (slots self) (find-slot-presentations   self)))
   
 
-
 (defmethod make-presentation ((object t) &key (type :viewer) (initargs nil))
   (let* ((p (make-instance 'mewa-object-presentation))
 	 (a (progn (setf (slot-value p 'instance) object)
@@ -260,3 +259,42 @@ attributes is an alist keyed on the attribute nreeame."
 
 (defmacro call-presentation (object &rest args)
   `(present-object ,object :presentation (make-presentation ,object ,@args)))
+
+
+
+(defaction cancel-save-instance ((self mewa))
+  (answer nil))
+
+(defaction save-instance ((self mewa))
+  (meta-modqel:sync-instance (instance self))
+   (setf (modifiedp self) nil)
+       (answer self))
+
+
+(defaction ok ((self mewa) &optional arg)
+  "Returns the component if it has not been modified. if it has been, prompt user to save or cancel"
+  (declare (ignore arg))
+  (when (modifiedp self)
+    (let ((message (format nil "Record has been modified, Do you wish to save the changes?<br/> ~a" (print (modifications self)))))
+      (case (call 'option-dialog 
+		  :message message
+		  :options '((:save . "Save changes to Database")
+			     (:cancel . "Cancel all changes")))
+	(:cancel
+	 (cancel-save-instance self))
+	(:save 
+	 (save-instance self)))))
+  (answer self))
+
+
+
+(defmethod (setf presentation-slot-value) :around (value (slot slot-presentation) instance)
+  (let* ((old (prog1 
+		 (presentation-slot-value slot instance)
+	       (call-next-method)))
+	(new (presentation-slot-value slot instance)))
+  
+  (unless (equal new old )
+    (let ((self (ucw::parent slot)))
+      (setf (modifiedp self) instance
+	    (modifications self)  (append (list  (type-of new) (type-of old) (type-of value) slot instance )))))))
