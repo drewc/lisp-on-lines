@@ -42,6 +42,30 @@
    (linkedp :accessor linkedp :initarg :linkedp :initform t))
   (:type-name relation))
 
+(defun get-fkey-data (instance slot-name)
+  "ugly workaround b/c UCW does not like M-V-B"
+  (multiple-value-bind (finstance foreign-slot-name)
+      (meta-model:explode-foreign-key instance slot-name)
+    (cons finstance foreign-slot-name)))
+
+(defaction search-records ((slot mewa-relation-slot-presentation) instance)
+  (let* ((d (get-fkey-data instance (slot-name slot)))
+	 (finstance (car d))
+	 (foreign-slot-name (cdr d))
+	 (new-instance
+    (call-component 
+     (parent slot) 
+     (make-instance 'mewa::mewa-presentation-search
+		    :search-presentation
+		    (mewa:make-presentation finstance 
+					    :type :search-presentation)
+		    :list-presentation 
+		    (mewa:make-presentation finstance 
+					    :type :listing)))))
+    (setf (slot-value instance (slot-name slot)) (slot-value new-instance foreign-slot-name))
+    (meta-model:sync-instance instance)
+    (clsql:update-objects-joins (list instance))))
+    
 (defmethod present-relation ((slot mewa-relation-slot-presentation) instance)
  ;;;;(<:as-html (slot-name slot) "=> " (foreign-instance slot) " from " instance )
   (let* ((i (foreign-instance slot))
@@ -56,13 +80,15 @@
       (cond 
 	((editablep slot)
 	 (render)
-	 (<ucw:a :action (search-records slot i) (<:as-html " (search)"))
+	 (<ucw:a :action (search-records slot instance) (<:as-html " (search)"))
 	 (<ucw:a :action (create-record slot i) (<:as-html " (new)")))
 	((linkedp slot)
 	 (<ucw:a :action (view-instance slot i) 
 		 (render)))
 	(t       
 	 (render))))))
+
+
 
 (defmethod present-slot ((slot mewa-relation-slot-presentation) instance)
   (present-relation slot instance))
