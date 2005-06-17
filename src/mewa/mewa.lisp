@@ -215,12 +215,6 @@ attributes is an alist keyed on the attribute nreeame."
   (setf (slots self) (find-slot-presentations   self)))
   
 
-(defmethod render-on :around ((res response) (self mewa))
-  (unless (slot-value self 'initializedp)
-    (initialize-slots self))
-  (setf (slot-value self 'initializedp) t)
-  (call-next-method))
-
 
 (defmethod make-presentation ((object t) &key (type :viewer) (initargs nil))
   (let* ((p (make-instance 'mewa-object-presentation))
@@ -247,6 +241,8 @@ attributes is an alist keyed on the attribute nreeame."
 					   type))
 				       (plist-union initargs (cddr a)))))
     (setf (slot-value i 'instance) object)
+    (initialize-slots i)
+    (setf (slot-value i 'initializedp) t)
     i))
 
 
