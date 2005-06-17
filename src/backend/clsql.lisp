@@ -8,6 +8,24 @@
 (export 'def-view-class/meta)
 (export 'list-base-classes)
 
+
+
+(defmethod sync-instance ((view clsql:standard-db-object) &key (database *default-database*))
+  (labels ((sym->sql (sym) (string-downcase (substitute #\_ #\- (string sym))))
+           (get-def (slot) (caar (query
+                                  (format nil                                                             "SELECT DISTINCT adsrc from pg_attrdef join pg_attribute on attnum = adnum where adrelid = (select oid from pg_class where relname = '~A') and attname = '~A'" (sym->sql (class-name (class-of view))) (sym->sql slot)))))
+           (get-default-value (slot) (caar (query (format nil "SELECT ~A" (get-def slot))))))
+
+    (dolist (slot (list-slots view))
+      (when (and (primary-key-p view slot)
+                 (or (not (slot-boundp view slot))
+                     (equal (slot-value view slot) nil)))
+        (setf (slot-value view slot) (get-default-value slot)))))
+  (update-records-from-instance view :database database)
+  (update-instance-from-records view :database database))
+
+
+
 (defparameter *clsql-base-classes* (list) )
 
 (defmethod list-base-classes ((type (eql :clsql)))
@@ -58,9 +76,6 @@
 (defmacro def-meta-models ()
   (let ((defs (view-class-definition-list)))
     `(progn ,@defs)))
-
-
-
 
 
 (defun get-pkeys ()
@@ -185,21 +200,6 @@ AND fa.attnum = ANY (pg_constraint.confkey)"))
 	       :target-slot ,name
 	       :set t))))
  
-(defmethod update-records-from-instance :before ((view clsql::standard-db-object) &key database)
-  (declare (ignorable database))
-  (labels ((sym->sql (sym) (string-downcase (substitute #\_ #\- (string sym))))
-	   (get-def (slot) (caar (query
-				  (format nil								  "SELECT DISTINCT adsrc from pg_attrdef join pg_attribute on attnum = adnum where adrelid = (select oid from pg_class where relname = '~A') and attname = '~A'" (sym->sql (class-name (class-of view))) (sym->sql slot)))))
-	   (get-default-value (slot) (caar (query (format nil "SELECT ~A" (get-def slot))))))
-
-    (dolist (slot (list-slots view))
-      (when (and (primary-key-p view slot)
-		 (or (not (slot-boundp view slot))
-		     (equal (slot-value view slot) nil)))
-	(setf (slot-value view slot) (get-default-value slot))))))
-
-;;;;
-
 (defmacro def-view-class/meta (name supers slots &rest args)  
     `(progn
 	(let* ((m (def-meta-model model-name ,supers ,slots ,args))
