@@ -67,3 +67,27 @@
 
 (defmethod get-all-instances ((self mewa-list-presentation))
   (instances self))
+
+
+;;; searching
+
+(defcomponent mewa-presentation-search (ucw::presentation-search) 
+ ((display-results-p :accessor display-results-p :initarg :display-results-p :initform nil)))
+
+(defmethod ok ((self mewa-presentation-search) &optional arg)
+  (declare (ignore arg))
+  (setf (display-results-p self) t))
+
+(defmethod get-all-instances ((self mewa-presentation-search))
+  (clsql:select (class-name (class-of (instance (ucw::search-presentation self)))) :flatp t))
+
+(defmethod render-on ((res response) (self mewa-presentation-search))
+  (ucw::render-criteria res self)
+  (when (display-results-p self)
+    (let ((listing (ucw::list-presentation self))) 
+      (setf (instances listing ) (ucw::valid-instances self)
+	    (slot-value listing 'ucw::calling-component) (slot-value self 'ucw::calling-component)
+	    (slot-value listing 'ucw::place) (slot-value self 'ucw::place)
+	    (slot-value listing 'ucw::continuation) (slot-value self 'ucw::continuation))
+    
+      (render-on res listing))))
