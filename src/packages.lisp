@@ -1,5 +1,5 @@
 (defpackage :meta-model
-  (:use :common-lisp )
+  (:use :common-lisp :clsql)
   (:export
    :meta-model-class
    :meta-model.base-type
@@ -30,7 +30,8 @@
    :find-default-value
    :explode-foreign-key
    :list-has-many
-   :list-many-to-many))
+   :list-many-to-many
+   :sync-instance))
 
 
 (defpackage :mewa 
