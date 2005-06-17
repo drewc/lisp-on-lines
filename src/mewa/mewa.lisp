@@ -86,7 +86,6 @@ attributes is an alist keyed on the attribute nreeame."
 
 (defmethod default-attributes ((model t))
   (append (mapcar #'(lambda (s) (cons (car s) (gen-pslot (if (meta-model:foreign-key-p model (car s))
-						   'ucw::foreign-key
 						   (cadr s))
 						 (string (car s)) (car s)))) 
 	  (meta-model:list-slot-types model))
@@ -128,7 +127,8 @@ attributes is an alist keyed on the attribute nreeame."
     :accessor use-instance-class-p 
     :initform t)
    (initializedp :initform nil)
-   (modifiedp :accessor modifiedp :initform nil)))
+   (modifiedp :accessor modifiedp :initform nil)
+   (modifications :accessor modifications :initform nil)))
 
 
 (defmethod attributes :around ((self mewa))
