@@ -85,7 +85,12 @@ attributes is an alist keyed on the attribute nreeame."
 
 
 (defmethod default-attributes ((model t))
-  (append (mapcar #'(lambda (s) (cons (car s) (gen-pslot (if (meta-model:foreign-key-p model (car s))
+  (append (mapcar #'(lambda (s) 
+		      (cons (car s) 
+			    (gen-pslot 
+			     (if (meta-model:foreign-key-p model
+							   'ucw::foreign-key
+							   (car s))
 						   (cadr s))
 						 (string (car s)) (car s)))) 
 	  (meta-model:list-slot-types model))
@@ -266,7 +271,7 @@ attributes is an alist keyed on the attribute nreeame."
   (answer nil))
 
 (defaction save-instance ((self mewa))
-  (meta-modqel:sync-instance (instance self))
+  (meta-model:sync-instance (instance self))
    (setf (modifiedp self) nil)
        (answer self))
 
