@@ -12,9 +12,7 @@
 ;;; some utilities for merging plists
 
 (defun plist-nunion (new-props plist)
-  (loop for cons on new-props
-	for i from 1
-	when (oddp i)
+  (loop for cons on new-props by #'cddr
 	do (setf (getf plist (first cons)) (second cons))
 	finally (return plist)))
 
