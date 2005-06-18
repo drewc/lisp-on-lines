@@ -31,7 +31,7 @@ LISP-ON-LINES
 
 
 \noun on 
-Drew Crapmsie
+Drew Crampsie
 \noun default 
 , 
 \noun on 
@@ -72,7 +72,7 @@ Lisp-On-Lines
  was founded and developed and continues to be developed and mantained by
  
 \noun on 
-Drew Crapmsie
+Drew Crampsie
 \noun default 
 .
 \layout Subsection
@@ -83,7 +83,7 @@ Conventions
 The conventions used in this manual are:
 \layout Itemize
 
-Dode is shown as a monospace font.
+Code is shown in a monospace font.
  When it is expected that the user is working in an interactive environment
  what the user should type appears as bold, while the computer result appears
  non-bold, for example:
@@ -101,7 +101,7 @@ Dode is shown as a monospace font.
 
 Names of people or products are show as small caps, like 
 \noun on 
-Drew Crapmsie
+Drew Crampsie
 \noun default 
  or 
 \noun on 
@@ -451,16 +451,17 @@ CSS
 \noun default 
 
 \begin_inset Foot
-collapsed true
+collapsed false
 
 \layout Standard
 
 
 \noun on 
-Drew Crapmsie
+Drew Crampsie
 \noun default 
  discovered this, rather than invent or design it, so there are some rough
  edges, but its a good start.
+ Exploration baby yeah!
 \end_inset 
 
 .
@@ -683,7 +684,7 @@ UnCommon Web
 
 
 \series bold 
-    (call 'products-presentation))
+    (call 'lol-example))
 \layout Standard
 
 As you'll see, nothing is exported from the LISP-ON-LINES package.
@@ -691,25 +692,27 @@ As you'll see, nothing is exported from the LISP-ON-LINES package.
  you simply need to use the MEWA and META-MODEL packages.
 \layout Standard
 
-SET-ATTRIBUTE can be used in place of (setf (find-attribute)) when you want
- to "inherit" the properties of an existing attribute definition :
-\layout Standard
+SET-ATTRIBUTE can be used in place of (setf (find-attribute ...)) when you
+ want to "inherit" the properties of an existing attribute definition :
+\layout LyX-Code
 
-LISP-ON-LINES> (set-attribute 'user 'password '(string :label "password:
- (must be at leat 8 chars)"))
-\layout Standard
+LISP-ON-LINES> 
+\series bold 
+(set-attribute 'user 'password '(string :label "password: (must be at least
+ 8 chars)"))
+\layout LyX-Code
 
 (PASSWORD STRING
-\layout Standard
+\layout LyX-Code
 
 :LABEL
-\layout Standard
+\layout LyX-Code
 
 "password: (must be at leat 8 chars)"
-\layout Standard
+\layout LyX-Code
 
 :SLOT-NAME
-\layout Standard
+\layout LyX-Code
 
 PASSWORD)
 \layout Standard
@@ -717,58 +720,81 @@ PASSWORD)
 Now we want to create a presentation with which to edit the username.
  we will use the existing attributes on a subclass of mewa-object-presetation
  :
-\layout Standard
+\layout LyX-Code
 
-LISP-ON-LINES> (defcomponent user-editor (mewa-object-presentation)
-\layout Standard
+> 
+\series bold 
+(defcomponent user-editor (mewa-object-presentation)
+\layout LyX-Code
 
-()
-\layout Standard
 
-(:default-initargs 
-\layout Standard
+\series bold 
+   ()
+\layout LyX-Code
 
-:attributes '((username :label "Enter your New Username") password)
-\layout Standard
 
-:global-properties '(:editablep t)))
-\layout Standard
+\series bold 
+   (:default-initargs 
+\layout LyX-Code
+
+
+\series bold 
+     :attributes '((username :label "Enter your New Username") password)
+\layout LyX-Code
+
+
+\series bold 
+     :global-properties '(:editablep t)))
+\layout LyX-Code
 
 USER-EDITOR
-\layout Standard
+\layout LyX-Code
 
-LISP-ON-LINES> (setf (find-attribute 'user :editor) '(user-editor))
-\layout Standard
+LISP-ON-LINES> 
+\series bold 
+(setf (find-attribute 'user :editor) '(user-editor))
+\layout LyX-Code
 
 (:EDITOR USER-EDITOR)
 \layout Standard
 
-LISP-ON-LINES> 
-\layout Standard
-
 which we then can display below our earlier example :
-\layout Standard
+\layout LyX-Code
 
+
+\series bold 
 (defmethod render-on ((res response) (e presentations-index))
-\layout Standard
+\layout LyX-Code
 
+
+\series bold 
 "
-\layout Standard
+\layout LyX-Code
 
+
+\series bold 
 As you'll see, nothing is exported from the LISP-ON-LINES package.
  
-\layout Standard
+\layout LyX-Code
 
+
+\series bold 
 if you wish to use LOL in your own package (or in UCW-USER or whatever),
-\layout Standard
+\layout LyX-Code
 
+
+\series bold 
 you simply need to use the MEWA and META-MODEL packages" 
-\layout Standard
+\layout LyX-Code
 
+
+\series bold 
 (<ucw:render-component :component (lisp-on-lines::make-presentation lisp-on-line
 s::user :type :viewer))
-\layout Standard
+\layout LyX-Code
 
+
+\series bold 
 (<ucw:render-component :component (lisp-on-lines::make-presentation lisp-on-line
 s::user :type :editor)))
 \layout Standard
@@ -939,7 +965,7 @@ set-default-attributes is marked to be renamed to set-generated-attributes.
 
 
 \layout Standard
-
+\align left 
 As you can see, we instantiate 
 \family typewriter 
 product
@@ -986,6 +1012,418 @@ mewa-object-presentation
           :global-properties (:editablep nil)))
 \layout Standard
 
-The last parameter shows that it is not editable, which makes sense for
- a viewer.
+The last parameter is a list of properties that will be applied to each
+ attribute.
+\layout Section
+
+Yet Another Example .
+\layout Standard
+
+Drew Crampsie Posted the following to comp.lang.lisp ..
+ it just might help until he writes some real documentation.
+ 
+\layout Standard
+
+I've written a system that generates presentations for database objects
+ based on the type and relation information in the system catalog.
+ Its based on Mewa
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+Mewa : Meta-level Architecture for Generic Web-Application Construction
+\layout Standard
+
+http://map1.squeakfoundation.org/sm/package/32c5401f-fa30-4a2b-80c8-1006dd462859
+\end_inset 
+
+ clsql + postgres and the UCW presentation components.
+\layout Standard
+
+This is the code to add a new contact to the system.
+ (screenshot pr0n follows).
+\layout Standard
+
+In the RENDER-ON method of my front-page i have :
+\layout LyX-Code
+
+(let ((p (make-instance 'person :person-type-code nil)))
+\layout LyX-Code
+
+  (<:as-html "Add Person :")
+\layout LyX-Code
+
+   (<ucw:render-component
+\layout LyX-Code
+
+    :component (make-presentation
+\layout LyX-Code
+
+                p
+\layout LyX-Code
+
+                :type :one-line
+\layout LyX-Code
+
+                :initargs '(:attributes
+\layout LyX-Code
+
+                            ((person-type-code :editablep t)))))
+\layout LyX-Code
+
+   (<ucw:submit :action (new-person self p) :value  "add"))
+\layout LyX-Code
+
+\layout Standard
+
+This creates a drop-down list of person-types and an "add" button which
+ calls NEW-PERSON :
+\layout LyX-Code
+
+(defaction new-person ((self component) person)
+\layout LyX-Code
+
+  "
+\layout LyX-Code
+
+Take a PERSON with a user-defined PERSON-TYPE-CODE,
+\layout LyX-Code
+
+ * Prompt the user for a FIRST-NAME, LAST-NAME and/or COMPANY-NAME
+\layout LyX-Code
+
+ * Search for similar PERSONs in the database.
+\layout LyX-Code
+
+ * If they exist, ask the user to select one or continue
+\layout LyX-Code
+
+ * otherwise, just continue editing the person"
+\layout LyX-Code
+
+  (let ((named-person
+\layout LyX-Code
+
+         (call-component self (make-presentation
+\layout LyX-Code
+
+                               person
+\layout LyX-Code
+
+                               :type 'new-person
+\layout LyX-Code
+
+                               :initargs '(:global-properties
+\layout LyX-Code
+
+                                           (:size 25 :editablep t))))))
+\layout LyX-Code
+
+    (when named-person
+\layout LyX-Code
+
+      (call-component self (make-presentation
+\layout LyX-Code
+
+                            (find-or-return-named-person self named-person)
+\layout LyX-Code
+
+                            :type :editor)))))
+\layout LyX-Code
+
+\layout LyX-Code
+
+(defaction find-or-return-named-person ((self component) person)
+\layout LyX-Code
+
+  "
+\layout LyX-Code
+
+If any similiar contacts exist in the database,
+\layout LyX-Code
+
+select one or continue with the current person
+\layout LyX-Code
+
+PERSON must have FIRST-NAME, LAST-NAME and COMPANY-NAME bound."
+\layout LyX-Code
+
+  (let ((instances (sql-word-search person 'first-name 'last-name 'company-name)
+))
+\layout LyX-Code
+
+    (if instances
+\layout LyX-Code
+
+        (call-component self (make-presentation
+\layout LyX-Code
+
+                              person
+\layout LyX-Code
+
+                              :type 'person-chooser
+\layout LyX-Code
+
+                              :initargs
+\layout LyX-Code
+
+                              `(:instances ,instances)))
+\layout LyX-Code
+
+        person)))
+\layout LyX-Code
+
+\layout Standard
+
+You can hardly tell it's a web application ...
+ there is no checking of CGI params etc...
+ just nice code in the order i wanted to write it.
+\layout Standard
+
+Screenshots :
+\layout Itemize
+
+http://tech.coop/img/screenshots/select-person-type.jpg
+\layout Itemize
+
+http://tech.coop/img/screenshots/enter-person-name.jpg
+\layout Itemize
+
+http://tech.coop/img/screenshots/select-similar-contacts.jpg
+\layout Itemize
+
+http://tech.coop/img/screenshots/edit-person-details.jpg
+\layout Itemize
+
+http://tech.coop/img/screenshots/view-recent-changes.jpg
+\layout Standard
+
+All of the code used to create the presentations for this is below my sig.
+ I do eventually plan to release the presentation system as Free Software,
+ it just needs a little cleaning up.
+ E-mail me for a sneak peak.
+\layout LyX-Code
+
+-- 
+\layout LyX-Code
+
+Drew Crampsie
+\layout LyX-Code
+
+drewc at tech dot coop
+\layout LyX-Code
+
+"Never mind the bollocks -- here's the sexp's tools."
+\layout LyX-Code
+
+    -- Karl A.
+ Krueger on comp.lang.lisp
+\layout LyX-Code
+
+\layout LyX-Code
+
+(def-view-class/table "person")
+\layout LyX-Code
+
+\layout LyX-Code
+
+(set-default-attributes (make-instance 'person)
+\layout LyX-Code
+
+\layout LyX-Code
+
+(defcomponent person-display (mewa::two-column-presentation)
+\layout LyX-Code
+
+  ())
+\layout LyX-Code
+
+\layout LyX-Code
+
+(defcomponent one-line-person (mewa::mewa-one-line-presentation)
+\layout LyX-Code
+
+  ()
+\layout LyX-Code
+
+  (:default-initargs :attributes '(first-name last-name company-name)))
+\layout LyX-Code
+
+\layout LyX-Code
+
+(setf (find-attribute 'person :one-line) '(one-line-person))
+\layout LyX-Code
+
+\layout LyX-Code
+
+(set-attribute 'person 'person-type-code '(code-select :category 1))
+\layout LyX-Code
+
+\layout LyX-Code
+
+(set-attribute 'person 'province-state-code '(code-select :category 2))
+\layout LyX-Code
+
+\layout LyX-Code
+
+(setf (find-attribute 'person :viewer) '(person-display :global-properties
+ (:editablep nil)))
+\layout LyX-Code
+
+\layout LyX-Code
+
+(set-attribute 'person :editor '(person-display :global-properties (:editablep
+ t)))
+\layout LyX-Code
+
+\layout LyX-Code
+
+(setf (find-attribute 'person 'claim->adjuster-id) '(ucw::has-very-many
+ :label "Claims as Adjuster" :slot-name claim->adjuster-id ) )
+\layout LyX-Code
+
+\layout LyX-Code
+
+(set-attribute 'person 'policy->agent-id '(ucw::has-very-many :label "Policies
+ as Agent"))
+\layout LyX-Code
+
+\layout LyX-Code
+
+(defcomponent new-person (person-display)
+\layout LyX-Code
+
+  ()
+\layout LyX-Code
+
+  (:default-initargs
+\layout LyX-Code
+
+      :attributes '(first-name last-name company-name)))
+\layout LyX-Code
+
+\layout LyX-Code
+
+(defcomponent person-chooser (mewa::mewa-list-presentation)
+\layout LyX-Code
+
+  ()
+\layout LyX-Code
+
+  (:default-initargs
+\layout LyX-Code
+
+      :attributes '(first-name
+\layout LyX-Code
+
+                   last-name
+\layout LyX-Code
+
+                   company-name
+\layout LyX-Code
+
+                   address
+\layout LyX-Code
+
+                   city
+\layout LyX-Code
+
+                   person-type-code)
+\layout LyX-Code
+
+    :global-properties '(:editablep nil)
+\layout LyX-Code
+
+    :editablep nil
+\layout LyX-Code
+
+    :deleteablep nil))
+\layout LyX-Code
+
+\layout LyX-Code
+
+(defmethod render-on :wrapping ((res response) (self person-chooser))
+\layout LyX-Code
+
+  (<:p (<:as-html "Similar contact(s) in database.
+ You can :")
+\layout LyX-Code
+
+       (<:ul
+\layout LyX-Code
+
+        (<:li (<:as-html "Select one of the contacts below"))
+\layout LyX-Code
+
+        (<:li (<ucw:a :action (answer (instance self))
+\layout LyX-Code
+
+                      (<:as-html "Continue, adding a new contact")))))
+\layout LyX-Code
+
+  (call-next-method))
+\layout LyX-Code
+
+\layout LyX-Code
+
+(defaction ok  ((self new-person) &optional arg)
+\layout LyX-Code
+
+  (declare (ignore arg))
+\layout LyX-Code
+
+  (answer (instance self)))
+\layout LyX-Code
+
+\layout LyX-Code
+
+(defmethod sql-word-search ((instance standard-db-object) &rest slots)
+\layout LyX-Code
+
+  (let ((names
+\layout LyX-Code
+
+         (loop for slot in slots
+\layout LyX-Code
+
+               nconc (split-sequence #
+\backslash 
+Space (slot-value instance slot)))))
+\layout LyX-Code
+
+    (select (class-name (class-of instance))
+\layout LyX-Code
+
+            :where (sql-or  (mapcar #'(lambda (x)
+\layout LyX-Code
+
+                                        (when (< 0 (length x))
+\layout LyX-Code
+
+                                          (apply #'sql-or
+\layout LyX-Code
+
+                                                 (mapcar #'(lambda (y)
+\layout LyX-Code
+
+                                                             (sql-uplike
+\layout LyX-Code
+
+(sql-slot-value 'person y)
+\layout LyX-Code
+
+                                                              (format nil
+ "%~a%" x)))
+\layout LyX-Code
+
+                                                         slots))))
+\layout LyX-Code
+
+                                    names))
+\layout LyX-Code
+
+            :flatp t))) 
+\layout LyX-Code
+
 \the_end

@@ -1,0 +1,777 @@
+LISP-ON-LINES
+
+Drew Crampsie, José Pablo Ezequiel "Pupeno" Fernández Silva
+
+Abstract
+
+Lisp-On-Lines is a very useful module that works on top 
+of the UnCommon Web framework to do rapid developing of 
+complex data-driven web appilcations (on Common Lisp, 
+of course).
+
+1 Introduction
+
+Lisp-On-Lines was founded and developed and continues 
+to be developed and mantained by Drew Crampsie.
+
+1.1 Conventions
+
+The conventions used in this manual are:
+
+* Code is shown in a monospace font. When it is 
+  expected that the user is working in an interactive 
+  environment what the user should type appears as 
+  bold, while the computer result appears non-bold, for example:
+
+  > (+ 5 10)
+
+  15
+
+* Names of people or products are show as small caps, 
+  like Drew Crampsie or Lisp-On-Lines.
+
+* Sections marked with ToDo require further revision.
+
+ToDo: Add more conventions as they are needed, possible 
+classes of text: names of concepts, name of programming 
+entities, like variables, functions, etc (which are 
+embedded in text, should they be shown monospaced ?).
+
+2 Components
+
+  Meta Model Protocol A Protocol for introspection on 
+  relational objects.
+
+  Mewa Presentations A Mewa-likehttp://www.adrian-lienhard.ch/files/mewa.pdf layer for UncommonWebhttp://common-lisp.net/project/ucw/ 
+  Presentations.
+
+3 Example
+
+First we start with the data model. The Meta Model 
+Protocol (MMP) is used to provide information on the 
+data objects and how they relate to one another. Its is 
+currently implemented as a layer over CLSQLhttp://clsql.b9.com/, although 
+support is planned for other backends (CLOS, 
+Elephant[4], whatever).
+
+The MMP shares its definition syntax with CLSQL's 
+Object Oriented Data Definition Language (OODDL)http://clsql.b9.com/manual/ref-ooddl.html. The 
+macro to define view-classes is named 
+DEF-VIEW-CLASS/META, and takes the same arguments as 
+DEF-VIEW-CLASS from CLSQL. For the purposes of this 
+simple example, we will only need two functions from 
+the MMP beyond what CLSQL provides : LIST-SLOTS and 
+LIST-SLOT-TYPES[5].
+
+We'll define a simple class to hold a user.
+
+> (def-view-class/meta user () 
+
+   ((userid :initarg :userid :accessor userid :type 
+integer :db-kind :key)
+
+    (username :initarg :username :accessor username 
+:type string :db-kind :base)
+
+    (password :initarg :password :accessor password 
+:type string :db-kind :base)))
+
+and now we create a user:
+
+> (defparameter user (make-instance 'user :userid 1 
+
+                                          :username "drewc"
+
+                                          :password "p@ssw0rd"))
+
+We can see the slots of users running:
+
+> (lisp-on-lines::list-slots user)
+
+(USERID USERNAME PASSWORD)
+
+or the types with:
+
+> (lisp-on-lines::list-slot-types user)
+
+((USERID INTEGER) (USERNAME STRING) (PASSWORD STRING))
+
+To see the default attributes of a classIs this correct ? Drew, please, check. we run.
+
+> (lisp-on-lines::default-attributes user)
+
+((USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+
+ (USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+
+ (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD))
+
+To set the attributes of a class to the default values 
+we use:
+
+> (lisp-on-lines::set-default-attributes user)
+
+((USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+
+ (USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+
+ (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD))
+
+which takes an object of the class we are working with. 
+This is going to be change so we can do this action 
+directly on the class. It is on the TODO file.
+
+Class attributes?
+
+> (lisp-on-lines::find-class-attributes user)
+
+(USER (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)
+
+      (USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+
+      (USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+
+      NIL)
+
+note that the mewa functions (find-attribute, 
+set-attribute etc) can take either an instance, or a 
+class-name as a symbol:
+
+> (lisp-on-lines::find-class-attributes 'user)
+
+(USER (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)
+
+      (USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+
+      (USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+
+      NIL)
+
+> (lisp-on-lines::find-class-attributes (make-instance 'user))
+
+(USER (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)
+
+      (USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+
+      (USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+
+      NIL)
+
+Using that information, we have enough to create an 
+interface to the object. UnCommon Web includes a 
+powerful presentation systemTo see this system in action, we strongly recomend to 
+study the presentations example which comes with 
+UnCommon Web. Reading components/presentations.lisp can 
+help understand a lot about how presentations are built.
+, but it is not dynamic enough for some of the most 
+advanced applications. Mewa defines an approach to 
+presentations that solves that problem, but the paper 
+is written from a Smalltalk point of view. A mixture of 
+the two , Mewa Presentations(MP), is described here.
+
+MP introduces to UnCommon Web the concept of 
+attributes. An attribute is essentially a named version 
+of the DEFPRESENTATION slot-like arguments, for example 
+in :
+
+> (defpresentation person-editor (object-presentation)
+
+   ((string :label "First Name" :slot-name 'first-name 
+:max-length 30)))
+
+the (string :label "First Name" ...) form is an 
+attribute definiton. Attributes are accessed through 
+FIND-ATTIRIBUTES, and are composed at run time (where 
+the UnCommon Web's presentation system is done at 
+compile time) to display the object. This allows a very 
+flexible system of displaying objects which is 
+reminiscent of CSSDrew Crapmsie discovered this, rather than invent or 
+design it, so there are some rough edges, but its a 
+good start.
+.
+
+Its much easier to show this than to tell. Lets present 
+our user class. Currently in UnCommon Web, you'd define 
+a presentation as such :
+
+> (defpresentation user-presentation (object-presentation)
+
+((INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+
+ (STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+
+ (STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)))
+
+which could be presented using PRESENT-OBJECT :
+
+> (present-object user :using 'user-presentation)
+
+The equivalent approach using mewa presentations is 
+actually longer and more verbose(!) but it serves to 
+demonstrate how the MP system works.
+
+Mewa Presentations adds a set of attributes to a class, 
+keyed off the class name. Attributes are inherited, so 
+if you define an attribute on T, you can use it with 
+any class.
+
+MP stores named attributes keyed on a class name. To 
+achieve the same functionality as the above using mp 
+would look like this :
+
+> (setf (lisp-on-lines::find-attribute 'user :viewer)Isn't this too imperative (in contrast to functional, lispy).
+
+        '(lisp-on-lines::mewa-object-presentation
+
+          :attributes (userid username password)
+
+          :global-properties (:editablep nil)))
+
+(:VIEWER MEWA-OBJECT-PRESENTATION
+
+         :ATTRIBUTES
+
+         (USERID USERNAME PASSWORD)
+
+         :GLOBAL-PROPERTIES
+
+         (:EDITABLEP NIL))
+
+> (setf (lisp-on-lines::find-attribute 'user 'userid)Are this setfs to 'userid, 'username and 'password 
+needed ? I (Pupeno) inspected they contents at of this 
+moment and they seem to already contain what they are 
+being set to.
+
+        '(integer :label "userid" :slot-name userid))
+
+(USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+
+> (setf (lisp-on-lines::find-attribute 'user 'username)
+
+        '(STRING :LABEL "USERNAME" :SLOT-NAME USERNAME))
+
+(USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+
+> (setf (lisp-on-lines::find-attribute 'user 'password)
+
+        '(STRING :LABEL "USERNAME" :SLOT-NAME PASSWORD))
+
+(PASSWORD STRING :LABEL "USERNAME" :SLOT-NAME PASSWORD)
+
+> (lisp-on-lines::find-class-attributes 'user)
+
+(USER
+
+ (:VIEWER MEWA-OBJECT-PRESENTATION
+
+          :ATTRIBUTES
+
+          (USERID USERNAME PASSWORD)
+
+          :GLOBAL-PROPERTIES
+
+          (:EDITABLEP NIL))
+
+ (PASSWORD STRING :LABEL "PASSWORD" :SLOT-NAME PASSWORD)
+
+ (USERNAME STRING :LABEL "USERNAME" :SLOT-NAME USERNAME)
+
+ (USERID INTEGER :LABEL "USERID" :SLOT-NAME USERID)
+
+ NIL)
+
+this is all turned into a UnCommon Web presentation at 
+runtime using MAKE-PRESENTATION, for example, the 
+following code should be enough to show what's built so 
+far attached to the examples application:
+
+> (defcomponent lol-example (window-component)
+
+   ())
+
+> (defmethod render-on ((res response) (lol-example lol-example))
+
+    (<:h1 "User")
+
+    (<ucw:render-component :component 
+(lisp-on-lines::make-presentation user :type :viewer)))
+
+> (defentry-point "lol.ucw" (:application 
+*example-application*) ()
+
+    (call 'lol-example))
+
+As you'll see, nothing is exported from the 
+LISP-ON-LINES package. If you wish to use LOL in your 
+own package (or in UCW-USER or whatever), you simply 
+need to use the MEWA and META-MODEL packages.
+
+SET-ATTRIBUTE can be used in place of (setf 
+(find-attribute ...)) when you want to "inherit" the 
+properties of an existing attribute definition :
+
+LISP-ON-LINES> (set-attribute 'user 'password '(string 
+:label "password: (must be at least 8 chars)"))
+
+(PASSWORD STRING
+
+:LABEL
+
+"password: (must be at leat 8 chars)"
+
+:SLOT-NAME
+
+PASSWORD)
+
+Now we want to create a presentation with which to edit 
+the username. we will use the existing attributes on a 
+subclass of mewa-object-presetation :
+
+> (defcomponent user-editor (mewa-object-presentation)
+
+   ()
+
+   (:default-initargs 
+
+     :attributes '((username :label "Enter your New 
+Username") password)
+
+     :global-properties '(:editablep t)))
+
+USER-EDITOR
+
+LISP-ON-LINES> (setf (find-attribute 'user :editor) 
+'(user-editor))
+
+(:EDITOR USER-EDITOR)
+
+which we then can display below our earlier example :
+
+(defmethod render-on ((res response) (e presentations-index))
+
+"
+
+As you'll see, nothing is exported from the 
+LISP-ON-LINES package. 
+
+if you wish to use LOL in your own package (or in 
+UCW-USER or whatever),
+
+you simply need to use the MEWA and META-MODEL 
+packages" 
+
+(<ucw:render-component :component 
+(lisp-on-lines::make-presentation lisp-on-lines::user 
+:type :viewer))
+
+(<ucw:render-component :component 
+(lisp-on-lines::make-presentation lisp-on-lines::user 
+:type :editor)))
+
+that should give you some idea on how it works .. ask 
+me when you get confused :)
+
+4 Pupeno's Example
+
+This is Pupeno's view of how to do rapid developing of 
+a database-driven web application. It currently is 
+going to assume a very specific case but latter it may 
+be made bigger.
+
+We first start with a PostgreSQL connection of CLSQL 
+which is set up with one line:
+
+> (clsql:connect '("localhost" "geo" "geo" "geogeo"))
+
+which connect us to the server on localhost, to the 
+database geo as user "geo" with password "geogeo" (this is 
+not a smart way to generate password, don't do this). 
+To have a nice SQL environment, we also want:
+
+> (clsql:locally-enable-sql-reader-syntax)
+
+> (setf clsql:*default-caching* nil)
+
+Actually, it is more than a nice environmnet, without 
+those lines the rest of the code won't work.
+
+On the geo database, there's a table called product 
+which has the following structure:
+
+CREATE TABLE product (
+
+    id serial NOT NULL,
+
+    name text NOT NULL,
+
+    details text,
+
+    description text,
+
+    cost double precision,
+
+    CONSTRAINT product_cost_check CHECK ((cost > 
+(0)::double precision))
+
+);
+
+ALTER TABLE ONLY product ADD CONSTRAINT 
+product_name_key UNIQUE (name);
+
+ALTER TABLE ONLY product ADD CONSTRAINT product_pkey 
+PRIMARY KEY (id);
+
+ToDo: express the table structure in a better way.
+
+Now we'll create the class that represents a product, 
+mirroring the database structure:
+
+> (lisp-on-lines::def-view-class/table "product")
+
+and then we generate the default attributes (from 
+product's slots) and assign it to product:
+
+> (lisp-on-lines::set-default-attributes (make-instance 
+'product))set-default-attributes is marked to be renamed to 
+set-generated-attributes.
+
+As you can see, we instantiate product to pass it to 
+set-default-attributes, because it expects an object 
+instead of a class. We don't need the object anymore, 
+so we don't save any reference to it. In the future we 
+might have a set-default-attributes that can use a 
+class directly. Now we set a the attribute :viewer to 
+contain the mewa-object-presentation exposing the 
+attributes we like the user to work with:
+
+> (setf (lisp-on-lines::find-attribute (make-instance 
+'product) :viewer)
+
+        '(lisp-on-lines::mewa-object-presentation 
+
+          :attributes (name details description cost)
+
+          :global-properties (:editablep nil)))
+
+The last parameter is a list of properties that will be 
+applied to each attribute.
+
+5 Yet Another Example .
+
+Drew Crampsie Posted the following to comp.lang.lisp .. 
+it just might help until he writes some real 
+documentation. 
+
+I've written a system that generates presentations for 
+database objects based on the type and relation 
+information in the system catalog. Its based on MewaMewa : Meta-level Architecture for Generic 
+Web-Application Construction
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+http://map1.squeakfoundation.org/sm/package/32c5401f-fa30-4a2b-80c8-1006dd462859
+ clsql + postgres and the UCW presentation components.
+
+This is the code to add a new contact to the system. 
+(screenshot pr0n follows).
+
+In the RENDER-ON method of my front-page i have :
+
+
+
+(let ((p (make-instance 'person :person-type-code nil)))
+
+   (<:as-html "Add Person :")
+
+   (<ucw:render-component
+
+    :component (make-presentation
+
+                p
+
+                :type :one-line
+
+                :initargs '(:attributes
+
+                            ((person-type-code 
+:editablep t)))))
+
+   (<ucw:submit :action (new-person self p) :value  "add"))
+
+
+
+
+
+This creates a drop-down list of person-types and an 
+"add" button which calls NEW-PERSON :
+
+(defaction new-person ((self component) person)
+
+  "
+
+Take a PERSON with a user-defined PERSON-TYPE-CODE,
+
+ * Prompt the user for a FIRST-NAME, LAST-NAME and/or 
+COMPANY-NAME
+
+ * Search for similar PERSONs in the database.
+
+ * If they exist, ask the user to select one or continue
+
+ * otherwise, just continue editing the person"
+
+  (let ((named-person
+
+         (call-component self (make-presentation
+
+                               person
+
+                               :type 'new-person
+
+                               :initargs '(:global-properties
+
+                                           (:size 25 
+:editablep t))))))
+
+    (when named-person
+
+      (call-component self (make-presentation
+
+                            
+(find-or-return-named-person self named-person)
+
+                            :type :editor)))))
+
+
+
+(defaction find-or-return-named-person ((self 
+component) person)
+
+  "
+
+If any similiar contacts exist in the database,
+
+select one or continue with the current person
+
+PERSON must have FIRST-NAME, LAST-NAME and COMPANY-NAME bound."
+
+  (let ((instances (sql-word-search person 'first-name 
+'last-name 'company-name)))
+
+    (if instances
+
+        (call-component self (make-presentation
+
+                              person
+
+                              :type 'person-chooser
+
+                              :initargs
+
+                              `(:instances ,instances)))
+
+        person)))
+
+You can hardly tell it's a web application ... there is 
+no checking of CGI params etc... just nice code in the 
+order i wanted to write it.
+
+Screenshots :
+
+* http://tech.coop/img/screenshots/select-person-type.jpg
+
+* http://tech.coop/img/screenshots/enter-person-name.jpg
+
+* http://tech.coop/img/screenshots/select-similar-contacts.jpg
+
+* http://tech.coop/img/screenshots/edit-person-details.jpg
+
+* http://tech.coop/img/screenshots/view-recent-changes.jpg
+
+All of the code used to create the presentations for 
+this is below my sig. I do eventually plan to release 
+the presentation system as Free Software, it just needs 
+a little cleaning up. E-mail me for a sneak peak.
+
+-- 
+
+Drew Crampsie
+
+drewc at tech dot coop
+
+"Never mind the bollocks -- here's the sexp's tools."
+
+    -- Karl A. Krueger on comp.lang.lisp
+
+
+
+(def-view-class/table "person")
+
+
+
+(set-default-attributes (make-instance 'person)
+
+
+
+(defcomponent person-display (mewa::two-column-presentation)
+
+  ())
+
+
+
+(defcomponent one-line-person (mewa::mewa-one-line-presentation)
+
+  ()
+
+  (:default-initargs :attributes '(first-name last-name 
+company-name)))
+
+
+
+(setf (find-attribute 'person :one-line) '(one-line-person))
+
+
+
+(set-attribute 'person 'person-type-code '(code-select 
+:category 1))
+
+
+
+(set-attribute 'person 'province-state-code 
+'(code-select :category 2))
+
+
+
+(setf (find-attribute 'person :viewer) '(person-display 
+:global-properties (:editablep nil)))
+
+
+
+(set-attribute 'person :editor '(person-display 
+:global-properties (:editablep t)))
+
+
+
+(setf (find-attribute 'person 'claim->adjuster-id) 
+'(ucw::has-very-many :label "Claims as Adjuster" 
+:slot-name claim->adjuster-id ) )
+
+
+
+(set-attribute 'person 'policy->agent-id 
+'(ucw::has-very-many :label "Policies as Agent"))
+
+
+
+(defcomponent new-person (person-display)
+
+  ()
+
+  (:default-initargs
+
+      :attributes '(first-name last-name company-name)))
+
+
+
+(defcomponent person-chooser (mewa::mewa-list-presentation)
+
+  ()
+
+  (:default-initargs
+
+      :attributes '(first-name
+
+                   last-name
+
+                   company-name
+
+                   address
+
+                   city
+
+                   person-type-code)
+
+    :global-properties '(:editablep nil)
+
+    :editablep nil
+
+    :deleteablep nil))
+
+
+
+(defmethod render-on :wrapping ((res response) (self 
+person-chooser))
+
+  (<:p (<:as-html "Similar contact(s) in database. You 
+can :")
+
+       (<:ul
+
+        (<:li (<:as-html "Select one of the contacts below"))
+
+        (<:li (<ucw:a :action (answer (instance self))
+
+                      (<:as-html "Continue, adding a 
+new contact")))))
+
+  (call-next-method))
+
+
+
+(defaction ok  ((self new-person) &optional arg)
+
+  (declare (ignore arg))
+
+  (answer (instance self)))
+
+
+
+(defmethod sql-word-search ((instance 
+standard-db-object) &rest slots)
+
+  (let ((names
+
+         (loop for slot in slots
+
+               nconc (split-sequence #\Space 
+(slot-value instance slot)))))
+
+    (select (class-name (class-of instance))
+
+            :where (sql-or  (mapcar #'(lambda (x)
+
+                                        (when (< 0 
+(length x))
+
+                                          (apply #'sql-or
+
+                                                 
+(mapcar #'(lambda (y)
+
+                                                        
+     (sql-uplike
+
+(sql-slot-value 'person y)
+
+                                                        
+      (format nil "%~a%" x)))
+
+                                                        
+ slots))))
+
+                                    names))
+
+            :flatp t))) 
