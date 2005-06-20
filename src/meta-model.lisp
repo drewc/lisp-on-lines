@@ -177,5 +177,13 @@
   "returns the SLOT in the foreign VIEW-CLASS that joins with FOREIGN-KEY"
   (car (list-relations-helper view (find-join-helper foreign-key) :return-key :foreign-key)))
 
+(defmethod explode-has-many ((view t) join-slot)
+  "returns the class of the join as the primary value, the second and third value is the home key and the foreign key"
+  (let ((att (assoc join-slot (list-join-attributes view))))
+    (values (getf (cdr att) :join-class) 
+	    (getf (cdr att) :home-key) 
+	    (getf (cdr att) :foreign-key))))
+  
+
 
 

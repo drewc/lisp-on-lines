@@ -85,6 +85,7 @@ attributes is an alist keyed on the attribute nreeame."
 
 
 (defmethod default-attributes ((model t))
+  "return the default attributes for a given model using the meta-model's meta-data"
   (append (mapcar #'(lambda (s) 
 		      (cons (car s) 
 			    (gen-pslot 

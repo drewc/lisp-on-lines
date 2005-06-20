@@ -14,7 +14,11 @@
   (labels ((sym->sql (sym) (string-downcase (substitute #\_ #\- (string sym))))
            (get-def (slot) (caar (query
                                   (format nil                                                             "SELECT DISTINCT adsrc from pg_attrdef join pg_attribute on attnum = adnum where adrelid = (select oid from pg_class where relname = '~A') and attname = '~A'" (sym->sql (class-name (class-of view))) (sym->sql slot)))))
-           (get-default-value (slot) (caar (query (format nil "SELECT ~A" (get-def slot))))))
+           (get-default-value (slot) 
+	     (let ((def (get-def slot)))
+	       (if def
+		   (caar (query (format nil "SELECT ~A" def)))
+		   (error "No default value for primary key : ~A" slot)))))
 
     (dolist (slot (list-slots view))
       (when (and (primary-key-p view slot)
@@ -22,7 +26,8 @@
                      (equal (slot-value view slot) nil)))
         (setf (slot-value view slot) (get-default-value slot)))))
   (update-records-from-instance view :database database)
-  (update-instance-from-records view :database database))
+  (update-instance-from-records view :database database)
+  (update-objects-joins (list view)))
 
 
 
