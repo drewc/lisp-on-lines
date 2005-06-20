@@ -94,3 +94,12 @@
 	    (slot-value listing 'ucw::continuation) (slot-value self 'ucw::continuation))
     
       (render-on res listing))))
+
+
+;;;;
+(defcomponent dont-show-unset-slots ()())
+
+(defmethod slots :around ((self dont-show-unset-slots))
+  (remove-if-not #'(lambda (s) (let ((s (presentation-slot-value s (instance self))))
+				 (and s (not (equal "" s)))))
+		 (call-next-method)))
