@@ -1,5 +1,8 @@
 (in-package :mewa)
 
+(defaction edit-instance ((self mewa))
+  (call-presentation (instance self) :type :editor))
+
 ;;;one-line objects
 (defcomponent mewa-one-line-presentation (mewa one-line-presentation)
   ()
