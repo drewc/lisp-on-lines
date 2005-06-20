@@ -1,5 +1,12 @@
 (in-package :it.bese.ucw)
 
+(defun multiple-value-funcall->list (function &rest args)
+		   (multiple-value-call #'list (apply function args)))
+
+(defmacro multiple-value-bindf (vars form &body body)
+		   `(destructuring-bind ,vars 
+		     (multiple-value-funcall->list #',(car form) ,@(cdr form))
+		     ,@body))
 
 (defslot-presentation clsql-wall-time-slot-presentation (mewa-relation-slot-presentation)
        ()
