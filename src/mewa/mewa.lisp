@@ -89,13 +89,17 @@ attributes is an alist keyed on the attribute nreeame."
   (append (mapcar #'(lambda (s) 
 		      (cons (car s) 
 			    (gen-pslot 
-			     (if (meta-model:foreign-key-p model
-							   'ucw::foreign-key
-							   (car s))
-						   (cadr s))
-						 (string (car s)) (car s)))) 
-	  (meta-model:list-slot-types model))
-	  (mapcar #'(lambda (s) (cons s (append (gen-pslot 'ucw::has-many (string s) s) `(:presentation (make-presentation ,model :type :one-line)))))
+			     (if (meta-model:foreign-key-p model (car s))
+				 'ucw::foreign-key
+				 (cadr s))
+			     (string (car s)) (car s)))) 
+		  (meta-model:list-slot-types model))
+	  (mapcar #'(lambda (s) 
+		      (cons s (append (gen-pslot 'ucw::has-many (string s) s) 
+				      `(:presentation 
+					(make-presentation 
+					 ,model 
+					 :type :one-line)))))
 		  (meta-model:list-has-many model))))
 
 (defmethod set-default-attributes ((model t))
@@ -269,7 +273,11 @@ attributes is an alist keyed on the attribute nreeame."
 
 
 (defaction cancel-save-instance ((self mewa))
-  (answer nil))
+  (cond  
+    ((slot-value (instance self) 'clsql-sys::view-database)
+      (meta-model::update-instance-from-records (instance self))
+      (answer self))
+    (t (answer nil))))
 
 (defaction save-instance ((self mewa))
   (meta-model:sync-instance (instance self))
