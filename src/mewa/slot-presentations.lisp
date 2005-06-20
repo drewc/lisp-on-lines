@@ -82,18 +82,10 @@
 		:initargs (list 
 			   :global-properties 
 			   (list :editablep nil :linkedp nil)))))
-      (when (ucw::parent slot) (setf (component.place pres) (component.place (ucw::parent slot))))
-      (flet ((render () (when i (<ucw:render-component :component pres))))
-      (cond 
-	((editablep slot)
-	 (render)
-	 (<ucw:a :action (search-records slot instance) (<:as-html " (search)"))
-	 (<ucw:a :action (create-record slot i) (<:as-html " (new)")))
-	((linkedp slot)
-	 (<ucw:a :action (view-instance slot i) 
-		 (render)))
-	(t       
-	 (render))))))
+      (when (ucw::parent slot) 
+	(setf (component.place pres) (component.place (ucw::parent slot))))
+      (when i (<ucw:render-component :component pres))))
+      ))
 
 
 
@@ -108,24 +100,56 @@
 (defaction view-instance ((self component) instance &rest initargs)
   (call-component (parent self) (apply #'mewa:make-presentation instance initargs)))
 
-(defmethod  present-slot :before ((slot foreign-key-slot-presentation) instance)
-  (setf (foreign-instance slot) (meta-model:explode-foreign-key instance (slot-name slot))))
+
+(defmethod  present-slot :around ((slot foreign-key-slot-presentation) instance)
+  (setf (foreign-instance slot) (when (presentation-slot-value slot instance) (meta-model:explode-foreign-key instance (slot-name slot))))
+  (flet ((render () (call-next-method)))
+    (cond 
+      ((editablep slot)
+       (render)
+       (<ucw:a :action (search-records slot instance) (<:as-html " (search)"))
+       (<ucw:a :action (create-record slot instance) (<:as-html " (new)")))
+      ((linkedp slot)
+       (<ucw:a :action (view-instance slot (foreign-instance slot)) 
+	       (render)))
+      (t       
+       (render)))))
 
 ;;;; HAS MANY 
 (defslot-presentation has-many-slot-presentation (mewa-relation-slot-presentation)
   ()
   (:type-name has-many))
 
+
+(defun get-join-class-info (slot instance)
+  "hack around m-v-b"
+  (multiple-value-bind (s h f) (meta-model:explode-has-many instance (slot-name slot))
+    (list s h f)))
+((jci (get-join-class-info slot instance))
+	 (class (first jci))
+	 (home (second jci))
+	 (foreign (third jci)))
+
+(defaction add-to-has-many ((slot has-many-slot-presentation) instance)
+  (destructuring-bind (class home foreign) 
+      (maxwell-web-gui::multiple-value-funcall #'meta-model:explode-has-many instance (slot-name slot))
+    (let ((new (make-instance class)))
+      (setf (slot-value new foreign) (slot-value instance home))
+      (meta-model:sync-instance new)
+      (call-component (parent slot) (mewa:make-presentation new :type :editor)))))
+
 (defmethod present-slot ((slot has-many-slot-presentation) instance)
+  (<ucw:a :action (add-to-has-many slot instance) 
+	  (<:as-html "(add new)"))
   (let ((i (get-foreign-instances slot instance))
 	(linkedp (linkedp slot)))
-  (<:ul 
-   (dolist (s i)
-     (let ((s s))
-     (setf (foreign-instance slot) s)
-     (<ucw:a :action (view-instance slot s :initargs `(:global-properties ,(list :linkedp t :editablep nil)))
-     (<:li   (setf (linkedp slot) nil)
-	     (present-relation slot instance))))))))
+    (<:ul 
+     (dolist (s i)
+       (let ((s s))
+	 (setf (foreign-instance slot) s)
+	 (<ucw:a :action (view-instance slot s :initargs `(:global-properties ,(list :linkedp t :editablep nil)))
+		 (<:li   (setf (linkedp slot) nil)
+			 (present-relation slot instance))))))))
 
 
 (defmethod get-foreign-instances ((slot has-many-slot-presentation) instance)

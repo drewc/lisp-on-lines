@@ -31,12 +31,29 @@
    :explode-foreign-key
    :list-has-many
    :list-many-to-many
-   :sync-instance))
+   :sync-instance
+   :explode-has-many))
 
 
 (defpackage :mewa 
   (:use :ucw :common-lisp)
-  (:export :mewa :mewa-object-presentation :mewa-one-line-presentation :find-attribute :set-default-attributes :make-presentation :call-presentation :label :set-attribute :find-class-attributes :default-attributes :ok))
+  (:export 
+   :mewa 
+   :mewa-object-presentation 
+   :mewa-one-line-presentation 
+   :find-attribute 
+   :set-default-attributes 
+   :make-presentation 
+   :call-presentation 
+   :label 
+   :set-attribute 
+   :find-class-attributes 
+   :default-attributes 
+   :ok
+   :edit-instance
+   :save-instance
+   :cancel-save-instance
+   :global-properties))
 
 
 (defpackage :lisp-on-lines
