@@ -85,7 +85,6 @@
       (when (ucw::parent slot) 
 	(setf (component.place pres) (component.place (ucw::parent slot))))
       (when i (<ucw:render-component :component pres))))
-      ))
 
 
 
@@ -125,14 +124,10 @@
   "hack around m-v-b"
   (multiple-value-bind (s h f) (meta-model:explode-has-many instance (slot-name slot))
     (list s h f)))
-((jci (get-join-class-info slot instance))
-	 (class (first jci))
-	 (home (second jci))
-	 (foreign (third jci)))
 
 (defaction add-to-has-many ((slot has-many-slot-presentation) instance)
   (destructuring-bind (class home foreign) 
-      (maxwell-web-gui::multiple-value-funcall #'meta-model:explode-has-many instance (slot-name slot))
+      (multiple-value-funcall #'meta-model:explode-has-many instance (slot-name slot))
     (let ((new (make-instance class)))
       (setf (slot-value new foreign) (slot-value instance home))
       (meta-model:sync-instance new)
