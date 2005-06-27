@@ -44,9 +44,9 @@
 	(old-time (when (slot-boundp instance (slot-name slot))
 		    (slot-value instance (slot-name slot)))))
     (unless (or (eql old-time new-time)
-		(and (null old-time) new-time)
-		 (equal :equal (clsql:time-compare new-time old-time)))
-      (setf (presentation-slot-value slot instance) new-time ))))
+		(when (and new-time old-time)
+		  (equal :equal (clsql:time-compare new-time old-time))))
+    (setf (presentation-slot-value slot instance) new-time ))))
 
 (defmethod label :around ((slot clsql-wall-time-slot-presentation))
   (concatenate 'string (call-next-method) "  (mm/dd/yyyy)"))
@@ -142,18 +142,14 @@
   (:type-name has-many))
 
 
-(defun get-join-class-info (slot instance)
-  "hack around m-v-b"
-  (multiple-value-bind (s h f) (meta-model:explode-has-many instance (slot-name slot))
-    (list s h f)))
-
 (defaction add-to-has-many ((slot has-many-slot-presentation) instance)
   (destructuring-bind (class home foreign) 
-      (multiple-value-funcall->list #'meta-model:explode-has-many instance (slot-name slot))
+      (multiple-value-funcall #'meta-model:explode-has-many instance (slot-name slot))
     (let ((new (make-instance class)))
       (setf (slot-value new foreign) (slot-value instance home))
       (meta-model:sync-instance new :fill-gaps-only t)
-      (call-component (parent slot) (mewa:make-presentation new :type :editor)))))
+      (call-component (parent slot) (mewa:make-presentation new :type :editor))
+      (meta-model:sync-instance (instance (parent slot))))))
 
 (defmethod present-slot ((slot has-many-slot-presentation) instance)
   (<ucw:a :action (add-to-has-many slot instance) 
@@ -171,6 +167,9 @@
 
 (defmethod get-foreign-instances ((slot has-many-slot-presentation) instance)
   (slot-value instance (slot-name slot)))
+
+(defmethod presentation-slot-value ((slot has-many-slot-presentation) instance)
+  (get-foreign-instances slot instance))
 
 (defslot-presentation has-very-many-slot-presentation (has-many-slot-presentation)
   ((number-to-display :accessor number-to-display :initarg :number-to-display :initform 10)
