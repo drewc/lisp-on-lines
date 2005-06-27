@@ -1,3 +1,4 @@
+
 (in-package :mewa)
  
 (defparameter *default-type* :ucw)
@@ -318,3 +319,11 @@ attributes is an alist keyed on the attribute nreeame."
     (let ((self (ucw::parent slot)))
       (setf (modifiedp self) instance
 	    (modifications self)  (append (list  (type-of new) (type-of old) (type-of value) slot instance )))))))
+
+
+;; This software is Copyright (c) Drew Crampsie, 2004-2005.
+;; You are granted the rights to distribute
+;; and use this software as governed by the terms
+;; of the Lisp Lesser GNU Public License
+;; (http://opensource.franz.com/preamble.html),
+;; known as the LLGPL.

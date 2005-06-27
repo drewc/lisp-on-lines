@@ -165,7 +165,8 @@
     (when (equal (getf (cdr s) :home-key) slot)
       (let ((val (slot-value model (car s))))
       (return-from explode-foreign-key 
-	(values (if val val (make-instance (getf (cdr s) :join-class))) (getf (cdr s) :foreign-key)))))))
+	(values (if val val (make-instance (getf (cdr s) :join-class))) 
+		(getf (cdr s) :foreign-key)))))))
 
 (defun find-join-helper (foreign-key)
   (lambda (class slot) 
