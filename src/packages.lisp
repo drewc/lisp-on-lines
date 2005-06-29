@@ -65,9 +65,7 @@
    :edit-instance
    :save-instance
    :cancel-save-instance
-   :global-properties
-   :search-expr
-   :search-query))
+   :global-properties))
 
 
 (defpackage :lisp-on-lines

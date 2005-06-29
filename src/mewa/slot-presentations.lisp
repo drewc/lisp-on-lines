@@ -119,7 +119,9 @@
   (:default-initargs))
 
 (defaction view-instance ((self component) instance &rest initargs)
-  (call-component (parent self) (apply #'mewa:make-presentation instance initargs)))
+  (call-component (parent self) (apply #'mewa:make-presentation instance initargs))
+  ;; the viewed instance could have been changed/deleted, so we sync this instance
+  (meta-model:sync-instance (instance (parent self))))
 
 
 (defmethod  present-slot :around ((slot foreign-key-slot-presentation) instance)
@@ -128,8 +130,8 @@
     (cond 
       ((editablep slot)
        (render)
-       (<ucw:a :action (search-records slot instance) (<:as-html " (search)"))
-       (<ucw:a :action (create-record slot instance) (<:as-html " (new)")))
+       (<ucw:submit :action  (search-records slot instance) :value "Search" :style "display:inline")
+       (<ucw:submit :action  (create-record slot instance) :value "Add New" :style "display:inline"))
       ((linkedp slot)
        (<ucw:a :action (view-instance slot (foreign-instance slot)) 
 	       (render)))
@@ -138,7 +140,7 @@
 
 ;;;; HAS MANY 
 (defslot-presentation has-many-slot-presentation (mewa-relation-slot-presentation)
-  ()
+  ((add-new-label :accessor add-new-label :initarg :add-new-label :initform "Add New"))
   (:type-name has-many))
 
 
@@ -152,8 +154,7 @@
       (meta-model:sync-instance (instance (parent slot))))))
 
 (defmethod present-slot ((slot has-many-slot-presentation) instance)
-  (<ucw:a :action (add-to-has-many slot instance) 
-	  (<:as-html "(add new)"))
+  (<ucw:submit :action (add-to-has-many slot instance) :value (add-new-label slot))
   (let ((i (get-foreign-instances slot instance))
 	(linkedp (linkedp slot)))
     (<:ul 

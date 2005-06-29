@@ -277,8 +277,6 @@ attributes is an alist keyed on the attribute nreeame."
 (defmacro call-presentation (object &rest args)
   `(present-object ,object :presentation (make-presentation ,object ,@args)))
 
-
-
 (defaction cancel-save-instance ((self mewa))
   (cond  
     ((slot-value (instance self) 'clsql-sys::view-database)
@@ -295,6 +293,10 @@ attributes is an alist keyed on the attribute nreeame."
 (defaction ok ((self mewa) &optional arg)
   "Returns the component if it has not been modified. if it has been, prompt user to save or cancel"
   (declare (ignore arg))
+  (ensure-instance-sync self)
+  (answer self))
+
+(defaction ensure-instance-sync ((self mewa))
   (when (modifiedp self)
     (let ((message (format nil "Record has been modified, Do you wish to save the changes?<br/> ~a" (print (modifications self)))))
       (case (call 'option-dialog 
@@ -304,8 +306,7 @@ attributes is an alist keyed on the attribute nreeame."
 	(:cancel
 	 (cancel-save-instance self))
 	(:save 
-	 (save-instance self)))))
-  (answer self))
+	 (save-instance self))))))
 
 
 
