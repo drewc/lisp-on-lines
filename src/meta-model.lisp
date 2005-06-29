@@ -16,7 +16,8 @@
     :initform nil)
    (base-type
     :accessor meta-model.base-type
-    :initform 'clsql)))
+    :initarg :base-type
+    :initform :clsql)))
 
 (defmethod meta-model.metadata ((self (eql nil)))
   nil)
@@ -33,7 +34,7 @@
 (defmethod %def-meta-model ((base-type t) name supers slots &rest options)
   `(defclass ,name ,(gen-supers supers)
      ()
-     (:default-initargs :metadata ',slots)))
+     (:default-initargs :metadata ',slots :base-type ,base-type)))
   
   
 (defmacro def-meta-model (name supers slots &rest options)
@@ -44,13 +45,15 @@
      (let ((class ,(%def-meta-model (cadr (or (assoc :base-type options) '(t t))) name supers slots options)))
        class)))
 
-(defgeneric def-base-class-expander (model base-type name args))
+(defgeneric def-base-type-class-expander (base-type model name args))
 
+(defmethod def-base-class-expander ((model t) name args)
+  (def-base-type-class-expander (meta-model.base-type model) model name args))
 
 (defmacro def-base-class (name (model) &rest args)
   (let ((i (make-instance model)))
-    `(progn 
-       ,(def-base-class-expander i :clsql name args)
+    `(prog1
+         (eval ,(def-base-class-expander i name args))
        (defmethod meta-model.metadata ((m ,name))
 	 ',(meta-model.metadata i)))))
   
@@ -184,6 +187,45 @@
 	    (getf (cdr att) :home-key) 
 	    (getf (cdr att) :foreign-key))))
   
+(defgeneric expr-= (instance slot-name value)
+  (:documentation "Create search expression for appropriate backend."))
 
+(defgeneric expr-> (instance slot-name value)
+  (:documentation "Create search expression for appropriate backend."))
 
+(defgeneric expr-< (instance slot-name value)
+  (:documentation "Create search expression for appropriate backend."))
 
+(defgeneric expr-ends-with (instance slot-name value)
+  (:documentation "Create search expression for appropriate backend."))
+
+(defgeneric expr-starts-with (instance slot-name value)
+  (:documentation "Create search expression for appropriate backend."))
+
+(defgeneric expr-contains (instance slot-name value)
+  (:documentation "Create search expression for appropriate backend."))
+
+(defgeneric expr-and (instance &rest args)
+  (:documentation "Create search expression for appropriate backend."))
+
+(defgeneric expr-or (instance &rest args)
+  (:documentation "Create search expression for appropriate backend."))
+
+(defgeneric expr-not (instance &rest args)
+  (:documentation "Create search expression for appropriate backend."))
+
+(defgeneric select-instances (instance &rest args)
+  (:documentation "Select instances in backend dependent way"))
+
+(defmacro def-compare-expr (instance-type name expr &key value-format)
+  `(defmethod ,name ((instance ,instance-type) slot-name value)
+     (declare (ignore instance))
+     (,expr slot-name ,(typecase value-format
+                                 (null 'value)
+                                 (string `(format nil ,value-format value))
+                                 (t `(,value-format value))))))
+
+(defmacro def-logical-expr (instance-type name expr)
+  `(defmethod ,name ((instance ,instance-type) &rest args)
+     (declare (ignore instance))
+     (apply ,expr args)))

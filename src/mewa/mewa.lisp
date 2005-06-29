@@ -3,7 +3,13 @@
 (defparameter *default-type* :ucw)
 
 ;;; maps meta-model slot-types to slot-presentation
-(defparameter *slot-type-map* '(number ucw:currency))
+(defparameter *slot-type-map*
+  '(boolean   ucw::mewa-boolean
+    string    ucw::mewa-string
+    number    ucw::mewa-currency
+    integer   ucw::mewa-integer
+    currency  ucw::mewa-currency
+    ))
 
 ;;; an alist of model-class-name . attributes
 ;;; should really be a hash-table.
@@ -27,7 +33,7 @@
   (mapcar #'(lambda (x) (gen-pslot (cadr x) 
 				   (string (car x)) 
 				   (car x))) 
-	  (list-slot-types instance)))
+	  (meta-model:list-slot-types instance)))
 
 
 (defun gen-pslot (type label slot-name)
@@ -265,7 +271,7 @@ attributes is an alist keyed on the attribute nreeame."
   (setf (slots to) (mapcar #'(lambda (x) (prog2 
 					     (setf (component.place x) (component.place from))
 					     x))
-			     (slots to))))
+                            (slots to))))
 
 (defmacro call-presentation (object &rest args)
   `(present-object ,object :presentation (make-presentation ,object ,@args)))

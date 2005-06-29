@@ -32,7 +32,18 @@
    :list-has-many
    :list-many-to-many
    :sync-instance
-   :explode-has-many))
+   :explode-has-many
+   :expr-ends-with
+   :expr-starts-with
+   :expr-contains
+   :expr-=
+   :expr-<
+   :expr->
+   :expr-and
+   :expr-or
+   :expr-not
+   :select-instances
+   ))
 
 
 (defpackage :mewa 
@@ -40,7 +51,8 @@
   (:export 
    :mewa 
    :mewa-object-presentation 
-   :mewa-one-line-presentation 
+   :mewa-one-line-presentation
+   :mewa-presentation-search
    :find-attribute 
    :set-default-attributes 
    :make-presentation 
@@ -53,7 +65,9 @@
    :edit-instance
    :save-instance
    :cancel-save-instance
-   :global-properties))
+   :global-properties
+   :search-expr
+   :search-query))
 
 
 (defpackage :lisp-on-lines

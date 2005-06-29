@@ -8,6 +8,28 @@
 		     (multiple-value-funcall->list #',(car form) ,@(cdr form))
 		     ,@body))
 
+(defslot-presentation mewa-boolean-slot-presentation (boolean-slot-presentation)
+  ((slot-name :accessor slot-name :initarg :slot-name))
+  (:type-name mewa-boolean))
+
+(defslot-presentation mewa-string-slot-presentation (string-slot-presentation   )
+
+  ((slot-name :accessor slot-name :initarg :slot-name))
+  (:type-name mewa-string))
+
+(defslot-presentation mewa-number-slot-presentation (number-slot-presentation)
+  ((slot-name :accessor slot-name :initarg :slot-name))
+  (:type-name mewa-number))
+
+(defslot-presentation mewa-integer-slot-presentation (integer-slot-presentation)
+  ((slot-name :accessor slot-name :initarg :slot-name))
+  (:type-name mewa-integer))
+
+(defslot-presentation mewa-currency-slot-presentation (currency-slot-presentation)
+
+  ((slot-name :accessor slot-name :initarg :slot-name))
+  (:type-name mewa-currency))
+
 (defslot-presentation clsql-wall-time-slot-presentation (mewa-relation-slot-presentation)
        ()
        (:type-name clsql-sys:wall-time))
@@ -62,7 +84,8 @@
 	 (new-instance
     (call-component 
      (parent slot) 
-     (make-instance 'mewa::mewa-presentation-search
+     (make-instance (or (cadr (mewa:find-attribute finstance :presentation-search))
+                        'mewa::mewa-presentation-search)
 		    :search-presentation
 		    (mewa:make-presentation finstance 
 					    :type :search-presentation)
@@ -70,8 +93,7 @@
 		    (mewa:make-presentation finstance 
 					    :type :listing)))))
     (setf (slot-value instance (slot-name slot)) (slot-value new-instance foreign-slot-name))
-    (meta-model:sync-instance instance)
-    (clsql:update-objects-joins (list instance))))
+    (meta-model:sync-instance instance)))
     
 (defmethod present-relation ((slot mewa-relation-slot-presentation) instance)
  ;;;;(<:as-html (slot-name slot) "=> " (foreign-instance slot) " from " instance )
@@ -82,7 +104,7 @@
 		:initargs (list 
 			   :global-properties 
 			   (list :editablep nil :linkedp nil)))))
-      (when (ucw::parent slot) 
+      (when (and (ucw::parent slot) (slot-boundp slot 'ucw::place))
 	(setf (component.place pres) (component.place (ucw::parent slot))))
       (when i (<ucw:render-component :component pres))))
 
@@ -127,10 +149,10 @@
 
 (defaction add-to-has-many ((slot has-many-slot-presentation) instance)
   (destructuring-bind (class home foreign) 
-      (multiple-value-funcall #'meta-model:explode-has-many instance (slot-name slot))
+      (multiple-value-funcall->list #'meta-model:explode-has-many instance (slot-name slot))
     (let ((new (make-instance class)))
       (setf (slot-value new foreign) (slot-value instance home))
-      (meta-model:sync-instance new)
+      (meta-model:sync-instance new :fill-gaps-only t)
       (call-component (parent slot) (mewa:make-presentation new :type :editor)))))
 
 (defmethod present-slot ((slot has-many-slot-presentation) instance)

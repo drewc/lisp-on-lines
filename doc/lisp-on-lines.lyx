@@ -31,7 +31,9 @@ LISP-ON-LINES
 
 
 \noun on 
+v v v v v v v
 Drew Crampsie
+^ ^ ^ ^ ^ ^ ^
 \noun default 
 , 
 \noun on 
@@ -561,7 +563,7 @@ Isn't this too imperative (in contrast to functional, lispy).
 \series bold 
 (setf (lisp-on-lines::find-attribute 'user 'userid)
 \begin_inset Marginal
-collapsed true
+collapsed false
 
 \layout Standard
 
@@ -954,7 +956,7 @@ product
 
 > 
 \series bold 
-(lisp-on-lines::set-default-attributes (make-instance 'product))
+(lisp-on-lines::set-default-attributes (make-instance 'product))-
 \begin_inset Marginal
 collapsed true
 

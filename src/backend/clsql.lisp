@@ -10,24 +10,30 @@
 
 
 
-(defmethod sync-instance ((view clsql:standard-db-object) &key (database *default-database*))
+(defmethod sync-instance ((view clsql:standard-db-object) &key (fill-gaps-only nil) (database *default-database*))
   (labels ((sym->sql (sym) (string-downcase (substitute #\_ #\- (string sym))))
            (get-def (slot) (caar (query
                                   (format nil                                                             "SELECT DISTINCT adsrc from pg_attrdef join pg_attribute on attnum = adnum where adrelid = (select oid from pg_class where relname = '~A') and attname = '~A'" (sym->sql (class-name (class-of view))) (sym->sql slot)))))
            (get-default-value (slot) 
 	     (let ((def (get-def slot)))
 	       (if def
-		   (caar (query (format nil "SELECT ~A" def)))
-		   (error "No default value for primary key : ~A" slot)))))
+		   (caar (query (format nil "SELECT ~A" def)))))))
 
     (dolist (slot (list-slots view))
       (when (and (primary-key-p view slot)
                  (or (not (slot-boundp view slot))
                      (equal (slot-value view slot) nil)))
-        (setf (slot-value view slot) (get-default-value slot)))))
-  (update-records-from-instance view :database database)
-  (update-instance-from-records view :database database)
-  (update-objects-joins (list view)))
+        (setf (slot-value view slot) (get-default-value slot))
+        (when (and (primary-key-p view slot)
+                   (not (slot-value view slot))
+                   (not  fill-gaps-only))
+          (error "No default value for primary key : ~A" slot))))
+    (when fill-gaps-only
+      (update-objects-joins (list view))
+      (return-from sync-instance))
+    (update-records-from-instance view :database database)
+    (update-instance-from-records view :database database)
+    (update-objects-joins (list view))))
 
 
 
@@ -36,11 +42,11 @@
 (defmethod list-base-classes ((type (eql :clsql)))
   *clsql-base-classes*)
 
-(defmethod def-base-class-expander ((model meta-model-class) (base-type (eql :clsql)) (name t) (args t))
+(defmethod def-base-type-class-expander ((base-type (eql :clsql)) (model meta-model-class) (name t) (args t))
   `(def-view-class ,name () 
 		   ,(meta-model.metadata model)))
 
-(defmethod def-base-class-expander :after ((model meta-model-class) (base-type (eql :clsql)) (name t) (args t))
+(defmethod def-base-type-class-expander :after ((base-type (eql :clsql)) (model meta-model-class) (name t) (args t))
   (unless (member name *clsql-base-classes*)
     (setf *clsql-base-classes* (cons name *clsql-base-classes*))))
 
@@ -61,17 +67,26 @@
 	(intern (xform (string name)) package)
 	(intern (xform (string name))))))
 
-(defun table->slots (table pkey)
+(defun table->slots (table pkey &optional (accesor-prefix table) (prefix-all-p nil))
   (mapcar
    #'(lambda (col)
-       `(,(sql->sym col)
-	 :accessor ,(sql->sym col)
-	 :initarg ,(sql->sym col "KEYWORD")
-	 :type ,(gen-type table col)
-	 :db-kind
-	 ,(if (equalp col pkey)
-	      `:key
-	      `:base)))
+       (flet ((accessor-name (col)
+                (let ((name (sql->sym col)))
+                  (if (or prefix-all-p
+                          (and (fboundp name)
+                               (eq (type-of (symbol-function name)) 'function)))
+                      (sql->sym (concatenate 'string
+                                             (string accesor-prefix) "-" col))
+                      name))))
+
+         `(,(sql->sym col)
+            :accessor ,(accessor-name col)
+            :initarg ,(sql->sym col "KEYWORD")
+            :type ,(gen-type table col)
+            :db-kind
+            ,(if (equalp col pkey)
+                 `:key
+                 `:base))))
    (list-attributes table)))
 
 (defun view-class-definition-list ()
@@ -205,29 +220,63 @@ AND fa.attnum = ANY (pg_constraint.confkey)"))
 	       :target-slot ,name
 	       :set t))))
  
-(defmacro def-view-class/meta (name supers slots &rest args)  
-    `(progn
-	(let* ((m (def-meta-model model-name ,supers ,slots ,args))
-	       (i (make-instance m)))
-	  (prog1 (eval (def-base-class-expander i :clsql ',name ',args))
-	(defmethod meta-model.metadata ((self ,name))
-	  (meta-model.metadata i))))))
-	  
+(defmethod update-records-from-instance :before ((view clsql::standard-db-object) &key database)
+  (declare (ignorable database))
+  (labels ((sym->sql (sym) (string-downcase (substitute #\_ #\- (string sym))))
+	   (get-def (slot) (caar (query
+				  (format nil								  "SELECT DISTINCT adsrc from pg_attrdef join pg_attribute on attnum = adnum where adrelid = (select oid from pg_class where relname = '~A') and attname = '~A'" (sym->sql (class-name (class-of view))) (sym->sql slot)))))
+	   (get-default-value (slot) (caar (query (format nil "SELECT ~A" (get-def slot))))))
 
-(defmacro def-view-class/table (table &optional name)
+    (dolist (slot (list-slots view))
+      (when (and (primary-key-p view slot)
+		 (or (not (slot-boundp view slot))
+		     (equal (slot-value view slot) nil)))
+	(setf (slot-value view slot) (get-default-value slot))))))
+
+;;;;
+
+(defmacro def-view-class/meta (name supers slots &rest args)
+  "Create and instrument CLSQL view-class NAME and
+appropriate meta-model class(its default name is %NAME-meta-model).
+(DEF-VIEW-CLASS/META NAME SUPERS SLOTS &key (MODEL-NAME (intern (format nil \"%~S-META-MODEL\" NAME))) &rest ARGS)."
+  (let ((model-name (cond ((eq :model-name (car args))
+                           (pop args)  ; remove keyword
+                           (pop args)) ; get value
+                          (t (intern (format nil "%~S-META-MODEL" name))))))
+    `(progn
+       (def-meta-model ,model-name ,supers ,slots (:base-type :clsql) ,@args)
+       (def-base-class ,name (,model-name) ,@args))))
+
+(defmacro def-view-class/table (table &optional (name (sql->sym table)) model-name)
   "takes the name of a table as a string and
 creates a clsql view-class"
   (let* ((pkey (cadr (assoc table (get-pkeys) :test #'equalp)))
-	 (table-slots (table->slots table pkey))
+	 (table-slots (table->slots table pkey name))
 	 (join-slots
 	  (let ((slots nil))
 	    (dolist (exp (get-fkey-explosions))
 	      (when (equalp (car exp) (sql->sym table))
 		(setf slots (cons (cdr exp) slots))))
 	    slots)))
-    `(def-view-class/meta ,(if name name (sql->sym table))
-      ()
-      ,(append table-slots join-slots))))       
+    `(def-view-class/meta ,name
+         ()
+       ,(append table-slots join-slots)
+       ,@(when model-name (list :model-name model-name)))))
 
+(def-compare-expr standard-db-object expr-= sql-=)
+(def-compare-expr standard-db-object expr-< sql-<)        
+(def-compare-expr standard-db-object expr-> sql->)
+(def-compare-expr standard-db-object expr-ends-with sql-like :value-format "%~A")
+(def-compare-expr standard-db-object expr-starts-with sql-like :value-format "~A%")
+(def-compare-expr standard-db-object expr-contains sql-like :value-format "%~A%")
 
+(def-logical-expr standard-db-object expr-and #'sql-and)
 
+(def-logical-expr standard-db-object expr-or #'sql-or)
+
+(def-logical-expr standard-db-object expr-not #'sql-not)
+
+(defmethod select-instances ((instance standard-db-object) &rest query)
+  (unless (keywordp (car query))
+    (setf query (cons :where query)))
+  (apply #'select (class-name (class-of instance)) :flatp t query))

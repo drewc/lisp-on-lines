@@ -73,28 +73,79 @@
 
 
 ;;; searching
+(defgeneric search-expr (criteria instance)
+  (:documentation "Return ready to apply criteria.
+                   What to do with it is backend dependent."))
 
-(defcomponent mewa-presentation-search (ucw::presentation-search) 
- ((display-results-p :accessor display-results-p :initarg :display-results-p :initform nil)))
+(defmacro def-search-expr (((self criteria-type)) (model-expr &body body))
+  `(defmethod search-expr ((,self ,criteria-type) instance)
+     (,model-expr
+      instance
+      (ucw::slot-name (ucw::presentation ,self))
+      ,@body)))
+
+(defmethod search-expr ((self ucw::negated-criteria) instance)
+  (when (ucw::criteria self)
+    (meta-model:expr-not
+     instance
+     (search-expr (ucw::criteria self) instance))))
+
+(def-search-expr ((self ucw::string-starts-with))
+    (meta-model:expr-starts-with (ucw::search-text self)))
+
+(def-search-expr ((self ucw::string-ends-with))
+    (meta-model:expr-ends-with (ucw::search-text self)))
+
+(def-search-expr ((self ucw::string-contains))
+    (meta-model:expr-contains (ucw::search-text self)))
+
+(def-search-expr ((self ucw::number-less-than))
+    (meta-model:expr-< (ucw::number-input self)))
+
+(def-search-expr ((self ucw::number-greater-than))
+    (meta-model:expr-> (ucw::number-input self)))
+
+(def-search-expr ((self ucw::number-equal-to))
+    (meta-model:expr-= (ucw::number-input self)))
+
+(defcomponent mewa-presentation-search (ucw::presentation-search)
+  ((display-results-p :accessor display-results-p :initarg :display-results-p :initform nil)))
+
+(defmethod instance ((self mewa:mewa-presentation-search))
+  (instance (ucw::search-presentation self)))
+
+(defmethod search-expr ((self mewa:mewa-presentation-search) instance)
+  (apply #'meta-model:expr-and instance
+         (mapcan (lambda (c) (let ((e (search-expr c instance)))
+                               (if (listp e) e (list e))))
+                 (ucw::criteria self))))
+
+
+(defmethod search-query ((self mewa:mewa-presentation-search))
+  (search-expr self (instance self)))
+
+(defmethod valid-instances ((self mewa:mewa-presentation-search))
+  (meta-model:select-instances (instance self) (search-query self)))
+
+(defmethod get-all-instances ((self mewa-presentation-search))
+  (meta-model:select-instances (instance self)))
 
 (defmethod ok ((self mewa-presentation-search) &optional arg)
   (declare (ignore arg))
+  (setf (ucw::list-presentation self) (valid-instances self))
   (setf (display-results-p self) t))
-
-(defmethod get-all-instances ((self mewa-presentation-search))
-  (clsql:select (class-name (class-of (instance (ucw::search-presentation self)))) :flatp t))
 
 (defmethod render-on ((res response) (self mewa-presentation-search))
   (ucw::render-criteria res self)
+  (<ucw:input :type "submit" :value "Search" :action (ok self))
   (when (display-results-p self)
-    (let ((listing (ucw::list-presentation self))) 
-      (setf (instances listing ) (ucw::valid-instances self)
-	    (slot-value listing 'ucw::calling-component) (slot-value self 'ucw::calling-component)
-	    (slot-value listing 'ucw::place) (slot-value self 'ucw::place)
-	    (slot-value listing 'ucw::continuation) (slot-value self 'ucw::continuation))
-    
+    (let ((listing (ucw::list-presentation self)))
+      (setf 
+       (slot-value listing 'ucw::calling-component) (slot-value self 'ucw::calling-component)
+       (slot-value listing 'ucw::place) (slot-value self 'ucw::place)
+       (slot-value listing 'ucw::continuation) (slot-value self 'ucw::continuation))
+      
       (render-on res listing))))
-
 
 ;;;;
 (defcomponent dont-show-unset-slots ()())
