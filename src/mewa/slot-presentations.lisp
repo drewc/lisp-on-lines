@@ -145,8 +145,9 @@
 
 
 (defaction add-to-has-many ((slot has-many-slot-presentation) instance)
-  (destructuring-bind (class home foreign) 
-      (multiple-value-funcall #'meta-model:explode-has-many instance (slot-name slot))
+  (mewa:ensure-instance-sync (parent slot))
+  (multiple-value-bindf (class home foreign) 
+      (meta-model:explode-has-many instance (slot-name slot))
     (let ((new (make-instance class)))
       (setf (slot-value new foreign) (slot-value instance home))
       (meta-model:sync-instance new :fill-gaps-only t)

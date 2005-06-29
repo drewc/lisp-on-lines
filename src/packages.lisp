@@ -65,8 +65,10 @@
    :edit-instance
    :save-instance
    :cancel-save-instance
-   :global-properties))
-
+   :ensure-instance-sync
+   :global-properties
+   :search-expr
+   :search-query))
 
 (defpackage :lisp-on-lines
   (:use :mewa :meta-model :common-lisp :it.bese.ucw))
