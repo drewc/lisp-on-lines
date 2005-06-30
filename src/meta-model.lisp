@@ -52,8 +52,9 @@
 
 (defmacro def-base-class (name (model) &rest args)
   (let ((i (make-instance model)))
-    `(prog1
-         (eval ,(def-base-class-expander i name args))
+   `(progn
+      (eval-when (:compile-toplevel :load-toplevel :execute)
+       ,(def-base-class-expander i :clsql name args))
        (defmethod meta-model.metadata ((m ,name))
 	 ',(meta-model.metadata i)))))
   

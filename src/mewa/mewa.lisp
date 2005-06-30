@@ -90,6 +90,9 @@ attributes is an alist keyed on the attribute nreeame."
 			 (cddr (find-attribute model name))))
 	    definition)))
 
+(defmethod perform-set-attributes ((model t) definitions)
+  (dolist (def definitions)
+    (funcall #'set-attribute model (first def) (rest def))))
 
 (defmethod default-attributes ((model t))
   "return the default attributes for a given model using the meta-model's meta-data"
@@ -290,12 +293,6 @@ attributes is an alist keyed on the attribute nreeame."
        (answer self))
 
 
-(defaction ok ((self mewa) &optional arg)
-  "Returns the component if it has not been modified. if it has been, prompt user to save or cancel"
-  (declare (ignore arg))
-  (ensure-instance-sync self)
-  (answer self))
-
 (defaction ensure-instance-sync ((self mewa))
   (when (modifiedp self)
     (let ((message (format nil "Record has been modified, Do you wish to save the changes?<br/> ~a" (print (modifications self)))))
@@ -307,6 +304,14 @@ attributes is an alist keyed on the attribute nreeame."
 	 (cancel-save-instance self))
 	(:save 
 	 (save-instance self))))))
+
+(defaction ok ((self mewa) &optional arg)
+  "Returns the component if it has not been modified. if it has been, prompt user to save or cancel"
+  (declare (ignore arg))
+  (ensure-instance-sync self)
+  (answer self))
+
+
 
 
 

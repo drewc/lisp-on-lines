@@ -58,7 +58,8 @@
    :make-presentation 
    :call-presentation 
    :label 
-   :set-attribute 
+   :set-attribute
+   :perform-set-attributes
    :find-class-attributes 
    :default-attributes 
    :ok
