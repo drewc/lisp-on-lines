@@ -120,7 +120,6 @@
                                (if (listp e) e (list e))))
                  (ucw::criteria self))))
 
-
 (defmethod search-query ((self mewa:mewa-presentation-search))
   (search-expr self (instance self)))
 
@@ -136,6 +135,7 @@
   (setf (display-results-p self) t))
 
 (defmethod render-on ((res response) (self mewa-presentation-search))
+  (<:as-html (search-query self))
   (ucw::render-criteria res self)
   (<ucw:input :type "submit" :value "Search" :action (ok self))
   (when (display-results-p self)

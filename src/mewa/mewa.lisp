@@ -280,6 +280,14 @@ attributes is an alist keyed on the attribute nreeame."
 (defmacro call-presentation (object &rest args)
   `(present-object ,object :presentation (make-presentation ,object ,@args)))
 
+
+(defcomponent about-dialog (option-dialog)
+  ((body :initarg :body)))
+
+(defmethod render-on ((res response) (self about-dialog))
+  (render-on res (slot-value self 'body))
+  (call-next-method))
+
 (defaction cancel-save-instance ((self mewa))
   (cond  
     ((slot-value (instance self) 'clsql-sys::view-database)
@@ -296,7 +304,9 @@ attributes is an alist keyed on the attribute nreeame."
 (defaction ensure-instance-sync ((self mewa))
   (when (modifiedp self)
     (let ((message (format nil "Record has been modified, Do you wish to save the changes?<br/> ~a" (print (modifications self)))))
-      (case (call 'option-dialog 
+      (case (call 'about-dialog
+                  :body (make-presentation (instance self) 
+					   :type :viewer)
 		  :message message
 		  :options '((:save . "Save changes to Database")
 			     (:cancel . "Cancel all changes")))
@@ -324,7 +334,7 @@ attributes is an alist keyed on the attribute nreeame."
   (unless (equal new old )
     (let ((self (ucw::parent slot)))
       (setf (modifiedp self) instance
-	    (modifications self)  (append (list  (type-of new) (type-of old) (type-of value) slot instance )))))))
+	    (modifications self)  (append (list new old value slot instance) (modifications self)))))))
 
 
 ;; This software is Copyright (c) Drew Crampsie, 2004-2005.

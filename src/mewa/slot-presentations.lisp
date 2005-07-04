@@ -1,9 +1,11 @@
 (in-package :it.bese.ucw)
 
 (defun multiple-value-funcall->list (function &rest args)
+  "The function to be called by m-v-bf"
 		   (multiple-value-call #'list (apply function args)))
 
 (defmacro multiple-value-bindf (vars form &body body)
+  "Like M-V-B, only it works in actions. form must be a function call"
 		   `(destructuring-bind ,vars 
 		     (multiple-value-funcall->list #',(car form) ,@(cdr form))
 		     ,@body))
@@ -84,12 +86,6 @@ When T, only the default value for primary keys and the joins are updated."))
   ((foreign-instance :accessor foreign-instance)
    (linkedp :accessor linkedp :initarg :linkedp :initform t))
   (:type-name relation))
-
-(defun get-fkey-data (instance slot-name)
-  "ugly workaround b/c UCW does not like M-V-B"
-  (multiple-value-bind (finstance foreign-slot-name)
-      (meta-model:explode-foreign-key instance slot-name)
-    (cons finstance foreign-slot-name)))
 
 (defaction search-records ((slot mewa-relation-slot-presentation) instance)
   (multiple-value-bindf (finstance foreign-slot-name)
