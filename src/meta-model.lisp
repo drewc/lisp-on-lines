@@ -32,13 +32,14 @@
 	(cons 'meta-model-class supers))))
 
 (defmethod %def-meta-model ((base-type t) name supers slots &rest options)
-  `(defclass ,name ,(gen-supers supers)
-     ()
-     (:default-initargs :metadata ',slots :base-type ,base-type)))
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
+    (defclass ,name ,(gen-supers supers)
+      ()
+      (:default-initargs :metadata ',slots :base-type ,base-type))))
   
   
 (defmacro def-meta-model (name supers slots &rest options)
-  `(progn
+  `(eval-when (:compile-toplevel :load-toplevel :execute)
      (when (not (member (quote ,name) *meta-models*))
        (setf *meta-models* (cons (quote ,name) *meta-models*)))
 
@@ -50,19 +51,8 @@
 (defmethod def-base-class-expander ((model t) name args)
   (def-base-type-class-expander (meta-model.base-type model) model name args))
 
-(defmacro def-base-class (name (model) &rest args)
-  (let ((i (make-instance model)))
-   `(progn
-      (eval-when (:compile-toplevel :load-toplevel :execute)
-       ,(def-base-class-expander i :clsql name args))
-       (defmethod meta-model.metadata ((m ,name))
-	 ',(meta-model.metadata i)))))
-  
-
 (defmethod base-class-name ((model t))
   (class-name (class-of (meta-model.instance model))))
-  
-
 
 (defmethod view-class-metadata ((model t))
   (meta-model.metadata model))

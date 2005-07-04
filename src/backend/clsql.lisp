@@ -263,10 +263,11 @@ creates a clsql view-class"
 	      (when (equalp (car exp) (sql->sym table))
 		(setf slots (cons (cdr exp) slots))))
 	    slots)))
-    `(def-view-class/meta ,name
-         ()
-       ,(append table-slots join-slots)
-       ,@(when model-name (list :model-name model-name)))))
+    `(eval-when (:compile-toplevel :load-toplevel :execute)
+      (def-view-class/meta ,name
+	  ()
+	,(append table-slots join-slots)
+	,@(when model-name (list :model-name model-name))))))
 
 (def-compare-expr standard-db-object expr-= sql-=)
 (def-compare-expr standard-db-object expr-< sql-<)        
