@@ -212,13 +212,17 @@ most of the below functions expect this method to exist"
 (defgeneric select-instances (instance &rest args)
   (:documentation "Select instances in backend dependent way"))
 
+(defgeneric prepare-slot-name-for-select (instance slot-name)
+  (:method (i s) s))
+
 (defmacro def-compare-expr (instance-type name expr &key value-format)
   `(defmethod ,name ((instance ,instance-type) slot-name value)
      (declare (ignore instance))
-     (,expr slot-name ,(typecase value-format
+     (,expr (prepare-slot-name-for-select instance slot-name) ,(typecase value-format
                                  (null 'value)
                                  (string `(format nil ,value-format value))
                                  (t `(,value-format value))))))
+
 
 (defmacro def-logical-expr (instance-type name expr)
   `(defmethod ,name ((instance ,instance-type) &rest args)

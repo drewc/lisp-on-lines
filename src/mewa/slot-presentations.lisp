@@ -106,7 +106,7 @@ When T, only the default value for primary keys and the joins are updated."))
                             (mewa:make-presentation finstance 
                                                     :type :listing)))))
       (setf (slot-value instance (slot-name slot)) (slot-value new-instance foreign-slot-name))
-      (meta-model:sync-instance instance :fill-gaps-only t))))
+      (meta-model:sync-instance instance :fill-gaps-only-p (fill-gaps-only-p self)))))
 
 (defaction create-record ((slot mewa-relation-slot-presentation) instance)
   (multiple-value-bindf (finstance foreign-slot-name)
@@ -148,18 +148,24 @@ When T, only the default value for primary keys and the joins are updated."))
 
 
 (defmethod  present-slot :around ((slot foreign-key-slot-presentation) instance)
-  (setf (foreign-instance slot) (when (presentation-slot-value slot instance) (meta-model:explode-foreign-key instance (slot-name slot))))
-  (flet ((render () (call-next-method)))
-    (cond 
-      ((editablep slot)
-       (render)
-       (<ucw:submit :action  (search-records slot instance) :value "Search" :style "display:inline")
-       (<ucw:submit :action  (create-record slot instance) :value "Add New" :style "display:inline"))
-      ((linkedp slot)
-       (<ucw:a :action (view-instance slot (foreign-instance slot)) 
-	       (render)))
-      (t       
-       (render)))))
+  (setf (foreign-instance slot) 
+	(when (presentation-slot-value slot instance) 
+	  (meta-model:explode-foreign-key instance (slot-name slot))))
+  
+  (flet ((render () (when (foreign-instance slot)(call-next-method))))
+    (if (slot-boundp slot 'place)
+        (cond 
+          ((editablep slot)
+           (render)
+           (<ucw:submit :action  (search-records slot instance) :value "Search" :style "display:inline")
+           (<ucw:submit :action  (create-record slot instance) :value "Add New" :style "display:inline"))
+          ((linkedp slot)
+           (<ucw:a :action (view-instance slot (foreign-instance slot)) 
+                   (render)))
+          (t       
+           (render)))
+	;; presentation is used only for rendering
+        (render))))
 
 ;;;; HAS MANY 
 (defslot-presentation has-many-slot-presentation (mewa-relation-slot-presentation)
@@ -178,9 +184,10 @@ When T, only the default value for primary keys and the joins are updated."))
       (meta-model:sync-instance instance))))
 
 (defmethod present-slot ((slot has-many-slot-presentation) instance)
-  (<ucw:submit :action (add-to-has-many slot instance) :value (add-new-label slot))
-  (let ((i (get-foreign-instances slot instance))
-	(linkedp (linkedp slot)))
+  (when (slot-boundp slot 'place)
+    (<ucw:submit :action (add-to-has-many slot instance) :value (add-new-label slot)))
+  (let ((i (get-foreign-instances slot instance)))
+	
     (<:ul 
      (dolist (s i)
        (let ((s s))
@@ -219,13 +226,16 @@ When T, only the default value for primary keys and the joins are updated."))
 
 (defmethod present-slot ((slot has-very-many-slot-presentation) instance)
   ;;(<:as-html "isance: " instance)
-  (<ucw:a :action (list-prev slot) (<:as-html "<<"))
-  (let ((self (parent slot)))
-    (<ucw:a :action (call-component self (mewa:make-presentation (car (slot-value instance (slot-name slot))) :type :listing :initargs (list :instances (instances slot))))
-	    (<:as-html  (label slot) (format nil " ~a-~a " (current slot) (+ (current slot) (number-to-display slot))))))
-  (<ucw:a :action (list-next slot) (<:as-html ">>"))
-  (call-next-method)
-  (<:as-html "total :" (len slot))) 
+  (if (slot-boundp slot 'place)
+      (progn
+        (<ucw:a :action (list-prev slot) (<:as-html "<<"))
+        (let ((self (parent slot)))
+          (<ucw:a :action (call-component self (mewa:make-presentation (car (slot-value instance (slot-name slot))) :type :listing :initargs (list :instances (instances slot))))
+	        (<:as-html  (label slot) (format nil " ~a-~a " (current slot) (+ (current slot) (number-to-display slot))))))
+        (<ucw:a :action (list-next slot) (<:as-html ">>"))
+        (call-next-method)
+        (<:as-html "total :" (len slot)))
+      (call-next-method)))
 
 (defmethod get-foreign-instances :around ((slot has-very-many-slot-presentation) instance)
   (let ((f (call-next-method)))

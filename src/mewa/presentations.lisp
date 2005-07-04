@@ -132,7 +132,7 @@
 
 (defmethod ok ((self mewa-presentation-search) &optional arg)
   (declare (ignore arg))
-  (setf (ucw::list-presentation self) (valid-instances self))
+  (setf (ucw::instances (ucw::list-presentation self)) (valid-instances self))
   (setf (display-results-p self) t))
 
 (defmethod render-on ((res response) (self mewa-presentation-search))

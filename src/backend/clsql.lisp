@@ -269,6 +269,10 @@ creates a clsql view-class"
 	,(append table-slots join-slots)
 	,@(when model-name (list :model-name model-name))))))
 
+
+(defmethod prepare-slot-name-for-select ((i standard-db-object) slot-name)
+  (clsql:sql-expression :attribute slot-name))
+
 (def-compare-expr standard-db-object expr-= sql-=)
 (def-compare-expr standard-db-object expr-< sql-<)        
 (def-compare-expr standard-db-object expr-> sql->)
