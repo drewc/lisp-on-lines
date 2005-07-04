@@ -55,6 +55,9 @@
   (class-name (class-of (meta-model.instance model))))
 
 (defmethod view-class-metadata ((model t))
+  "
+This is what meta-model.metadata used to be called,
+most of the below functions expect this method to exist"
   (meta-model.metadata model))
 
 (defun list-item-helper (type view &key (ret-fun #'car))
