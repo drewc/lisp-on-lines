@@ -10,7 +10,7 @@
 
 
 
-(defmethod sync-instance ((view clsql:standard-db-object) &key (fill-gaps-only nil) (database *default-database*))
+(defmethod sync-instance ((view clsql:standard-db-object) &key (fill-gaps-only-p nil) (database *default-database*))
   (labels ((sym->sql (sym) (string-downcase (substitute #\_ #\- (string sym))))
            (get-def (slot) (caar (query
                                   (format nil                                                             "SELECT DISTINCT adsrc from pg_attrdef join pg_attribute on attnum = adnum where adrelid = (select oid from pg_class where relname = '~A') and attname = '~A'" (sym->sql (class-name (class-of view))) (sym->sql slot)))))
@@ -26,9 +26,9 @@
         (setf (slot-value view slot) (get-default-value slot))
         (when (and (primary-key-p view slot)
                    (not (slot-value view slot))
-                   (not  fill-gaps-only))
+                   (not  fill-gaps-only-p))
           (error "No default value for primary key : ~A" slot))))
-    (when fill-gaps-only
+    (when fill-gaps-only-p
       (update-objects-joins (list view))
       (return-from sync-instance))
     (update-records-from-instance view :database database)

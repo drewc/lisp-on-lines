@@ -8,27 +8,42 @@
 		     (multiple-value-funcall->list #',(car form) ,@(cdr form))
 		     ,@body))
 
-(defslot-presentation mewa-boolean-slot-presentation (boolean-slot-presentation)
-  ((slot-name :accessor slot-name :initarg :slot-name))
-  (:type-name mewa-boolean))
+(defcomponent mewa-slot-presentation ()
+  ((slot-name :accessor slot-name 
+	      :initarg :slot-name 
+	      :documentation 
+	      "The name of the slot being accessed")
+   (fill-gaps-only-p :accessor fill-gaps-only-p 
+		     :initarg :fill-gaps-only-p
+		     :initform nil
+		     :documentation 
+		     "When nil, the instance is syncronised with the database. 
+When T, only the default value for primary keys and the joins are updated."))
+  (:documentation "The superclass of all Mewa slot presentations"))
 
-(defslot-presentation mewa-string-slot-presentation (string-slot-presentation   )
+;;;; this has to be in the eval when i would think
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun generate-slot-presentation-definition-for-type (type)
+    (let* ((u-name (intern (format nil "~A-SLOT-PRESENTATION" type)))
+	   (sp-name (intern (format nil "MEWA-~A" u-name)))
+	   (t-name (intern (format nil "MEWA-~A" type))))
+      `(defslot-presentation ,sp-name (,u-name mewa-slot-presentation)
+	()
+	(:type-name ,t-name)))))
 
-  ((slot-name :accessor slot-name :initarg :slot-name))
-  (:type-name mewa-string))
+(defmacro define-base-mewa-presentations (&body types)
+  "Define the mewa-slot-presentations by subclassing the base UCW ones"
+    `(progn ,@(mapcar #'generate-slot-presentation-definition-for-type
+		      types)))
 
-(defslot-presentation mewa-number-slot-presentation (number-slot-presentation)
-  ((slot-name :accessor slot-name :initarg :slot-name))
-  (:type-name mewa-number))
+;;;then actually define the base presentations :
+(define-base-mewa-presentations 
+  boolean
+  string
+  number
+  integer
+  currency)
 
-(defslot-presentation mewa-integer-slot-presentation (integer-slot-presentation)
-  ((slot-name :accessor slot-name :initarg :slot-name))
-  (:type-name mewa-integer))
-
-(defslot-presentation mewa-currency-slot-presentation (currency-slot-presentation)
-
-  ((slot-name :accessor slot-name :initarg :slot-name))
-  (:type-name mewa-currency))
 
 (defslot-presentation clsql-wall-time-slot-presentation (mewa-relation-slot-presentation)
        ()
@@ -65,9 +80,8 @@
         ifFormat       :    \"%m/%d/%Y\",
       });" input-id))))))
 
-(defslot-presentation  mewa-relation-slot-presentation ()
-  ((slot-name :accessor slot-name :initarg :slot-name)
-   (foreign-instance :accessor foreign-instance)
+(defslot-presentation  mewa-relation-slot-presentation (mewa-slot-presentation slot-presentation)
+  ((foreign-instance :accessor foreign-instance)
    (linkedp :accessor linkedp :initarg :linkedp :initform t))
   (:type-name relation))
 
@@ -78,23 +92,32 @@
     (cons finstance foreign-slot-name)))
 
 (defaction search-records ((slot mewa-relation-slot-presentation) instance)
-  (let* ((d (get-fkey-data instance (slot-name slot)))
-	 (finstance (car d))
-	 (foreign-slot-name (cdr d))
-	 (new-instance
-    (call-component 
-     (parent slot) 
-     (make-instance (or (cadr (mewa:find-attribute finstance :presentation-search))
-                        'mewa::mewa-presentation-search)
-		    :search-presentation
-		    (mewa:make-presentation finstance 
-					    :type :search-presentation)
-		    :list-presentation 
-		    (mewa:make-presentation finstance 
-					    :type :listing)))))
-    (setf (slot-value instance (slot-name slot)) (slot-value new-instance foreign-slot-name))
-    (meta-model:sync-instance instance)))
-    
+  (multiple-value-bindf (finstance foreign-slot-name)
+      (meta-model:explode-foreign-key instance (slot-name slot))
+    (let ((new-instance
+            (call-component 
+             (parent slot) 
+             (make-instance (or (cadr (mewa:find-attribute finstance :presentation-search))
+                                'mewa::mewa-presentation-search)
+                            :search-presentation
+                            (mewa:make-presentation finstance 
+                                                    :type :search-presentation)
+                            :list-presentation 
+                            (mewa:make-presentation finstance 
+                                                    :type :listing)))))
+      (setf (slot-value instance (slot-name slot)) (slot-value new-instance foreign-slot-name))
+      (meta-model:sync-instance instance :fill-gaps-only t))))
+
+(defaction create-record ((slot mewa-relation-slot-presentation) instance)
+  (multiple-value-bindf (finstance foreign-slot-name)
+      (meta-model:explode-foreign-key instance (slot-name slot))
+    (let ((new-instance
+           (call-component
+            (parent slot) 
+            (mewa:make-presentation finstance :type :editor))))
+      (setf (slot-value instance (slot-name slot)) (slot-value new-instance foreign-slot-name))
+      (meta-model:sync-instance instance :fill-gaps-only-p (fill-gaps-only-p self)))))
+
 (defmethod present-relation ((slot mewa-relation-slot-presentation) instance)
  ;;;;(<:as-html (slot-name slot) "=> " (foreign-instance slot) " from " instance )
   (let* ((i (foreign-instance slot))
@@ -150,9 +173,9 @@
       (meta-model:explode-has-many instance (slot-name slot))
     (let ((new (make-instance class)))
       (setf (slot-value new foreign) (slot-value instance home))
-      (meta-model:sync-instance new :fill-gaps-only t)
+      (meta-model:sync-instance new :fill-gaps-only-p (fill-gaps-only-p self))
       (call-component (parent slot) (mewa:make-presentation new :type :editor))
-      (meta-model:sync-instance (instance (parent slot))))))
+      (meta-model:sync-instance instance))))
 
 (defmethod present-slot ((slot has-many-slot-presentation) instance)
   (<ucw:submit :action (add-to-has-many slot instance) :value (add-new-label slot))
@@ -162,9 +185,10 @@
      (dolist (s i)
        (let ((s s))
 	 (setf (foreign-instance slot) s)
-	 (<ucw:a :action (view-instance slot s :initargs `(:global-properties ,(list :linkedp t :editablep nil)))
+         (when (slot-boundp slot 'place)
+           (<ucw:a :action (view-instance slot s :initargs `(:global-properties ,(list :linkedp t :editablep nil)))
 		 (<:li   (setf (linkedp slot) nil)
-			 (present-relation slot instance))))))))
+			 (present-relation slot instance)))))))))
 
 
 (defmethod get-foreign-instances ((slot has-many-slot-presentation) instance)
