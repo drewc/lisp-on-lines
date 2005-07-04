@@ -237,15 +237,20 @@ AND fa.attnum = ANY (pg_constraint.confkey)"))
 
 (defmacro def-view-class/meta (name supers slots &rest args)
   "Create and instrument CLSQL view-class NAME and
-appropriate meta-model class(its default name is %NAME-meta-model).
-(DEF-VIEW-CLASS/META NAME SUPERS SLOTS &key (MODEL-NAME (intern (format nil \"%~S-META-MODEL\" NAME))) &rest ARGS)."
+appropriate meta-model class its default name is %NAME-meta-model."
+
   (let ((model-name (cond ((eq :model-name (car args))
-                           (pop args)  ; remove keyword
-                           (pop args)) ; get value
+                           (pop args)	; remove keyword
+                           (pop args))	; get value
                           (t (intern (format nil "%~S-META-MODEL" name))))))
+
     `(progn
-       (def-meta-model ,model-name ,supers ,slots (:base-type :clsql) ,@args)
-       (def-base-class ,name (,model-name) ,@args))))
+      (let* ((m (def-meta-model ,model-name ,supers ,slots ,args))
+	     (i (make-instance m)))
+	(setf (meta-model.base-type i) :clsql)
+	(prog1 (eval (def-base-class-expander i ',name ',args))
+	  (defmethod meta-model.metadata ((self ,name))
+	    (meta-model.metadata i)))))))
 
 (defmacro def-view-class/table (table &optional (name (sql->sym table)) model-name)
   "takes the name of a table as a string and
