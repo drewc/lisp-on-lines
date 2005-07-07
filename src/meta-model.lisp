@@ -22,6 +22,9 @@
 (defmethod meta-model.metadata ((self (eql nil)))
   nil)
 
+(defmethod meta-model.metadata ((self symbol))
+  (meta-model.metadata (make-instance self)))
+
 (defun gen-supers (supers)
   (let (subclassp)
     (dolist (x supers)
