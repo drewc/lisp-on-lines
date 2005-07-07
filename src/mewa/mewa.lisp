@@ -304,8 +304,8 @@ attributes is an alist keyed on the attribute nreeame."
   ((body :initarg :body)))
 
 (defmethod render-on ((res response) (self about-dialog))
-  (render-on res (slot-value self 'body))
-  (call-next-method))
+  (call-next-method)
+  (render-on res (slot-value self 'body)))
 
 (defaction cancel-save-instance ((self mewa))
   (cond  
@@ -339,10 +339,6 @@ attributes is an alist keyed on the attribute nreeame."
   (declare (ignore arg))
   (ensure-instance-sync self)
   (answer self))
-
-
-
-
 
 (defmethod (setf presentation-slot-value) :around (value (slot slot-presentation) instance)
   (let* ((old (prog1 
