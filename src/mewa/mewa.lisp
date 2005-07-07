@@ -241,7 +241,7 @@ attributes is an alist keyed on the attribute nreeame."
 	      (let ((class-name (or (gethash (second s) ucw::*slot-type-mapping*) 'mewa-object-presentation)))
 	      (apply #'make-instance 
 		     class-name
-		     (append (cddr s) (list :parent self)))))
+		     (append (cddr s) (list :parent self :size 30)))))
 	  (find-applicable-attributes self)))
 
 
