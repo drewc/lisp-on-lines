@@ -42,8 +42,7 @@
    :expr-and
    :expr-or
    :expr-not
-   :select-instances
-   ))
+   :select-instances))
 
 
 (defpackage :mewa 
@@ -52,14 +51,17 @@
    :mewa 
    :mewa-object-presentation 
    :mewa-one-line-presentation
+   :mewa-list-presentation
    :mewa-presentation-search
    :find-attribute 
-   :set-default-attributes 
+   :set-default-leattributes 
    :make-presentation 
    :call-presentation 
-   :label 
+   :label
+   :attributes
    :set-attribute
    :perform-set-attributes
+   :perform-set-attribute-properties
    :find-class-attributes 
    :default-attributes 
    :ok
@@ -72,4 +74,24 @@
    :search-query))
 
 (defpackage :lisp-on-lines
-  (:use :mewa :meta-model :common-lisp :it.bese.ucw))
+  (:use :mewa :meta-model :common-lisp :it.bese.ucw)
+  (:export 
+   ;;;; Mewa Exports
+   :make-presentation
+
+   ;;attributes
+   :attributes
+   :set-default-attributes
+   :set-attribute
+   :find-attribute
+   :perform-set-attributes
+   ;;
+   :perform-set-attribute-properties
+
+   ;; presentation objects
+   :mewa-object-presentation
+   :mewa-one-line-presentation
+   :mewa-list-presentation
+   ;;;; Meta Model Exports))
+   :def-view-class/table
+   :def-view-class/meta))
