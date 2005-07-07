@@ -65,6 +65,9 @@ attributes is an alist keyed on the attribute nreeame."
 (defmethod find-class-attributes ((model symbol))
   (find-or-create-attributes model))
 
+(defmethod clear-class-attributes ((model t))
+  (setf (cdr (find-class-attributes model)) nil))
+
 (defmethod add-attribute ((model t) name def)
   (let ((map (find-class-attributes model)))
     (setf (cdr map) (acons name def (cdr map)))))
@@ -113,6 +116,7 @@ attributes is an alist keyed on the attribute nreeame."
 		  (meta-model:list-has-many model))))
 
 (defmethod set-default-attributes ((model t))
+  (clear-class-attributes model)
   (mapcar #'(lambda (x) 
 	      (setf (find-attribute model (car x)) (cdr x)))
 	  (default-attributes model)))
