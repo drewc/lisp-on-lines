@@ -351,6 +351,22 @@ attributes is an alist keyed on the attribute nreeame."
       (setf (modifiedp self) instance
 	    (modifications self)  (append (list new old value slot instance) (modifications self)))))))
 
+;;;; * Finally set up some defaults
+
+(setf (find-attribute t :viewer) 
+      '(mewa-object-presentation :global-properties (:editablep nil))
+      (find-attribute t :editor)
+      '(mewa-object-presentation :global-properties (:editablep t))
+      (find-attribute t :one-line)
+      '(mewa::mewa-one-line-presentation)
+      (find-attribute t :listing)
+      '(mewa::mewa-list-presentation :global-properties (:editablep nil) :editablep t)
+      (find-attribute t :search-presentation)
+      '(mewa-object-presentation))
+
+
+
+
 
 ;; This software is Copyright (c) Drew Crampsie, 2004-2005.
 ;; You are granted the rights to distribute
