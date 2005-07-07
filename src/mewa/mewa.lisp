@@ -97,6 +97,21 @@ attributes is an alist keyed on the attribute nreeame."
   (dolist (def definitions)
     (funcall #'set-attribute model (first def) (rest def))))
 
+
+(defmethod set-attribute-properties ((model t) attribute properties)
+  (let ((a (find-attribute model attribute)))
+    (if a
+	(setf (cddr a) (plist-nunion properties (cddr a)))
+	(error "Attribute ~A does not exist" attribute) )))
+
+(defmethod perform-set-attribute-properties ((model t) definitions)
+  (dolist (def definitions)
+    (funcall #'set-attribute-properties model (car def) (cdr def))))
+  
+
+
+
+
 (defmethod default-attributes ((model t))
   "return the default attributes for a given model using the meta-model's meta-data"
   (append (mapcar #'(lambda (s) 
