@@ -34,5 +34,8 @@
   :depends-on (:ucw :meta-model))
 	  
 (defsystem :lisp-on-lines
-  :components ((:static-file "lisp-on-lines.asd"))
+  :components ((:static-file "lisp-on-lines.asd")
+	       (:module :components
+		:pathname "src/components/"
+                :components ((:file "range-list"))))
 :depends-on (:meta-model :mewa))
