@@ -54,7 +54,7 @@
    :mewa-list-presentation
    :mewa-presentation-search
    :find-attribute 
-   :set-default-leattributes 
+   :set-default-attributes 
    :make-presentation 
    :call-presentation 
    :label
@@ -94,4 +94,5 @@
    :mewa-list-presentation
    ;;;; Meta Model Exports))
    :def-view-class/table
-   :def-view-class/meta))
+   :def-view-class/meta
+   :list-slot-types))

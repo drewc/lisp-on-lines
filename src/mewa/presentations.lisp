@@ -135,7 +135,7 @@
   (setf (display-results-p self) t))
 
 (defmethod render-on ((res response) (self mewa-presentation-search))
-  (<:as-html (search-query self))
+  ;(<:as-html (search-query self))
   (ucw::render-criteria res self)
   (<ucw:input :type "submit" :value "Search" :action (ok self))
   (when (display-results-p self)
