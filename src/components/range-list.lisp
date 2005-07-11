@@ -1,3 +1,6 @@
+(in-package :mewa)
+
+
 (defgeneric make-range-list-generator (instance &key query chunk-size &allow-other-keys)
   (:documentation "Produced generator must obeys the following interface:
 GENERATOR (:first|:last|:next|:previous|:current &optional offset) =>
