@@ -134,6 +134,7 @@
   (setf (ucw::instances (ucw::list-presentation self)) (valid-instances self))
   (setf (display-results-p self) t))
 
+
 (defmethod render-on ((res response) (self mewa-presentation-search))
   ;(<:as-html (search-query self))
   (ucw::render-criteria res self)

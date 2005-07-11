@@ -102,7 +102,7 @@ most of the below functions expect this method to exist"
 	      (list-item-helper
 	       type view
 	       :ret-fun #'rfun)))
-    (append (lister :key) (lister :base))))
+    (append (lister :key) (lister :base) (lister nil))))
 			 
 (defmethod slot-type ((view t) slot)
   "returns the CLSQL type of SLOT"
