@@ -209,7 +209,7 @@ AND fa.attnum = ANY (pg_constraint.confkey)"))
    :set t))
 
 (defun gen-many-to-many (row home-key foreign-key)
- (let ((name (sql->sym (string-upcase (format nil "~A->~A" (string (car row)) (string (second row)))))))
+ (let ((name (sql->sym (string-upcase (format nil "~A<-~A->~A" (string (car row)) (string foreign-key) (string (second row)))))))
    (setf row (mapcar #'sql->sym row))
    `(,name
      :accessor ,name
