@@ -8,6 +8,7 @@
    :def-meta-model
    :def-base-class
    :%def-base-class
+   
    :def-view-class/table
    :def-view-class/meta
    :view-class-metadata
@@ -75,8 +76,10 @@
 
 (defpackage :lisp-on-lines
   (:use :mewa :meta-model :common-lisp :it.bese.ucw)
+  (:nicknames :lol)
   (:export 
    ;;;; Mewa Exports
+   :mewa ;the superclass of all mewa-presentations
    :make-presentation
 
    ;;attributes
@@ -95,4 +98,5 @@
    ;;;; Meta Model Exports))
    :def-view-class/table
    :def-view-class/meta
-   :list-slot-types))
+   :list-slot-types
+   ))

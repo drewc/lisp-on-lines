@@ -170,7 +170,12 @@ When T, only the default value for primary keys and the joins are updated."))
 
 
 (defaction add-to-has-many ((slot has-many-slot-presentation) instance)
+  ;; if the instance is not stored we must make sure to mark it stored now!
+  (unless (mewa::instance-is-stored-p instance)
+    (setf (mewa::modifiedp (parent self)) t))
+  ;; sync up the instance
   (mewa:ensure-instance-sync (parent slot))
+
   (multiple-value-bindf (class home foreign) 
       (meta-model:explode-has-many instance (slot-name slot))
     (let ((new (make-instance class)))

@@ -51,7 +51,7 @@
   "return an exisiting class attribute map or create one. 
 
 A map is a cons of class-name . attributes. 
-attributes is an alist keyed on the attribute nreeame."
+attributes is an alist keyed on the attribute name."
   (or (assoc class-name *attribute-map*) 
       (progn 
 	(setf *attribute-map* (acons class-name (list (list)) *attribute-map*)) 
@@ -97,7 +97,6 @@ attributes is an alist keyed on the attribute nreeame."
   (dolist (def definitions)
     (funcall #'set-attribute model (first def) (rest def))))
 
-
 (defmethod set-attribute-properties ((model t) attribute properties)
   (let ((a (find-attribute model attribute)))
     (if a
@@ -108,9 +107,6 @@ attributes is an alist keyed on the attribute nreeame."
   (dolist (def definitions)
     (funcall #'set-attribute-properties model (car def) (cdr def))))
   
-
-
-
 
 (defmethod default-attributes ((model t))
   "return the default attributes for a given model using the meta-model's meta-data"
@@ -131,6 +127,7 @@ attributes is an alist keyed on the attribute nreeame."
 		  (meta-model:list-has-many model))))
 
 (defmethod set-default-attributes ((model t))
+  "Set the default attributes for MODEL"
   (clear-class-attributes model)
   (mapcar #'(lambda (x) 
 	      (setf (find-attribute model (car x)) (cdr x)))
@@ -140,7 +137,6 @@ attributes is an alist keyed on the attribute nreeame."
 (defgeneric attributes-getter (model))
 	  
 ;;;presentations 
-
 
 
 
@@ -166,7 +162,7 @@ attributes is an alist keyed on the attribute nreeame."
     :accessor use-instance-class-p 
     :initform t)
    (initializedp :initform nil)
-   (modifiedp :accessor modifiedp :initform nil)
+   (modifiedp :accessor modifiedp :initform nil :initarg :modifiedp)
    (modifications :accessor modifications :initform nil)))
 
 
@@ -284,6 +280,14 @@ attributes is an alist keyed on the attribute nreeame."
     i))
 
 
+(defmethod initialize-slots-place ((place ucw::place) (mewa mewa))
+  (setf (slots mewa) (mapcar #'(lambda (x) 
+			       (prog1 x 
+				 (setf (component.place x) place)))
+                            (slots mewa))))
+  
+  
+  
 
 
 
@@ -307,22 +311,26 @@ attributes is an alist keyed on the attribute nreeame."
   (call-next-method)
   (render-on res (slot-value self 'body)))
 
+
+(defmethod instance-is-stored-p ((instance clsql:standard-db-object))
+  (slot-value instance  'clsql-sys::view-database))
+
 (defaction cancel-save-instance ((self mewa))
   (cond  
-    ((slot-value (instance self) 'clsql-sys::view-database)
+    ((instance-is-stored-p (instance self))
       (meta-model::update-instance-from-records (instance self))
       (answer self))
     (t (answer nil))))
 
 (defaction save-instance ((self mewa))
   (meta-model:sync-instance (instance self))
-   (setf (modifiedp self) nil)
-       (answer self))
+  (setf (modifiedp self) nil)
+  (answer self))
 
 
 (defaction ensure-instance-sync ((self mewa))
   (when (modifiedp self)
-    (let ((message (format nil "Record has been modified, Do you wish to save the changes?<br/> ~a" (print (modifications self)))))
+    (let ((message (format nil "Record has been modified, Do you wish to save the changes?")))
       (case (call 'about-dialog
                   :body (make-presentation (instance self) 
 					   :type :viewer)

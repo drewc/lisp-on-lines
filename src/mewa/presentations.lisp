@@ -39,7 +39,9 @@
   ((ucw::instances :accessor instances :initarg :instances :initform nil)
    (instance :accessor instance)
    (select-label :accessor select-label :initform "select" :initarg :select-label)
-   (selectablep :accessor selectablep :initform t :initarg :selectablep)))
+   (selectablep :accessor selectablep :initform t :initarg :selectablep)
+   (ucw::deleteablep :accessor deletablep :initarg :deletablep :initform nil)
+   (viewablep :accessor viewablep :initarg :viewablep :initform nil)))
 
 (defaction select-from-listing ((listing mewa-list-presentation) object index)
   (answer object))
@@ -62,7 +64,12 @@
 	(let ((index index))
 	  (<ucw:input :type "submit"
 		      :action (select-from-listing listing object index)
-		      :value (select-label listing)))))
+		      :value (select-label listing))))
+      (when (viewablep listing)
+	(let ((index index))
+	  (<ucw:input :type "submit"
+		      :action (call-component listing  (make-presentation object))
+		      :value "view"))))
     (dolist (slot (slots listing))
       (<:td :class "data-cell" (present-slot slot object)))
     (<:td :class "index-number-cell")
