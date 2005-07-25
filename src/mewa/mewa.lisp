@@ -149,6 +149,9 @@ attributes is an alist keyed on the attribute name."
     :accessor attributes-getter
     :initform #'get-attributes
     :initarg :attributes-getter)
+   (attribute-slot-map
+    :accessor attribute-slot-map
+    :initform nil)
    (global-properties
     :initarg :global-properties
     :accessor global-properties
@@ -177,7 +180,6 @@ attributes is an alist keyed on the attribute name."
   (append (meta-model:list-slots (instance self))
 	  (meta-model:list-has-many (instance self)))
   nil))
-
 
 (defmethod find-instance-classes ((self mewa))
   (mapcar #'class-name 
@@ -232,22 +234,29 @@ attributes is an alist keyed on the attribute name."
 			(attributes self)))
       all-attributes))))
 
+(defmethod find-slot-presentation-for-attribute ((self mewa) attribute)
+  (let ((class-name 
+	 (or (gethash (second attribute) ucw::*slot-type-mapping*) 
+	     (error  "Can't find slot type for ~A" (second attribute)))))
+		
+	  (cons (first attribute) (apply #'make-instance 
+	   class-name
+	   (append (cddr attribute) (list :parent self :size 30))))))
+
 (defmethod find-slot-presentations ((self mewa))
-  (mapcar #'(lambda (s)
-	      (let ((class-name (or (gethash (second s) ucw::*slot-type-mapping*) 'mewa-object-presentation)))
-	      (apply #'make-instance 
-		     class-name
-		     (append (cddr s) (list :parent self :size 30)))))
+  (mapcar #'(lambda (a) (find-slot-presentation-for-attribute self a))
 	  (find-applicable-attributes self)))
 
-
+(defmethod find-attribute-slot ((self mewa) (attribute symbol))
+  (cdr (assoc attribute (attribute-slot-map self))))
 
 (defmethod initialize-slots ((self mewa))
   (when (use-instance-class-p self)
     (setf (classes self) 
 	  (append (find-instance-classes self)
 		  (classes self))))
-  (setf (slots self) (find-slot-presentations   self)))
+  (setf (attribute-slot-map self) (find-slot-presentations self))
+  (setf (slots self) (mapcar #'(lambda (x)(cdr x)) (attribute-slot-map self ))))
   
 
 (defmethod make-presentation ((object t) &key (type :viewer) (initargs nil))
@@ -286,11 +295,6 @@ attributes is an alist keyed on the attribute name."
 				 (setf (component.place x) place)))
                             (slots mewa))))
   
-  
-  
-
-
-
 (defmethod call-component :before ((from standard-component) (to mewa))
   (unless (slot-value to 'initializedp)
     (initialize-slots to))
@@ -313,7 +317,10 @@ attributes is an alist keyed on the attribute name."
 
 
 (defmethod instance-is-stored-p ((instance clsql:standard-db-object))
-  (slot-value instance  'clsql-sys::view-database))
+  (slot-value instance 'clsql-sys::view-database))
+
+(defmethod instance-is-stored-p ((mewa mewa))
+  (instance-is-stored-p (instance mewa)))
 
 (defaction cancel-save-instance ((self mewa))
   (cond  

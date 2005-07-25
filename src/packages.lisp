@@ -70,6 +70,7 @@
    :save-instance
    :cancel-save-instance
    :ensure-instance-sync
+   :instance-is-stored-p
    :global-properties
    :search-expr
    :search-query))
@@ -95,6 +96,10 @@
    :mewa-object-presentation
    :mewa-one-line-presentation
    :mewa-list-presentation
+
+   ;; CRUD
+   :instance-is-stored-p
+
    ;;;; Meta Model Exports))
    :def-view-class/table
    :def-view-class/meta

@@ -84,7 +84,8 @@ When T, only the default value for primary keys and the joins are updated."))
 
 (defslot-presentation  mewa-relation-slot-presentation (mewa-slot-presentation slot-presentation)
   ((foreign-instance :accessor foreign-instance)
-   (linkedp :accessor linkedp :initarg :linkedp :initform t))
+   (linkedp :accessor linkedp :initarg :linkedp :initform t)
+   (creator :accessor creator :initarg :creator :initform :editor))
   (:type-name relation))
 
 (defaction search-records ((slot mewa-relation-slot-presentation) instance)
@@ -104,15 +105,28 @@ When T, only the default value for primary keys and the joins are updated."))
       (setf (slot-value instance (slot-name slot)) (slot-value new-instance foreign-slot-name))
       (meta-model:sync-instance instance :fill-gaps-only-p (fill-gaps-only-p self)))))
 
-(defaction create-record ((slot mewa-relation-slot-presentation) instance)
+(defaction create-record-on-foreign-key ((slot mewa-relation-slot-presentation) instance)
   (multiple-value-bindf (finstance foreign-slot-name)
       (meta-model:explode-foreign-key instance (slot-name slot))
     (let ((new-instance
            (call-component
             (parent slot) 
-            (mewa:make-presentation finstance :type :editor))))
+            (mewa:make-presentation finstance :type (creator self)))))
+      
+      ;;;; TODO: this next bit is due to a bad design decision. 
+      ;;;; Components should always have (ok) return self, but somewhere 
+      ;;;; i've made in return (instance self) sometimes, and this
+      ;;;; bahaviour is totatlly fucked.
+      
+     (when (typep new-instance 'mewa::mewa)
+       (setf new-instance (instance new-instance)))
+
+      ;;;; sorry about that, and now back t our regular program.
+      
+      (meta-model:sync-instance new-instance)
       (setf (slot-value instance (slot-name slot)) (slot-value new-instance foreign-slot-name))
       (meta-model:sync-instance instance :fill-gaps-only-p (fill-gaps-only-p self)))))
+      
 
 (defmethod present-relation ((slot mewa-relation-slot-presentation) instance)
  ;;;;(<:as-html (slot-name slot) "=> " (foreign-instance slot) " from " instance )
@@ -143,18 +157,22 @@ When T, only the default value for primary keys and the joins are updated."))
   (meta-model:sync-instance (instance (parent self))))
 
 
-(defmethod  present-slot :around ((slot foreign-key-slot-presentation) instance)
+
+(defmethod present-slot :before ((slot foreign-key-slot-presentation) instance)
+  ())
+
+
+(defmethod  present-slot :around ((slot foreign-key-slot-presentation) instance)  
   (setf (foreign-instance slot) 
 	(when (presentation-slot-value slot instance) 
 	  (meta-model:explode-foreign-key instance (slot-name slot))))
-  
   (flet ((render () (when (foreign-instance slot)(call-next-method))))
     (if (slot-boundp slot 'place)
         (cond 
           ((editablep slot)
            (render)
            (<ucw:submit :action  (search-records slot instance) :value "Search" :style "display:inline")
-           (<ucw:submit :action  (create-record slot instance) :value "Add New" :style "display:inline"))
+           (<ucw:submit :action  (create-record-on-foreign-key slot instance) :value "Add New" :style "display:inline"))
           ((linkedp slot)
            (<ucw:a :action (view-instance slot (foreign-instance slot)) 
                    (render)))
@@ -181,7 +199,7 @@ When T, only the default value for primary keys and the joins are updated."))
     (let ((new (make-instance class)))
       (setf (slot-value new foreign) (slot-value instance home))
       (meta-model:sync-instance new :fill-gaps-only-p (fill-gaps-only-p self))
-      (call-component (parent slot) (mewa:make-presentation new :type :editor))
+      (call-component (parent slot) (mewa:make-presentation new :type (creator slot)))
       (meta-model:sync-instance instance))))
 
 (defmethod present-slot ((slot has-many-slot-presentation) instance)
