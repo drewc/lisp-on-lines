@@ -276,9 +276,9 @@ creates a clsql view-class"
 (def-compare-expr standard-db-object expr-= sql-=)
 (def-compare-expr standard-db-object expr-< sql-<)        
 (def-compare-expr standard-db-object expr-> sql->)
-(def-compare-expr standard-db-object expr-ends-with sql-like :value-format "%~A")
-(def-compare-expr standard-db-object expr-starts-with sql-like :value-format "~A%")
-(def-compare-expr standard-db-object expr-contains sql-like :value-format "%~A%")
+(def-compare-expr standard-db-object expr-ends-with sql-uplike :value-format "%~A")
+(def-compare-expr standard-db-object expr-starts-with sql-uplike :value-format "~A%")
+(def-compare-expr standard-db-object expr-contains sql-uplike :value-format "%~A%")
 
 (def-logical-expr standard-db-object expr-and #'sql-and)
 
