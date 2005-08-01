@@ -169,6 +169,10 @@ attributes is an alist keyed on the attribute name."
    (modifications :accessor modifications :initform nil)))
 
 
+
+
+
+
 (defmethod attributes :around ((self mewa))
   (let ((a (call-next-method)))
     (or a (funcall (attributes-getter self) self))))
@@ -251,12 +255,13 @@ attributes is an alist keyed on the attribute name."
   (cdr (assoc attribute (attribute-slot-map self))))
 
 (defmethod initialize-slots ((self mewa))
-  (when (use-instance-class-p self)
-    (setf (classes self) 
-	  (append (find-instance-classes self)
-		  (classes self))))
-  (setf (attribute-slot-map self) (find-slot-presentations self))
-  (setf (slots self) (mapcar #'(lambda (x)(cdr x)) (attribute-slot-map self ))))
+  (when (instance self)
+    (when (use-instance-class-p self)
+      (setf (classes self) 
+	    (append (find-instance-classes self)
+		    (classes self))))
+    (setf (attribute-slot-map self) (find-slot-presentations self))
+    (setf (slots self) (mapcar #'(lambda (x)(cdr x)) (attribute-slot-map self )))))
   
 
 (defmethod make-presentation ((object t) &key (type :viewer) (initargs nil))
@@ -372,11 +377,13 @@ attributes is an alist keyed on the attribute name."
       '(mewa-object-presentation :global-properties (:editablep nil))
       (find-attribute t :editor)
       '(mewa-object-presentation :global-properties (:editablep t))
+      (find-attribute t :creator)
+      '(mewa-object-presentation :global-properties (:editablep t))
       (find-attribute t :one-line)
-      '(mewa::mewa-one-line-presentation)
+      '(mewa-one-line-presentation)
       (find-attribute t :listing)
-      '(mewa::mewa-list-presentation :global-properties (:editablep nil) :editablep t)
-      (find-attribute t :search-presentation)
+      '(mewa-list-presentation :global-properties (:editablep nil) :editablep t)
+      (find-attribute t :search-model)
       '(mewa-object-presentation))
 
 

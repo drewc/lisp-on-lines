@@ -12,7 +12,8 @@
   (or (meta-model:list-keys (instance self))))
 
 ;;;objects
-(defcomponent mewa-object-presentation (mewa ucw:object-presentation) ())
+(defcomponent mewa-object-presentation (mewa ucw:object-presentation) 
+  ((ucw::instance :accessor instance :initarg :instance :initform nil)))
 
 (defcomponent two-column-presentation (mewa-object-presentation) ())
 
