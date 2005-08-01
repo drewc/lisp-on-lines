@@ -82,6 +82,8 @@ When T, only the default value for primary keys and the joins are updated."))
         ifFormat       :    \"%m/%d/%Y\",
       });" input-id))))))
 
+
+
 (defslot-presentation  mewa-relation-slot-presentation (mewa-slot-presentation slot-presentation)
   ((foreign-instance :accessor foreign-instance)
    (linkedp :accessor linkedp :initarg :linkedp :initform t)
@@ -93,7 +95,7 @@ When T, only the default value for primary keys and the joins are updated."))
       (meta-model:explode-foreign-key instance (slot-name slot))
     (let ((new-instance
             (call-component 
-             (parent slot) 
+             (parent slot)
              (make-instance (or (cadr (mewa:find-attribute finstance :presentation-search))
                                 'mewa::mewa-presentation-search)
                             :search-presentation
@@ -185,7 +187,6 @@ When T, only the default value for primary keys and the joins are updated."))
 (defslot-presentation has-many-slot-presentation (mewa-relation-slot-presentation)
   ((add-new-label :accessor add-new-label :initarg :add-new-label :initform "Add New"))
   (:type-name has-many))
-
 
 (defaction add-to-has-many ((slot has-many-slot-presentation) instance)
   ;; if the instance is not stored we must make sure to mark it stored now!
@@ -285,3 +286,16 @@ When T, only the default value for primary keys and the joins are updated."))
 	    (setf (instance (presentation slot)) (presentation-slot-value slot instance))
 	    (present (presentation slot)))
 	  (<:as-html "--"))))
+
+(defslot-presentation inline-slot-presentation (mewa-relation-slot-presentation)
+  ()
+  (:type-name inline))
+
+(defmethod present-slot ((slot inline-slot-presentation) instance)
+  (<:fieldset 
+   (<:legend (<:as-html (label slot)))
+  (<ucw:render-component :component (mewa:make-presentation (meta-model::explode-foreign-key instance (slot-name slot)) :type :editor))))
+
+(defmethod mewa::present-slot-as-row ((self mewa::mewa-object-presentation) (slot inline-slot-presentation))
+  (<:td :colspan 2
+	(present-slot slot (instance self))))

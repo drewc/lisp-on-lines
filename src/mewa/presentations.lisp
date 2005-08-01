@@ -15,6 +15,18 @@
 (defcomponent mewa-object-presentation (mewa ucw:object-presentation) 
   ((ucw::instance :accessor instance :initarg :instance :initform nil)))
 
+(defmethod present ((pres mewa-object-presentation))
+  (<:table :class (css-class pres)
+    (dolist (slot (slots pres))
+      (<:tr :class "presentation-slot-row"
+	    (present-slot-as-row pres slot))))
+    (render-options pres (instance pres)))
+        
+(defmethod present-slot-as-row ((pres mewa-object-presentation) (slot ucw::slot-presentation))
+  (<:td :class "presentation-slot-label" (<:as-html (label slot)))
+  (<:td :class "presentation-slot-value" (present-slot slot (instance pres))))
+
+
 (defcomponent two-column-presentation (mewa-object-presentation) ())
 
 (defmethod present ((pres two-column-presentation))
@@ -80,7 +92,11 @@
   (instances self))
 
 
-;;; searching
+;;;; * Presentation Searches
+
+
+;;;; ** "search all fields" criteria
+
 (defgeneric search-expr (criteria instance)
   (:documentation "Return ready to apply criteria.
                    What to do with it is backend dependent."))
@@ -116,15 +132,19 @@
 (def-search-expr ((self ucw::number-equal-to))
     (meta-model:expr-= (ucw::number-input self)))
 
+
+
 (defcomponent mewa-presentation-search (ucw::presentation-search)
-  ((display-results-p :accessor display-results-p :initarg :display-results-p :initform nil)))
+  ((display-results-p :accessor display-results-p :initarg :display-results-p :initform nil)
+   (criteria-input :accessor criteria-input :initform "")
+   (new-criteria :accessor new-criteria :initform nil)))
 
 (defmethod instance ((self mewa:mewa-presentation-search))
   (instance (ucw::search-presentation self)))
 
 (defmethod search-expr ((self mewa:mewa-presentation-search) instance)
   (apply #'meta-model:expr-and instance
-         (mapcan (lambda (c) (let ((e (search-expr c instance)))
+         (mapcan (lambda (c) (let ((e  (search-expr c instance)))
                                (if (listp e) e (list e))))
                  (ucw::criteria self))))
 
@@ -143,10 +163,56 @@
   (setf (display-results-p self) t))
 
 
+(defmethod set-search-input-for-criteria ((criteria ucw::criteria) (input t))
+  (error "No search-input-for-criteria method for ~A : ~A" criteria input))
+
+(defmethod set-search-input-for-criteria ((c ucw::string-criteria) input)
+  (setf (ucw::search-text c) input))
+
+(defmethod set-search-input-for-criteria ((c ucw::negated-criteria) i)
+  nil)
+
+
+(defmethod mewa-add-criteria ((self component) (criteria ucw::criteria))
+  (set-search-input-for-criteria criteria (criteria-input self))
+  (ucw::add-criteria self criteria))
+
+(defmethod find-default-criteria (c ucw::mewa-string-slot-presentation)
+  'ucw::string-contains)
+
+
+
+(defmethod render-criteria ((res response) (s mewa-presentation-search))
+  (setf (criteria-input s) "")
+  (<:ul
+   (dolist (c (criteria s))
+     (<:li (render-on res c)
+	   (let ((c c))
+	     (<ucw:input :action (ucw::drop-criteria s c) :type "submit" :value "eliminate"))))
+     (<:li 
+      "Search For: "
+      (<ucw:input :type "text" :accessor (criteria-input s))
+      " Using : "
+       (<ucw:select :accessor (new-criteria s) 
+         (dolist (criteria (ucw::applicable-criteria s))
+	   (<ucw:option :value criteria (<:as-html (label criteria)))))
+       (<ucw:input :type "submit" :action (mewa-add-criteria s (new-criteria s))
+		   :value "add"))))
+
+(defmethod submit-search ((s mewa-presentation-search))
+  (with-slots (criteria-input) s
+    
+    (unless (or (null criteria-input)
+		(string-equal "" (remove #\Space criteria-input)))
+      
+      (mewa-add-criteria s (new-criteria s)))
+	       
+    (ok s)))
+
 (defmethod render-on ((res response) (self mewa-presentation-search))
   ;(<:as-html (search-query self))
-  (ucw::render-criteria res self)
-  (<ucw:input :type "submit" :value "Search" :action (ok self))
+  (render-criteria res self)
+  (<ucw:input :type "submit" :value "Search" :action (submit-search self))
   (when (display-results-p self)
     (let ((listing (ucw::list-presentation self)))
       (setf 
@@ -156,7 +222,8 @@
       
       (render-on res listing))))
 
-;;;;
+
+;;;; 
 (defcomponent dont-show-unset-slots ()())
 
 (defmethod slots :around ((self dont-show-unset-slots))
