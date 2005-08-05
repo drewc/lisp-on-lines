@@ -141,7 +141,8 @@ attributes is an alist keyed on the attribute name."
 
 
 (defcomponent mewa ()
-  ((attributes
+  ((ucw::instance :accessor instance :initarg :instance) 
+   (attributes
     :initarg :attributes
     :accessor attributes
     :initform nil)

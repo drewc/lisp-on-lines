@@ -46,7 +46,6 @@ When T, only the default value for primary keys and the joins are updated."))
   integer
   currency)
 
-
 (defslot-presentation clsql-wall-time-slot-presentation (mewa-relation-slot-presentation)
        ()
        (:type-name clsql-sys:wall-time))
@@ -81,8 +80,6 @@ When T, only the default value for primary keys and the joins are updated."))
         inputField     :    \"~a\",
         ifFormat       :    \"%m/%d/%Y\",
       });" input-id))))))
-
-
 
 (defslot-presentation  mewa-relation-slot-presentation (mewa-slot-presentation slot-presentation)
   ((foreign-instance :accessor foreign-instance)
@@ -287,15 +284,9 @@ When T, only the default value for primary keys and the joins are updated."))
 	    (present (presentation slot)))
 	  (<:as-html "--"))))
 
-(defslot-presentation inline-slot-presentation (mewa-relation-slot-presentation)
-  ()
-  (:type-name inline))
 
-(defmethod present-slot ((slot inline-slot-presentation) instance)
-  (<:fieldset 
-   (<:legend (<:as-html (label slot)))
-  (<ucw:render-component :component (mewa:make-presentation (meta-model::explode-foreign-key instance (slot-name slot)) :type :editor))))
 
-(defmethod mewa::present-slot-as-row ((self mewa::mewa-object-presentation) (slot inline-slot-presentation))
-  (<:td :colspan 2
-	(present-slot slot (instance self))))
+
+
+
+

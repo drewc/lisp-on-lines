@@ -185,7 +185,7 @@
 (defmethod render-criteria ((res response) (s mewa-presentation-search))
   (setf (criteria-input s) "")
   (<:ul
-   (dolist (c (criteria s))
+   (dolist (c (ucw::criteria s))
      (<:li (render-on res c)
 	   (let ((c c))
 	     (<ucw:input :action (ucw::drop-criteria s c) :type "submit" :value "eliminate"))))
