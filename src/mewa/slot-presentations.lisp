@@ -10,6 +10,28 @@
 		     (multiple-value-funcall->list #',(car form) ,@(cdr form))
 		     ,@body))
 
+
+;;;; ** Textarea Slot Presentation
+;;;;  This should really be in UCW.
+
+(defslot-presentation text-slot-presentation ()
+  ((rows :initarg :rows :accessor rows :initform nil)
+   (columns :initarg :columns :accessor columns :initform nil)
+   (html-contentp :initarg :escape-html-p :accessor escape-html-p :initform nil))
+  (:type-name text))
+
+(defmethod present-slot ((slot text-slot-presentation) instance)
+  (if (editablep slot)
+      (<ucw:textarea :accessor (presentation-slot-value slot instance)
+		     :rows (rows slot)
+		     :cols (columns slot))
+      (if (escape-html-p slot)
+	  (<:as-is (presentation-slot-value slot instance))
+	  (<:as-html (presentation-slot-value slot instance)))))
+
+
+
+
 (defcomponent mewa-slot-presentation ()
   ((slot-name :accessor slot-name 
 	      :initarg :slot-name 
