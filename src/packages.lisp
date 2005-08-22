@@ -79,10 +79,16 @@
   (:use :mewa :meta-model :common-lisp :it.bese.ucw)
   (:nicknames :lol)
   (:export 
+   ;;;; LoL 
+   :initialize-lol-for-table
+   :initialize-lol-for-database
+
+
+
    ;;;; Mewa Exports
    :mewa ;the superclass of all mewa-presentations
    :make-presentation
-
+   :call-presentation
    ;;attributes
    :attributes
    :set-default-attributes

@@ -35,6 +35,8 @@
 	  
 (defsystem :lisp-on-lines
   :components ((:static-file "lisp-on-lines.asd")
+	       (:module :src
+			:components ((:file "lisp-on-lines")))
 	       (:module :components
 		:pathname "src/components/"
                 :components ((:file "range-list"))))

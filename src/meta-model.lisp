@@ -156,14 +156,23 @@ most of the below functions expect this method to exist"
 		 :test-key :target-slot
 		 :return-full t)))
 
-(defmethod explode-foreign-key ((model clsql:standard-db-object) slot)
+(defmethod explode-foreign-key ((model clsql:standard-db-object) slot &key (createp t))
   "returns the clsql view-class joined on SLOT"
   (dolist (s (list-join-attributes model))
     (when (equal (getf (cdr s) :home-key) slot)
-      (let ((val (slot-value model (car s))))
-      (return-from explode-foreign-key 
-	(values (if val val (make-instance (getf (cdr s) :join-class))) 
-		(getf (cdr s) :foreign-key)))))))
+      (let* ((fkey (getf (cdr s) :foreign-key))
+	     (new (sync-instance (make-instance (getf (cdr s) :join-class))))
+	     (val (or (slot-value model (car s))
+		      (progn
+			(when createp
+			  (setf
+			   (slot-value model slot)
+			   (slot-value new fkey))
+			  (sync-instance model)
+			  (slot-value model (car s)))))))
+	    
+	(return-from explode-foreign-key 
+	  (values val fkey))))))
 
 (defun find-join-helper (foreign-key)
   (lambda (class slot) 

@@ -30,8 +30,6 @@
 	  (<:as-html (presentation-slot-value slot instance)))))
 
 
-
-
 (defcomponent mewa-slot-presentation ()
   ((slot-name :accessor slot-name 
 	      :initarg :slot-name 
@@ -42,7 +40,8 @@
 		     :initform nil
 		     :documentation 
 		     "When nil, the instance is syncronised with the database. 
-When T, only the default value for primary keys and the joins are updated."))
+When T, only the default value for primary keys and the joins are updated.")
+   (show-label-p :accessor show-label-p :initarg :show-label-p :initform t))
   (:documentation "The superclass of all Mewa slot presentations"))
 
 ;;;; this has to be in the eval when i would think

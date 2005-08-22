@@ -33,7 +33,10 @@
       (return-from sync-instance))
     (update-records-from-instance view :database database)
     (update-instance-from-records view :database database)
-    (update-objects-joins (list view))))
+    (update-objects-joins (list view)))
+
+  ;; return the modified and hopefully now persistent object
+  view)
 
 
 

@@ -1,4 +1,3 @@
-
 (in-package :mewa)
  
 (defparameter *default-type* :ucw)
@@ -170,10 +169,6 @@ attributes is an alist keyed on the attribute name."
    (modifications :accessor modifications :initform nil)))
 
 
-
-
-
-
 (defmethod attributes :around ((self mewa))
   (let ((a (call-next-method)))
     (or a (funcall (attributes-getter self) self))))
@@ -264,31 +259,20 @@ attributes is an alist keyed on the attribute name."
     (setf (attribute-slot-map self) (find-slot-presentations self))
     (setf (slots self) (mapcar #'(lambda (x)(cdr x)) (attribute-slot-map self )))))
   
-
 (defmethod make-presentation ((object t) &key (type :viewer) (initargs nil))
   (let* ((p (make-instance 'mewa-object-presentation))
-	 (a (progn (setf (slot-value p 'instance) object)
+	 (a (progn (setf (slot-value p 'ucw::instance) object)
 		   (initialize-slots p) 
 		   (assoc type (find-all-attributes p))))
-	 
-	 (i (apply #'make-instance (second a) (plist-union initargs (cddr a)))))
-    (setf (slot-value i 'instance) object)
-    i))
-
-(defmethod make-presentation ((object t) &key (type :viewer) (initargs nil))
-  (let* ((p (make-instance 'mewa-object-presentation))
-	 (a (progn (setf (slot-value p 'instance) object)
-		   (initialize-slots p) 
-		   (assoc type (find-all-attributes p))))
-	 
-	 (i (apply #'make-instance (or (second a)
-				       ;; if we didnt find the type, 
-				       ;; use the symbol as a class. 
-				       (if (eql (symbol-package type) 
-						(find-package 'keyword))
-					   (symbol-name type)
-					   type))
-				       (plist-union initargs (cddr a)))))
+	 ;;;; TODO: this can be cleaned up, probably CHANGE-CLASS is better here
+	 (i (apply #'change-class p (or (second a)
+				      ;; if we didnt find the type, 
+				      ;; use the symbol as a class. 
+				      (if (eql (symbol-package type) 
+					       (find-package 'keyword))
+					  (symbol-name type)
+					  type))
+		   (plist-union initargs (cddr a)))))
     (setf (slot-value i 'instance) object)
     (initialize-slots i)
     (setf (slot-value i 'initializedp) t)
@@ -301,14 +285,14 @@ attributes is an alist keyed on the attribute name."
 				 (setf (component.place x) place)))
                             (slots mewa))))
   
-(defmethod call-component :before ((from standard-component) (to mewa))
+(arnesi:defmethod/cc call-component :before ((from standard-component) (to mewa))
   (unless (slot-value to 'initializedp)
     (initialize-slots to))
   (setf (slot-value to 'initializedp) t)
-  (setf (slots to) (mapcar #'(lambda (x) (prog2 
-					     (setf (component.place x) (component.place from))
-					     x))
-                            (slots to))))
+  (initialize-slots-place (component.place from) to)
+  to)
+
+
 
 (defmacro call-presentation (object &rest args)
   `(present-object ,object :presentation (make-presentation ,object ,@args)))
@@ -357,9 +341,9 @@ attributes is an alist keyed on the attribute name."
 
 (defaction ok ((self mewa) &optional arg)
   "Returns the component if it has not been modified. if it has been, prompt user to save or cancel"
-  (declare (ignore arg))
-  (ensure-instance-sync self)
-  (answer self))
+  ;(declare (ignore arg))
+  (meta-model::sync-instance (instance self))
+  (answer (instance self)))
 
 (defmethod (setf presentation-slot-value) :around (value (slot slot-presentation) instance)
   (let* ((old (prog1 
