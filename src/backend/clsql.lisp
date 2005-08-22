@@ -53,7 +53,7 @@
   (unless (member name *clsql-base-classes*)
     (setf *clsql-base-classes* (cons name *clsql-base-classes*))))
 
-(defparameter *sql-type-map* '((:INT4 integer) (:TEXT string) (:VARCHAR string) (:TIMESTAMP clsql-sys::wall-time) (:NUMERIC number)(:BYTEA string)))
+(defparameter *sql-type-map* '((:INT4 integer) (:BOOL boolean) (:TEXT string) (:VARCHAR string) (:TIMESTAMP clsql-sys::wall-time) (:NUMERIC number)(:BYTEA string)))
 
 (defun gen-type (table column)
   (cadr (assoc
