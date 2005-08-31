@@ -59,6 +59,7 @@
    :label
    :attributes
    :set-attribute
+   :set-attribute-properties
    :perform-set-attributes
    :perform-set-attribute-properties
    :find-class-attributes 

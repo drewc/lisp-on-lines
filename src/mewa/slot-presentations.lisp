@@ -86,7 +86,7 @@ When T, only the default value for primary keys and the joins are updated.")
     (setf (presentation-slot-value slot instance) new-time ))))
 
 (defmethod label :around ((slot clsql-wall-time-slot-presentation))
-  (concatenate 'string (call-next-method) "  (mm/dd/yyyy)"))
+  (concatenate 'string (call-next-method) "  (m/d/y)"))
 
 (defmethod present-slot ((slot clsql-wall-time-slot-presentation) instance)
   (let ((date (presentation-slot-value slot instance))
@@ -130,7 +130,7 @@ When T, only the default value for primary keys and the joins are updated.")
       (meta-model:explode-foreign-key instance (slot-name slot))
     (let ((new-instance
            (call-component
-            (parent slot) 
+            (parent slot)
             (mewa:make-presentation finstance :type (creator self)))))
       
       ;;;; TODO: this next bit is due to a bad design decision. 
@@ -177,11 +177,6 @@ When T, only the default value for primary keys and the joins are updated.")
   (meta-model:sync-instance (instance (parent self))))
 
 
-
-(defmethod present-slot :before ((slot foreign-key-slot-presentation) instance)
-  ())
-
-
 (defmethod  present-slot :around ((slot foreign-key-slot-presentation) instance)  
   (setf (foreign-instance slot) 
 	(when (presentation-slot-value slot instance) 
@@ -190,7 +185,6 @@ When T, only the default value for primary keys and the joins are updated.")
     (if (slot-boundp slot 'place)
         (cond 
           ((editablep slot)
-           (render)
            (<ucw:submit :action  (search-records slot instance) :value "Search" :style "display:inline")
            (<ucw:submit :action  (create-record-on-foreign-key slot instance) :value "Add New" :style "display:inline"))
           ((linkedp slot)
@@ -273,14 +267,15 @@ When T, only the default value for primary keys and the joins are updated.")
   (unless (mewa::instance-is-stored-p instance)
     (setf (mewa::modifiedp (parent self)) t))
   ;; sync up the instance
-  (mewa:ensure-instance-sync (parent slot))
-
+  ;;(mewa:ensure-instance-sync (parent slot))
+  (meta-model:sync-instance (instance (parent slot)))
+  
   (multiple-value-bindf (class home foreign) 
       (meta-model:explode-has-many instance (slot-name slot))
     (let ((new (make-instance class)))
       (setf (slot-value new foreign) (slot-value instance home))
       (meta-model:sync-instance new :fill-gaps-only-p (fill-gaps-only-p self))
-      (call-component (parent slot) (mewa:make-presentation new :type (creator slot)))
+      (call-component (parent slot)  (mewa:make-presentation new :type (creator slot)))
       (meta-model:sync-instance instance))))
 
 (defmethod present-slot ((slot has-many-slot-presentation) instance)
