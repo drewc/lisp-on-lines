@@ -236,7 +236,10 @@ attributes is an alist keyed on the attribute name."
 
 (defmethod find-slot-presentation-for-attribute ((self mewa) attribute)
   (let ((class-name 
-	 (or (gethash (second attribute) ucw::*slot-type-mapping*) 
+	 (or (gethash (if (consp (second attribute))
+			  (car (second attribute))
+			       (second attribute))
+			       ucw::*slot-type-mapping*) 
 	     (error  "Can't find slot type for ~A" (second attribute)))))
 		
 	  (cons (first attribute) (apply #'make-instance 
@@ -265,7 +268,7 @@ attributes is an alist keyed on the attribute name."
 		   (initialize-slots p) 
 		   (assoc type (find-all-attributes p))))
 	 ;;;; TODO: this can be cleaned up, probably CHANGE-CLASS is better here
-	 (i (apply #'change-class p (or (second a)
+	 (i (apply #'make-instance (or (second a)
 				      ;; if we didnt find the type, 
 				      ;; use the symbol as a class. 
 				      (if (eql (symbol-package type) 

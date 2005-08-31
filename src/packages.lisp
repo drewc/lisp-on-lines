@@ -107,7 +107,8 @@
    :instance-is-stored-p
 
    ;;;; Meta Model Exports))
-   :def-view-class/table
+   :define-meta-model
+   :def-view-class-from-table
    :def-view-class/meta
    :list-slot-types
    ))
