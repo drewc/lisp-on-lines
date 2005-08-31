@@ -39,5 +39,6 @@
 			:components ((:file "lisp-on-lines")))
 	       (:module :components
 		:pathname "src/components/"
-                :components ((:file "range-list"))))
+                :components ((:file "range-list")
+			     (:file "ajax"))))
 :depends-on (:meta-model :mewa))

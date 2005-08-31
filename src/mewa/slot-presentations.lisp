@@ -201,6 +201,68 @@ When T, only the default value for primary keys and the joins are updated.")
 	;; presentation is used only for rendering
         (render))))
 
+
+;;;; * AJAX stuff 
+
+;;;; TODO: This search stuff should probably me refactored elsewhere
+
+(defmethod find-slots-of-type (model &key (type 'string)
+			      (types '((string)) types-supplied-p))
+  "returns a list of slots matching TYPE, or matching any of TYPES"
+  (let (ty)
+    (if types-supplied-p 
+	(setf ty types)
+	(setf ty (list type)))
+    (remove nil (mapcar #'(lambda (st) (when (member (second st) ty)
+					 (first st)))
+	     (lisp-on-lines::list-slot-types model)))))
+
+(defslot-presentation ajax-foreign-key-slot-presentation (foreign-key-slot-presentation)
+  ((search-slots :accessor search-slots :initarg :search-slots :initform nil)
+   (live-search 
+     :accessor live-search
+     :component (lisp-on-lines:auto-complete
+		 :values-generator
+		 (lambda (value)
+		   (when (< 0 (length value))
+		     (limited-word-search 'person '(first-name last-name company-name) (list value))))
+
+		 :render (lambda (x)
+			   (<:as-html (if (> (length (last-name x)) 0)
+					 (strcat (last-name x) ", ")
+				      " ")
+				      (first-name x)" " (company-name x)))
+		 :as-value (lambda (x) x)
+		 :submit-on-click-p nil)))
+  (:type-name ajax-foreign-key))
+
+
+(defmethod shared-initialize :after ((slot ajax-foreign-key-slot-presentation) slots &rest args)
+  ;; If no search-slots than use the any slots of type string
+  (unless (search-slots slot)
+    (setf (search-slots slot) t)
+  (let ((l (live-search slot)))
+    (setf (lisp-on-lines::values-generator l) t))))
+	  
+
+(defmethod  present-slot :around ((slot ajax-foreign-key-slot-presentation) instance)  
+  (setf (foreign-instance slot) 
+	(when (presentation-slot-value slot instance) 
+	  (meta-model:explode-foreign-key instance (slot-name slot))))
+  (flet ((render () (when (foreign-instance slot)(call-next-method))))
+    (if (slot-boundp slot 'place)
+        (cond 
+          ((editablep slot)
+	   
+           (<ucw:submit :action  (search-records slot instance) :value "find" :style "display:inline"))
+          ((linkedp slot)
+           (<ucw:a :action (view-instance slot (foreign-instance slot)) 
+                   (render)))
+          (t       
+           (render)))
+	;; presentation is used only for rendering
+        (render))))
+
 ;;;; HAS MANY 
 (defslot-presentation has-many-slot-presentation (mewa-relation-slot-presentation)
   ((add-new-label :accessor add-new-label :initarg :add-new-label :initform "Add New"))

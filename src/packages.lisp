@@ -81,7 +81,9 @@
    :initialize-lol-for-table
    :initialize-lol-for-database
 
-
+   ;;;; Ajax
+   :auto-complete
+   :call-auto-complete
 
    ;;;; Mewa Exports
    :mewa ;the superclass of all mewa-presentations
