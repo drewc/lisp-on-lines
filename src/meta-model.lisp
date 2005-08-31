@@ -1,12 +1,25 @@
 (in-package :meta-model)
 
-(defvar *meta-models* nil)
-
-(defun list-meta-models ()
-  *meta-models*)
+(defvar *meta-models* (make-hash-table))
 
 (defclass meta-model-class ()
-  ((metadata
+  ((name
+    :accessor meta-model.name
+    :initarg :name
+    :initform nil)
+   (slots
+    :accessor meta-model.slots
+    :initarg :slots
+    :initform nil)
+   (superclasses
+    :accessor meta-model.superclasses
+    :initarg :superclasses
+    :initform nil)
+   (options
+    :accessor meta-model.options
+    :initarg :options
+    :initform nil)   
+   (metadata
     :accessor meta-model.metadata
     :initarg :metadata
     :initform nil)
@@ -23,39 +36,30 @@
   nil)
 
 (defmethod meta-model.metadata ((self symbol))
-  (meta-model.metadata (make-instance self)))
+  (meta-model.metadata (gethash self *meta-models*)))
 
-(defun gen-supers (supers)
-  (let (subclassp)
-    (dolist (x supers)
-      (when (member x (list-meta-models))
-	(setf subclassp t)))
-    (if subclassp
-	supers
-	(cons 'meta-model-class supers))))
+(defmethod meta-model.metadata ((self standard-object))
+  (meta-model.metadata (class-name (class-of self))))
 
-(defmethod %def-meta-model ((base-type t) name supers slots &rest options)
-  `(eval-when (:compile-toplevel :load-toplevel :execute)
-    (defclass ,name ,(gen-supers supers)
-      ()
-      (:default-initargs :metadata ',slots :base-type ,base-type))))
-  
-  
-(defmacro def-meta-model (name supers slots &rest options)
-  `(eval-when (:compile-toplevel :load-toplevel :execute)
-     (when (not (member (quote ,name) *meta-models*))
-       (setf *meta-models* (cons (quote ,name) *meta-models*)))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defmethod make-meta-model (name supers slots options)
+  (let ((m (make-instance 'meta-model-class 
+			  :name name
+			  :superclasses supers
+			  :slots slots
+			  :options options
+			  ;; TODO : the metadata should inherit any superclasses
+			  :metadata slots)))
+    (setf (gethash name *meta-models*) m))))
+	
+(defmacro define-meta-model (name supers slots &rest options)
+  `(make-meta-model ',name ',supers ',slots ',options))
 
-     (let ((class ,(%def-meta-model (cadr (or (assoc :base-type options) '(t t))) name supers slots options)))
-       class)))
+(defgeneric generate-base-class-definition (base-type model name args))
 
-(defgeneric def-base-type-class-expander (base-type model name args))
+(defmethod generate-base-class-expander ((model t) name args)
+  (generate-base-class-definition (meta-model.base-type model) model name args))
 
-(defmethod def-base-class-expander ((model t) name args)
-  (def-base-type-class-expander (meta-model.base-type model) model name args))
-
-(defmethod base-class-name ((model t))
-  (class-name (class-of (meta-model.instance model))))
 
 (defmethod view-class-metadata ((model t))
   "

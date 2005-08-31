@@ -1,15 +1,13 @@
 (defpackage :meta-model
-  (:use :common-lisp :clsql)
+  (:use :common-lisp :clsql :clsql-pg-introspect)
+  (:shadow :primary-key-p)
   (:export
    :meta-model-class
    :meta-model.base-type
    :meta-model.instance
    :meta-model.metadata
-   :def-meta-model
-   :def-base-class
-   :%def-base-class
-   
-   :def-view-class/table
+   :define-meta-model
+   :def-view-class-from-table
    :def-view-class/meta
    :view-class-metadata
    :create-table-from-model
@@ -76,7 +74,7 @@
    :search-query))
 
 (defpackage :lisp-on-lines
-  (:use :mewa :meta-model :common-lisp :it.bese.ucw)
+  (:use :mewa :meta-model :common-lisp :it.bese.ucw :js)
   (:nicknames :lol)
   (:export 
    ;;;; LoL 

@@ -9,7 +9,6 @@
 (export 'list-base-classes)
 
 
-
 (defmethod sync-instance ((view clsql:standard-db-object) &key (fill-gaps-only-p nil) (database *default-database*))
   (labels ((sym->sql (sym) (string-downcase (substitute #\_ #\- (string sym))))
            (get-def (slot) (caar (query
@@ -45,11 +44,11 @@
 (defmethod list-base-classes ((type (eql :clsql)))
   *clsql-base-classes*)
 
-(defmethod def-base-type-class-expander ((base-type (eql :clsql)) (model meta-model-class) (name t) (args t))
+(defmethod generate-base-class-definition ((base-type (eql :clsql)) (model meta-model-class) (name t) (args t))
   `(def-view-class ,name () 
 		   ,(meta-model.metadata model)))
 
-(defmethod def-base-type-class-expander :after ((base-type (eql :clsql)) (model meta-model-class) (name t) (args t))
+(defmethod generate-base-class-definition :after ((base-type (eql :clsql)) (model meta-model-class) (name t) (args t))
   (unless (member name *clsql-base-classes*)
     (setf *clsql-base-classes* (cons name *clsql-base-classes*))))
 
@@ -218,7 +217,7 @@ AND fa.attnum = ANY (pg_constraint.confkey)"))
      :accessor ,name
      :db-kind :join
      :db-info (:join-class ,(car row)
-	       :home-key ,home-key
+    	       :home-key ,home-key
 	       :foreign-key ,foreign-key
 	       :target-slot ,name
 	       :set t))))
@@ -242,35 +241,19 @@ AND fa.attnum = ANY (pg_constraint.confkey)"))
   "Create and instrument CLSQL view-class NAME and
 appropriate meta-model class its default name is %NAME-meta-model."
 
-  (let ((model-name (cond ((eq :model-name (car args))
-                           (pop args)	; remove keyword
-                           (pop args))	; get value
-                          (t (intern (format nil "%~S-META-MODEL" name))))))
+  `(progn
+    (let* ((m (define-meta-model ,name ,supers ,slots ,args)))
+      (setf (meta-model.base-type m) :clsql)
+      (eval (generate-base-class-expander m ',name ',args)))))
 
-    `(progn
-      (let* ((m (def-meta-model ,model-name ,supers ,slots ,args))
-	     (i (make-instance m)))
-	(setf (meta-model.base-type i) :clsql)
-	(prog1 (eval (def-base-class-expander i ',name ',args))
-	  (defmethod meta-model.metadata ((self ,name))
-	    (meta-model.metadata i)))))))
-
-(defmacro def-view-class/table (table &optional (name (sql->sym table)) model-name)
+(defmacro def-view-class-from-table (table &optional 
+				(name (clsql-pg-introspect::intern-normalize-for-lisp table)))
   "takes the name of a table as a string and
 creates a clsql view-class"
-  (let* ((pkey (cadr (assoc table (get-pkeys) :test #'equalp)))
-	 (table-slots (table->slots table pkey name))
-	 (join-slots
-	  (let ((slots nil))
-	    (dolist (exp (get-fkey-explosions))
-	      (when (equalp (car exp) (sql->sym table))
-		(setf slots (cons (cdr exp) slots))))
-	    slots)))
-    `(eval-when (:compile-toplevel :load-toplevel :execute)
-      (def-view-class/meta ,name
-	  ()
-	,(append table-slots join-slots)
-	,@(when model-name (list :model-name model-name))))))
+  `(clsql-pg-introspect:gen-view-class ,table  
+    :classname ,name
+    :generate-joins :all
+    :definer def-view-class/meta))
 
 
 (defmethod prepare-slot-name-for-select ((i standard-db-object) slot-name)

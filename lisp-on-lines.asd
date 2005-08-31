@@ -17,12 +17,12 @@
 		 :depends-on (:src)	 
 		:pathname "src/backend/"
 		:components ((:file "clsql"))))
-  :depends-on (:clsql))
+  :depends-on (:clsql :clsql-pg-introspect))
 
 ;; this is no longer used
 (defsystem :meta-model-clsql
   :components ()
-  :depends-on  (:meta-model :clsql))
+  :depends-on  (:meta-model :clsql ))
 
 (defsystem :mewa
   :components ((:module :src 
