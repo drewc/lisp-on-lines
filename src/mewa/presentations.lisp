@@ -12,8 +12,8 @@
   (or (meta-model:list-keys (instance self))))
 
 ;;;objects
-(defcomponent mewa-object-presentation (mewa ucw:object-presentation) 
-  ((ucw::instance :accessor instance :initarg :instance :initform nil)))
+(defcomponent mewa-object-presentation (mewa object-presentation) 
+  ((instance :accessor instance :initarg :instance :initform nil)))
 
 (defmethod present ((pres mewa-object-presentation))
   (<:table :class (css-class pres)
@@ -22,7 +22,7 @@
 	    (present-slot-as-row pres slot))))
     (render-options pres (instance pres)))
         
-(defmethod present-slot-as-row ((pres mewa-object-presentation) (slot ucw::slot-presentation))
+(defmethod present-slot-as-row ((pres mewa-object-presentation) (slot slot-presentation))
   (<:td :class "presentation-slot-label" (<:as-html (label slot)))
   (<:td :class "presentation-slot-value" (present-slot slot (instance pres))))
 
@@ -48,12 +48,12 @@
 
 
 ;;;lists
-(defcomponent mewa-list-presentation (mewa ucw:list-presentation) 
-  ((ucw::instances :accessor instances :initarg :instances :initform nil)
+(defcomponent mewa-list-presentation (mewa list-presentation) 
+  ((instances :accessor instances :initarg :instances :initform nil)
    (instance :accessor instance)
    (select-label :accessor select-label :initform "select" :initarg :select-label)
    (selectablep :accessor selectablep :initform t :initarg :selectablep)
-   (ucw::deleteablep :accessor deletablep :initarg :deletablep :initform nil)
+   (deleteablep :accessor deletablep :initarg :deletablep :initform nil)
    (viewablep :accessor viewablep :initarg :viewablep :initform nil)))
 
 (defaction select-from-listing ((listing mewa-list-presentation) object index)
@@ -62,17 +62,17 @@
 (defmethod render-list-row ((listing mewa-list-presentation) object index)
   (<:tr :class "item-row"
     (<:td :align "center" :valign "top"
-      (when (ucw::editablep listing)
+      (when (editablep listing)
 	(let ((object object))
 	  (<ucw:input :type "submit"
 		      :action (edit-from-listing listing object index)
-		      :value (ucw::edit-label listing))))
+		      :value (edit-label listing))))
       (<:as-is " ")
-      (when (ucw::deleteablep listing)
+      (when (deleteablep listing)
 	(let ((index index))
 	  (<ucw:input :type "submit"
 		      :action (delete-from-listing listing object index)
-		      :value (ucw::delete-label listing))))
+		      :value (delete-label listing))))
       (when (selectablep listing)
 	(let ((index index))
 	  (<ucw:input :type "submit"
@@ -105,48 +105,48 @@
   `(defmethod search-expr ((,self ,criteria-type) instance)
      (,model-expr
       instance
-      (ucw::slot-name (ucw::presentation ,self))
+      (slot-name (presentation ,self))
       ,@body)))
 
-(defmethod search-expr ((self ucw::negated-criteria) instance)
-  (when (ucw::criteria self)
+(defmethod search-expr ((self negated-criteria) instance)
+  (when (criteria self)
     (meta-model:expr-not
      instance
-     (search-expr (ucw::criteria self) instance))))
+     (search-expr (criteria self) instance))))
 
-(def-search-expr ((self ucw::string-starts-with))
-    (meta-model:expr-starts-with (ucw::search-text self)))
+(def-search-expr ((self string-starts-with))
+    (meta-model:expr-starts-with (search-text self)))
 
-(def-search-expr ((self ucw::string-ends-with))
-    (meta-model:expr-ends-with (ucw::search-text self)))
+(def-search-expr ((self string-ends-with))
+    (meta-model:expr-ends-with (search-text self)))
 
-(def-search-expr ((self ucw::string-contains))
-    (meta-model:expr-contains (ucw::search-text self)))
+(def-search-expr ((self string-contains))
+    (meta-model:expr-contains (search-text self)))
 
-(def-search-expr ((self ucw::number-less-than))
-    (meta-model:expr-< (ucw::number-input self)))
+(def-search-expr ((self number-less-than))
+    (meta-model:expr-< (number-input self)))
 
-(def-search-expr ((self ucw::number-greater-than))
-    (meta-model:expr-> (ucw::number-input self)))
+(def-search-expr ((self number-greater-than))
+    (meta-model:expr-> (number-input self)))
 
-(def-search-expr ((self ucw::number-equal-to))
-    (meta-model:expr-= (ucw::number-input self)))
+(def-search-expr ((self number-equal-to))
+    (meta-model:expr-= (number-input self)))
 
 
 
-(defcomponent mewa-presentation-search (ucw::presentation-search)
+(defcomponent mewa-presentation-search (presentation-search)
   ((display-results-p :accessor display-results-p :initarg :display-results-p :initform nil)
    (criteria-input :accessor criteria-input :initform "")
    (new-criteria :accessor new-criteria :initform nil)))
 
 (defmethod instance ((self mewa:mewa-presentation-search))
-  (instance (ucw::search-presentation self)))
+  (instance (search-presentation self)))
 
 (defmethod search-expr ((self mewa:mewa-presentation-search) instance)
   (apply #'meta-model:expr-and instance
          (mapcan (lambda (c) (let ((e  (search-expr c instance)))
                                (if (listp e) e (list e))))
-                 (ucw::criteria self))))
+                 (criteria self))))
 
 (defmethod search-query ((self mewa:mewa-presentation-search))
   (search-expr self (instance self)))
@@ -159,42 +159,42 @@
 
 (defmethod ok ((self mewa-presentation-search) &optional arg)
   (declare (ignore arg))
-  (setf (ucw::instances (ucw::list-presentation self)) (valid-instances self))
+  (setf (instances (list-presentation self)) (valid-instances self))
   (setf (display-results-p self) t))
 
 
-(defmethod set-search-input-for-criteria ((criteria ucw::criteria) (input t))
+(defmethod set-search-input-for-criteria ((criteria criteria) (input t))
   (error "No search-input-for-criteria method for ~A : ~A" criteria input))
 
-(defmethod set-search-input-for-criteria ((c ucw::string-criteria) input)
-  (setf (ucw::search-text c) input))
+(defmethod set-search-input-for-criteria ((c string-criteria) input)
+  (setf (search-text c) input))
 
-(defmethod set-search-input-for-criteria ((c ucw::negated-criteria) i)
+(defmethod set-search-input-for-criteria ((c negated-criteria) i)
   nil)
 
 
-(defmethod mewa-add-criteria ((self component) (criteria ucw::criteria))
+(defmethod mewa-add-criteria ((self component) (criteria criteria))
   (set-search-input-for-criteria criteria (criteria-input self))
-  (ucw::add-criteria self criteria))
+  (add-criteria self criteria))
 
-(defmethod find-default-criteria (c ucw::mewa-string-slot-presentation)
-  'ucw::string-contains)
+(defmethod find-default-criteria (c mewa-string-slot-presentation)
+  'string-contains)
 
 
 
 (defmethod render-criteria ((res response) (s mewa-presentation-search))
   (setf (criteria-input s) "")
   (<:ul
-   (dolist (c (ucw::criteria s))
+   (dolist (c (criteria s))
      (<:li (render-on res c)
 	   (let ((c c))
-	     (<ucw:input :action (ucw::drop-criteria s c) :type "submit" :value "eliminate"))))
+	     (<ucw:input :action (drop-criteria s c) :type "submit" :value "eliminate"))))
      (<:li 
       "Search For: "
       (<ucw:input :type "text" :accessor (criteria-input s))
       " Using : "
        (<ucw:select :accessor (new-criteria s) 
-         (dolist (criteria (ucw::applicable-criteria s))
+         (dolist (criteria (applicable-criteria s))
 	   (<ucw:option :value criteria (<:as-html (label criteria)))))
        (<ucw:input :type "submit" :action (mewa-add-criteria s (new-criteria s))
 		   :value "add"))))
@@ -214,7 +214,7 @@
   (render-criteria res self)
   (<ucw:input :type "submit" :value "Search" :action (submit-search self))
   (when (display-results-p self)
-    (let ((listing (ucw::list-presentation self)))
+    (let ((listing (list-presentation self)))
       (setf 
        (slot-value listing 'ucw::calling-component) (slot-value self 'ucw::calling-component)
        (slot-value listing 'ucw::place) (slot-value self 'ucw::place)

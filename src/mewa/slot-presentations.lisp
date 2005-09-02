@@ -1,4 +1,4 @@
-(in-package :it.bese.ucw)
+(in-package :mewa)
 
 (defun multiple-value-funcall->list (function &rest args)
   "The function to be called by m-v-bf"
@@ -12,7 +12,6 @@
 
 
 ;;;; ** Textarea Slot Presentation
-;;;;  This should really be in UCW.
 
 (defslot-presentation text-slot-presentation ()
   ((rows :initarg :rows :accessor rows :initform nil)
@@ -105,32 +104,42 @@ When T, only the default value for primary keys and the joins are updated.")
 (defslot-presentation  mewa-relation-slot-presentation (mewa-slot-presentation slot-presentation)
   ((foreign-instance :accessor foreign-instance)
    (linkedp :accessor linkedp :initarg :linkedp :initform t)
-   (creator :accessor creator :initarg :creator :initform :editor))
+   (creator :accessor creator :initarg :creator :initform :editor)
+   (new-instance :accessor new-instance :initform nil))
   (:type-name relation))
 
 (defaction search-records ((slot mewa-relation-slot-presentation) instance)
   (multiple-value-bindf (finstance foreign-slot-name)
       (meta-model:explode-foreign-key instance (slot-name slot))
-    (let ((new-instance
-            (call-component 
-             (parent slot)
-             (make-instance (or (cadr (mewa:find-attribute finstance :presentation-search))
-                                'mewa::mewa-presentation-search)
-                            :search-presentation
-                            (mewa:make-presentation finstance 
-                                                    :type :search-presentation)
-                            :list-presentation 
-                            (mewa:make-presentation finstance 
-                                                    :type :listing)))))
-      (setf (slot-value instance (slot-name slot)) (slot-value new-instance foreign-slot-name))
-      (meta-model:sync-instance instance :fill-gaps-only-p (fill-gaps-only-p self)))))
+    (let ((new-instance (new-instance self)))
+      (unless new-instance
+	(setf (new-instance self)
+	      (call-component 
+	       (ucw::parent slot)
+	       (make-instance (or (cadr (mewa:find-attribute finstance :presentation-search))
+				  'mewa::mewa-presentation-search)
+			      :search-presentation
+			      (mewa:make-presentation finstance 
+						      :type :search-presentation)
+			      :list-presentation 
+			      (mewa:make-presentation finstance 
+						      :type :listing)))))
+      (sync-foreign-instance slot new-instance))))
 
+(defmethod sync-foreign-instance ((slot mewa-relation-slot-presentation) foreign-instance)
+  (let ((instance (instance (ucw::parent slot))))
+    (multiple-value-bind (foo f-slot-name)
+	(meta-model:explode-foreign-key instance (slot-name slot))
+      (setf (slot-value instance (slot-name slot)) (slot-value foreign-instance f-slot-name))
+      (meta-model:sync-instance instance :fill-gaps-only-p (fill-gaps-only-p slot)))))
+
+    
 (defaction create-record-on-foreign-key ((slot mewa-relation-slot-presentation) instance)
   (multiple-value-bindf (finstance foreign-slot-name)
       (meta-model:explode-foreign-key instance (slot-name slot))
     (let ((new-instance
            (call-component
-            (parent slot)
+            (ucw::parent slot)
             (mewa:make-presentation finstance :type (creator self)))))
       
       ;;;; TODO: this next bit is due to a bad design decision. 
@@ -172,9 +181,9 @@ When T, only the default value for primary keys and the joins are updated.")
   (:default-initargs))
 
 (defaction view-instance ((self component) instance &rest initargs)
-  (call-component (parent self) (apply #'mewa:make-presentation instance initargs))
+  (call-component (ucw::parent self) (apply #'mewa:make-presentation instance initargs))
   ;; the viewed instance could have been changed/deleted, so we sync this instance
-  (meta-model:sync-instance (instance (parent self))))
+  (meta-model:sync-instance (instance (ucw::parent self))))
 
 
 (defmethod  present-slot :around ((slot foreign-key-slot-presentation) instance)  
@@ -182,7 +191,7 @@ When T, only the default value for primary keys and the joins are updated.")
 	(when (presentation-slot-value slot instance) 
 	  (meta-model:explode-foreign-key instance (slot-name slot))))
   (flet ((render () (when (foreign-instance slot)(call-next-method))))
-    (if (slot-boundp slot 'place)
+    (if (slot-boundp slot 'ucw::place)
         (cond 
           ((editablep slot)
            (<ucw:submit :action  (search-records slot instance) :value "Search" :style "display:inline")
@@ -196,66 +205,7 @@ When T, only the default value for primary keys and the joins are updated.")
         (render))))
 
 
-;;;; * AJAX stuff 
 
-;;;; TODO: This search stuff should probably me refactored elsewhere
-
-(defmethod find-slots-of-type (model &key (type 'string)
-			      (types '((string)) types-supplied-p))
-  "returns a list of slots matching TYPE, or matching any of TYPES"
-  (let (ty)
-    (if types-supplied-p 
-	(setf ty types)
-	(setf ty (list type)))
-    (remove nil (mapcar #'(lambda (st) (when (member (second st) ty)
-					 (first st)))
-	     (lisp-on-lines::list-slot-types model)))))
-
-(defslot-presentation ajax-foreign-key-slot-presentation (foreign-key-slot-presentation)
-  ((search-slots :accessor search-slots :initarg :search-slots :initform nil)
-   (live-search 
-     :accessor live-search
-     :component (lisp-on-lines:auto-complete
-		 :values-generator
-		 (lambda (value)
-		   (when (< 0 (length value))
-		     (limited-word-search 'person '(first-name last-name company-name) (list value))))
-
-		 :render (lambda (x)
-			   (<:as-html (if (> (length (last-name x)) 0)
-					 (strcat (last-name x) ", ")
-				      " ")
-				      (first-name x)" " (company-name x)))
-		 :as-value (lambda (x) x)
-		 :submit-on-click-p nil)))
-  (:type-name ajax-foreign-key))
-
-
-(defmethod shared-initialize :after ((slot ajax-foreign-key-slot-presentation) slots &rest args)
-  ;; If no search-slots than use the any slots of type string
-  (unless (search-slots slot)
-    (setf (search-slots slot) t)
-  (let ((l (live-search slot)))
-    (setf (lisp-on-lines::values-generator l) t))))
-	  
-
-(defmethod  present-slot :around ((slot ajax-foreign-key-slot-presentation) instance)  
-  (setf (foreign-instance slot) 
-	(when (presentation-slot-value slot instance) 
-	  (meta-model:explode-foreign-key instance (slot-name slot))))
-  (flet ((render () (when (foreign-instance slot)(call-next-method))))
-    (if (slot-boundp slot 'place)
-        (cond 
-          ((editablep slot)
-	   
-           (<ucw:submit :action  (search-records slot instance) :value "find" :style "display:inline"))
-          ((linkedp slot)
-           (<ucw:a :action (view-instance slot (foreign-instance slot)) 
-                   (render)))
-          (t       
-           (render)))
-	;; presentation is used only for rendering
-        (render))))
 
 ;;;; HAS MANY 
 (defslot-presentation has-many-slot-presentation (mewa-relation-slot-presentation)
@@ -265,21 +215,21 @@ When T, only the default value for primary keys and the joins are updated.")
 (defaction add-to-has-many ((slot has-many-slot-presentation) instance)
   ;; if the instance is not stored we must make sure to mark it stored now!
   (unless (mewa::instance-is-stored-p instance)
-    (setf (mewa::modifiedp (parent self)) t))
+    (setf (mewa::modifiedp (ucw::parent self)) t))
   ;; sync up the instance
   ;;(mewa:ensure-instance-sync (parent slot))
-  (meta-model:sync-instance (instance (parent slot)))
+  (meta-model:sync-instance (instance (ucw::parent slot)))
   
   (multiple-value-bindf (class home foreign) 
       (meta-model:explode-has-many instance (slot-name slot))
     (let ((new (make-instance class)))
       (setf (slot-value new foreign) (slot-value instance home))
       (meta-model:sync-instance new :fill-gaps-only-p (fill-gaps-only-p self))
-      (call-component (parent slot)  (mewa:make-presentation new :type (creator slot)))
+      (call-component (ucw::parent slot)  (mewa:make-presentation new :type (creator slot)))
       (meta-model:sync-instance instance))))
 
 (defmethod present-slot ((slot has-many-slot-presentation) instance)
-  (when (slot-boundp slot 'place)
+  (when (slot-boundp slot 'ucw::place)
     (<ucw:submit :action (add-to-has-many slot instance) :value (add-new-label slot)))
   (let ((i (get-foreign-instances slot instance)))
 	
@@ -287,7 +237,7 @@ When T, only the default value for primary keys and the joins are updated.")
      (dolist (s i)
        (let ((s s))
 	 (setf (foreign-instance slot) s)
-         (when (slot-boundp slot 'place)
+         (when (slot-boundp slot 'ucw::place)
            (<ucw:a :action (view-instance slot s :initargs `(:global-properties ,(list :linkedp t :editablep nil)))
 		 (<:li   (setf (linkedp slot) nil)
 			 (present-relation slot instance)))))))))
@@ -304,7 +254,6 @@ When T, only the default value for primary keys and the joins are updated.")
    (current :accessor current :initform 0)
    (len :accessor len )
    (instances :accessor instances))
-
   (:type-name has-very-many))
 
 (defmethod list-next ((slot has-very-many-slot-presentation))
@@ -321,10 +270,10 @@ When T, only the default value for primary keys and the joins are updated.")
 
 (defmethod present-slot ((slot has-very-many-slot-presentation) instance)
   ;;(<:as-html "isance: " instance)
-  (if (slot-boundp slot 'place)
+  (if (slot-boundp slot 'ucw::place)
       (progn
         (<ucw:a :action (list-prev slot) (<:as-html "<<"))
-        (let ((self (parent slot)))
+        (let ((self (ucw::parent slot)))
           (<ucw:a :action (call-component self (mewa:make-presentation (car (slot-value instance (slot-name slot))) :type :listing :initargs (list :instances (instances slot))))
 	        (<:as-html  (label slot) (format nil " ~a-~a " (current slot) (+ (current slot) (number-to-display slot))))))
         (<ucw:a :action (list-next slot) (<:as-html ">>"))

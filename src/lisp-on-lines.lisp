@@ -28,3 +28,45 @@ This involves creating a meta-model, a clsql view-class, and the setting up the 
 (defmacro initialize-lol-for-database ()
   "expands to init-i-f-t using the listing of tables provided by meta-model"
   `(initialize-lol-for-table ,@(meta-model::list-tables)))
+
+;;;; * AJAX stuff 
+
+;;;; TODO: This search stuff should probably me refactored elsewhere
+
+(defmethod find-slots-of-type (model &key (type 'string)
+			      (types '((string)) types-supplied-p))
+  "returns a list of slots matching TYPE, or matching any of TYPES"
+  (let (ty)
+    (if types-supplied-p 
+	(setf ty types)
+	(setf ty (list type)))
+    (remove nil (mapcar #'(lambda (st) (when (member (second st) ty)
+					 (first st)))
+	     (lisp-on-lines::list-slot-types model)))))
+
+
+(defmethod word-search (class-name slots search-terms 
+			&key (limit 10) (where (sql-and t)))
+  (select class-name 
+	  :where (sql-and
+		  where
+		  (word-search-where class-name slots search-terms :format-string "~a%"))
+			   :flatp t
+			   :limit limit))
+
+
+(defmethod word-search (class-name slots (s string) &rest args)
+  (apply #'word-search class-name slots 
+	 (split-sequence:split-sequence #\Space s) args))
+
+(defmethod word-search-where (class-name slots search-terms &key (format-string "%~a%"))
+  (sql-or 
+   (mapcar #'(lambda (term)
+	       (apply #'sql-or 
+		      (mapcar #'(lambda (slot)  
+				  (sql-uplike
+				   (sql-slot-value class-name slot)
+				   (format nil format-string  term)))
+			      slots)))
+	   search-terms)))
+

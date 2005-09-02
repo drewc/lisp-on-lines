@@ -4,12 +4,11 @@
 
 ;;; maps meta-model slot-types to slot-presentation
 (defparameter *slot-type-map*
-  '(boolean   ucw::mewa-boolean
-    string    ucw::mewa-string
-    number    ucw::mewa-currency
-    integer   ucw::mewa-integer
-    currency  ucw::mewa-currency
-    ))
+  '(boolean   mewa-boolean
+    string    mewa-string
+    number    mewa-currency
+    integer   mewa-integer
+    currency  mewa-currency))
 
 ;;; an alist of model-class-name . attributes
 ;;; should really be a hash-table.
@@ -113,12 +112,12 @@ attributes is an alist keyed on the attribute name."
 		      (cons (car s) 
 			    (gen-pslot 
 			     (if (meta-model:foreign-key-p model (car s))
-				 'ucw::foreign-key
+				 'foreign-key
 				 (cadr s))
 			     (string (car s)) (car s)))) 
 		  (meta-model:list-slot-types model))
 	  (mapcar #'(lambda (s) 
-		      (cons s (append (gen-pslot 'ucw::has-many (string s) s) 
+		      (cons s (append (gen-pslot 'has-many (string s) s) 
 				      `(:presentation 
 					(make-presentation 
 					 ,model 
@@ -140,7 +139,7 @@ attributes is an alist keyed on the attribute name."
 
 
 (defcomponent mewa ()
-  ((ucw::instance :accessor instance :initarg :instance) 
+  ((instance :accessor instance :initarg :instance) 
    (attributes
     :initarg :attributes
     :accessor attributes
@@ -238,13 +237,13 @@ attributes is an alist keyed on the attribute name."
   (let ((class-name 
 	 (or (gethash (if (consp (second attribute))
 			  (car (second attribute))
-			       (second attribute))
-			       ucw::*slot-type-mapping*) 
-	     (error  "Can't find slot type for ~A" (second attribute)))))
+			  (second attribute))
+		      *presentation-slot-type-mapping*) 
+	     (error  "Can't find slot type for ~A in ~A but ~A" attribute *presentation-slot-type-mapping* (gethash 'mewa:has-very-many *presentation-slot-type-mapping*)))))
 		
-	  (cons (first attribute) (apply #'make-instance 
-	   class-name
-	   (append (cddr attribute) (list :parent self :size 30))))))
+    (cons (first attribute) (apply #'make-instance 
+				   class-name
+				   (append (cddr attribute) (list :parent self :size 30))))))
 
 (defmethod find-slot-presentations ((self mewa))
   (mapcar #'(lambda (a) (find-slot-presentation-for-attribute self a))
@@ -267,7 +266,6 @@ attributes is an alist keyed on the attribute name."
 	 (a (progn (setf (slot-value p 'ucw::instance) object)
 		   (initialize-slots p) 
 		   (assoc type (find-all-attributes p))))
-	 ;;;; TODO: this can be cleaned up, probably CHANGE-CLASS is better here
 	 (i (apply #'make-instance (or (second a)
 				      ;; if we didnt find the type, 
 				      ;; use the symbol as a class. 
