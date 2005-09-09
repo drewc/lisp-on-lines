@@ -32,4 +32,4 @@
 		:pathname "src/components/"
                 :components ((:file "range-list")
 			     (:file "ajax"))))
-:depends-on (:meta-model :mewa))
+:depends-on (:meta-model :mewa :split-sequence))
