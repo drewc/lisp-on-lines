@@ -8,7 +8,8 @@
     string    mewa-string
     number    mewa-currency
     integer   mewa-integer
-    currency  mewa-currency))
+    currency  mewa-currency
+    generalized-boolean mewa-boolean))
 
 ;;; an alist of model-class-name . attributes
 ;;; should really be a hash-table.

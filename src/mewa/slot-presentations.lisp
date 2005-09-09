@@ -91,7 +91,7 @@ When T, only the default value for primary keys and the joins are updated.")
   (let ((date (presentation-slot-value slot instance))
 	(input-id (string (gensym))))
     (if (and date (not (editablep slot)))
-	(<:span (<:as-html date)))
+	(<:as-html date))
     (when (editablep slot)
       (<ucw:input :accessor (presentation-slot-value slot instance) :id input-id)
       (<:script :type "text/javascript" 
