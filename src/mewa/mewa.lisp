@@ -239,7 +239,7 @@ attributes is an alist keyed on the attribute name."
 			  (car (second attribute))
 			  (second attribute))
 		      *presentation-slot-type-mapping*) 
-	     (error  "Can't find slot type for ~A in ~A but ~A" attribute *presentation-slot-type-mapping* (gethash 'mewa:has-very-many *presentation-slot-type-mapping*)))))
+	     (error  "Can't find slot type for ~A in ~A" attribute *presentation-slot-type-mapping* ))))
 		
     (cons (first attribute) (apply #'make-instance 
 				   class-name
