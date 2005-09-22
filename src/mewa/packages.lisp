@@ -21,6 +21,7 @@
    :has-very-many-slot-presentation
    :has-very-many
    :slot-name
+   :define-attributes
    :find-attribute 
    :set-default-attributes 
    :make-presentation 

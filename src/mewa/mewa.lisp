@@ -9,7 +9,7 @@
     number    mewa-currency
     integer   mewa-integer
     currency  mewa-currency
-    generalized-boolean mewa-boolean))
+    clsql:generalized-boolean mewa-boolean))
 
 ;;; an alist of model-class-name . attributes
 ;;; should really be a hash-table.
@@ -90,7 +90,7 @@ attributes is an alist keyed on the attribute name."
 	    (cons (car definition) 
 		  (plist-union (cdr definition)
 			 (cddr (find-attribute model name))))
-	    definition)))
+	    definition))) 
 
 (defmethod perform-set-attributes ((model t) definitions)
   (dolist (def definitions)
@@ -105,6 +105,23 @@ attributes is an alist keyed on the attribute name."
 (defmethod perform-set-attribute-properties ((model t) definitions)
   (dolist (def definitions)
     (funcall #'set-attribute-properties model (car def) (cdr def))))
+
+(defmethod perform-define-attributes ((model t) attributes)
+  (loop for attribute in attributes
+	do (destructuring-bind (name type &rest args)
+		  attribute
+		(cond ((eq type t)
+		       ;;use the existing (default) type
+		       (set-attribute-properties model name args))
+		      ((not (null type))
+		       ;;set the type as well
+		       (set-attribute model name (cons type args)))))))
+		       
+(defmacro define-attributes (models &body attribute-definitions)
+  `(progn
+    ,@(loop for model in models
+	    collect `(perform-define-attributes (quote ,model) (quote ,attribute-definitions)))
+  (mapcar #'find-class-attributes (quote ,models ))))
   
 
 (defmethod default-attributes ((model t))
@@ -136,8 +153,6 @@ attributes is an alist keyed on the attribute name."
 (defgeneric attributes-getter (model))
 	  
 ;;;presentations 
-
-
 
 (defcomponent mewa ()
   ((instance :accessor instance :initarg :instance) 
