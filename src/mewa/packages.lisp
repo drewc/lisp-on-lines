@@ -3,6 +3,10 @@
   (:export 
    :mewa 
    :editablep
+   
+   ;object presentations
+   :present
+   :foreign-key-slot-presentation
    :mewa-object-presentation 
    :mewa-one-line-presentation
    :mewa-list-presentation
@@ -12,7 +16,11 @@
    :defslot-presentation
    :slot-presentation
    :mewa-slot-presentation
-   :foreign-key-slot-presentation
+
+   :present-slot
+   :presentation-slot-value
+   
+
    :mewa-relation-slot-presentation
    :has-a-slot-presentation
    :has-a
@@ -21,8 +29,12 @@
    :has-very-many-slot-presentation
    :has-very-many
    :slot-name
+
+   ;attributes
    :define-attributes
-   :find-attribute 
+   :with-default-attributes
+   :find-attribute
+   :find-attribute-slot
    :set-default-attributes 
    :make-presentation 
    :call-presentation 
@@ -35,6 +47,7 @@
    :find-class-attributes 
    :default-attributes 
    :ok
+   :instance
    :edit-instance
    :save-instance
    :cancel-save-instance

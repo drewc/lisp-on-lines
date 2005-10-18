@@ -2,19 +2,6 @@
  
 (defparameter *default-type* :ucw)
 
-;;; maps meta-model slot-types to slot-presentation
-(defparameter *slot-type-map*
-  '(boolean   mewa-boolean
-    string    mewa-string
-    number    mewa-currency
-    integer   mewa-integer
-    currency  mewa-currency
-    clsql:generalized-boolean mewa-boolean))
-
-;;; an alist of model-class-name . attributes
-;;; should really be a hash-table.
-(defvar *attribute-map* (list)) 
-
 ;;; some utilities for merging plists
 
 (defun plist-nunion (new-props plist)
@@ -26,25 +13,10 @@
   "Non-destructive version of plist-nunion"
 		   (plist-nunion new-props (copy-list plist)))
 
-(defun gen-ptype (type)
-  (or (getf *slot-type-map* type) type))
 
-(defun gen-presentation-slots (instance)
-  (mapcar #'(lambda (x) (gen-pslot (cadr x) 
-				   (string (car x)) 
-				   (car x))) 
-	  (meta-model:list-slot-types instance)))
-
-
-(defun gen-pslot (type label slot-name)
-  (copy-list `(,(gen-ptype type) 
-	       :label ,label
-	       :slot-name ,slot-name))) 
-
-(defun gen-presentation-args (instance args)
-  (declare (ignore instance))
-  (if args args nil))
-
+;;; an alist of model-class-name . attributes
+;;; should really be a hash-table.
+(defvar *attribute-map* (list))
 
 (defun find-or-create-attributes (class-name)
   "return an exisiting class attribute map or create one. 
@@ -122,9 +94,75 @@ attributes is an alist keyed on the attribute name."
     ,@(loop for model in models
 	    collect `(perform-define-attributes (quote ,model) (quote ,attribute-definitions)))
   (mapcar #'find-class-attributes (quote ,models ))))
-  
 
-(defmethod default-attributes ((model t))
+(defun find-presentation-attributes (model)
+  (remove nil (mapcar #'(lambda (att)
+	      (when (keywordp (car att))
+		att))
+	  (cdr (find-class-attributes model)))))
+
+
+;;;; ** Default Attributes
+
+
+;;;; The default mewa class contains the types use as defaults.
+;;;; maps meta-model slot-types to slot-presentation
+
+(defvar *default-attributes-class-name* 'default)
+
+(define-attributes (default)
+  (boolean mewa-boolean)
+  (string mewa-string)
+  (number mewa-currency)
+  (integer   mewa-integer)
+  (currency  mewa-currency)
+  (clsql:generalized-boolean mewa-boolean)
+  (foreign-key foreign-key)
+  (:viewer mewa-viewer)
+  (:editor mewa-editor)
+  (:creator mewa-creator)
+  (:one-line mewa-one-line-presentation)
+  (:listing mewa-list-presentation :global-properties (:editablep nil) :editablep t)
+  (:search-model mewa-object-presentation))
+
+  
+(defun find-default-presentation-attributes ()
+  (if (eql *default-attributes-class-name* 'default)
+      (find-presentation-attributes 'default)
+      (remove-duplicates (append
+			  (find-presentation-attributes 'default)
+			  (find-presentation-attributes
+			   *default-attributes-class-name*)))))
+
+
+(defmacro with-default-attributes ((model-name) &body body)
+  `(let ((*default-attributes-class-name* ',model-name))
+    ,@body))
+
+(defun gen-ptype (type)
+  (let ((type (if (consp type) (car type) type)))
+  (or (second (find-attribute *default-attributes-class-name* type))
+      (second (find-attribute 'default type))
+      type)))
+
+(defun gen-presentation-slots (instance)
+  (mapcar #'(lambda (x) (gen-pslot (cadr x) 
+				   (string (car x)) 
+				   (car x))) 
+	  (meta-model:list-slot-types instance)))
+
+
+(defun gen-pslot (type label slot-name)
+  (copy-list `(,(gen-ptype type) 
+	       :label ,label
+	       :slot-name ,slot-name))) 
+
+(defun gen-presentation-args (instance args)
+  (declare (ignore instance))
+  (if args args nil))
+
+
+(defmethod find-default-attributes ((model t))
   "return the default attributes for a given model using the meta-model's meta-data"
   (append (mapcar #'(lambda (s) 
 		      (cons (car s) 
@@ -140,14 +178,15 @@ attributes is an alist keyed on the attribute name."
 					(make-presentation 
 					 ,model 
 					 :type :one-line)))))
-		  (meta-model:list-has-many model))))
+		  (meta-model:list-has-many model))
+	  (find-default-presentation-attributes)))
 
 (defmethod set-default-attributes ((model t))
   "Set the default attributes for MODEL"
   (clear-class-attributes model)
   (mapcar #'(lambda (x) 
 	      (setf (find-attribute model (car x)) (cdr x)))
-	  (default-attributes model)))
+	  (find-default-attributes model)))
 
 
 (defgeneric attributes-getter (model))
@@ -255,7 +294,7 @@ attributes is an alist keyed on the attribute name."
 			  (car (second attribute))
 			  (second attribute))
 		      *presentation-slot-type-mapping*) 
-	     (error  "Can't find slot type for ~A in ~A" attribute *presentation-slot-type-mapping* ))))
+	     (error  "Can't find slot type for ~A in ~A" attribute self ))))
 		
     (cons (first attribute) (apply #'make-instance 
 				   class-name
@@ -279,7 +318,7 @@ attributes is an alist keyed on the attribute name."
   
 (defmethod make-presentation ((object t) &key (type :viewer) (initargs nil))
   (let* ((p (make-instance 'mewa-object-presentation))
-	 (a (progn (setf (slot-value p 'ucw::instance) object)
+	 (a (progn (setf (slot-value p 'instance) object)
 		   (initialize-slots p) 
 		   (assoc type (find-all-attributes p))))
 	 (i (apply #'make-instance (or (second a)
@@ -322,7 +361,6 @@ attributes is an alist keyed on the attribute name."
   (call-next-method)
   (render-on res (slot-value self 'body)))
 
-
 (defmethod instance-is-stored-p ((instance clsql:standard-db-object))
   (slot-value instance 'clsql-sys::view-database))
 
@@ -341,26 +379,33 @@ attributes is an alist keyed on the attribute name."
   (setf (modifiedp self) nil)
   (answer self))
 
+(defmethod confirm-sync-instance ((self mewa))
+  nil)
 
 (defaction ensure-instance-sync ((self mewa))
   (when (modifiedp self)
-    (let ((message (format nil "Record has been modified, Do you wish to save the changes?")))
-      (case (call 'about-dialog
-                  :body (make-presentation (instance self) 
-					   :type :viewer)
-		  :message message
-		  :options '((:save . "Save changes to Database")
-			     (:cancel . "Cancel all changes")))
-	(:cancel
-	 (cancel-save-instance self))
-	(:save 
-	 (save-instance self))))))
+    (if nil
+	(let ((message (format nil "Record has been modified, Do you wish to save the changes?")))
+	  (case (call 'about-dialog
+		      :body (make-presentation (instance self) 
+					       :type :viewer)
+		      :message message
+		      :options '((:save . "Save changes to Database")
+				 (:cancel . "Cancel all changes")))
+	    (:cancel
+	     (cancel-save-instance self))
+	    (:save 
+	     (save-instance self))))
+	(save-instance self))))
+
+(defaction sync-and-answer ((self mewa))
+  (ensure-instance-sync self)
+  (answer (instance self)))
 
 (defaction ok ((self mewa) &optional arg)
   "Returns the component if it has not been modified. if it has been, prompt user to save or cancel"
   ;(declare (ignore arg))
-  (meta-model::sync-instance (instance self))
-  (answer (instance self)))
+  (sync-and-answer self))
 
 (defmethod (setf presentation-slot-value) :around (value (slot slot-presentation) instance)
   (let* ((old (prog1 
@@ -373,20 +418,7 @@ attributes is an alist keyed on the attribute name."
       (setf (modifiedp self) instance
 	    (modifications self)  (append (list new old value slot instance) (modifications self)))))))
 
-;;;; * Finally set up some defaults
 
-(setf (find-attribute t :viewer) 
-      '(mewa-object-presentation :global-properties (:editablep nil))
-      (find-attribute t :editor)
-      '(mewa-object-presentation :global-properties (:editablep t))
-      (find-attribute t :creator)
-      '(mewa-object-presentation :global-properties (:editablep t))
-      (find-attribute t :one-line)
-      '(mewa-one-line-presentation)
-      (find-attribute t :listing)
-      '(mewa-list-presentation :global-properties (:editablep nil) :editablep t)
-      (find-attribute t :search-model)
-      '(mewa-object-presentation))
 
 
 

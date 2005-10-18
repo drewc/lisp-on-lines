@@ -1,19 +1,46 @@
 (in-package :mewa)
 
+
+
+ (defun split-list (n list)  
+  (loop for cons on list
+        by #'(lambda (x) (nthcdr n x))
+        if (< 0 n)
+        collect (loop for atom in cons
+                      repeat n
+                      collect atom)
+        else return nil))
+
 (defaction edit-instance ((self mewa))
   (call-presentation (instance self) :type :editor))
 
 ;;;one-line objects
 (defcomponent mewa-one-line-presentation (mewa one-line-presentation)
   ()
-  (:default-initargs :attributes-getter #'one-line-attributes-getter))
+  (:default-initargs
+   :attributes-getter #'one-line-attributes-getter
+   :global-properties '(:editablep nil)))
 
 (defmethod one-line-attributes-getter ((self mewa))
-  (or (meta-model:list-keys (instance self))))
+  (or (meta-model::find-slots-of-type (instance self))
+      (meta-model::list-keys (instance self))))
 
 ;;;objects
 (defcomponent mewa-object-presentation (mewa object-presentation) 
   ((instance :accessor instance :initarg :instance :initform nil)))
+
+(defcomponent mewa-viewer (mewa-object-presentation)
+  ()
+  (:default-initargs
+   :global-properties '(:editablep nil)))
+
+(defcomponent mewa-editor (mewa-object-presentation)
+  ()
+  (:default-initargs
+   :global-properties '(:editablep t)))
+
+(defcomponent mewa-creator (mewa-editor)
+  ())
 
 (defmethod present ((pres mewa-object-presentation))
   (<:table :class (css-class pres)

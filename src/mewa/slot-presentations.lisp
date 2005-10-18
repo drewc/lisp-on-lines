@@ -14,9 +14,9 @@
 ;;;; ** Textarea Slot Presentation
 
 (defslot-presentation text-slot-presentation ()
-  ((rows :initarg :rows :accessor rows :initform nil)
-   (columns :initarg :columns :accessor columns :initform nil)
-   (html-contentp :initarg :escape-html-p :accessor escape-html-p :initform nil))
+  ((rows :initarg :rows :accessor rows :initform 25)
+   (columns :initarg :columns :accessor columns :initform 40)
+   (escape-html-p :initarg :escape-html-p :accessor escape-html-p :initform nil))
   (:type-name text))
 
 (defmethod present-slot ((slot text-slot-presentation) instance)
@@ -25,8 +25,9 @@
 		     :rows (rows slot)
 		     :cols (columns slot))
       (if (escape-html-p slot)
+	  (<:as-html (presentation-slot-value slot instance))
 	  (<:as-is (presentation-slot-value slot instance))
-	  (<:as-html (presentation-slot-value slot instance)))))
+	  )))
 
 
 (defcomponent mewa-slot-presentation ()
@@ -67,7 +68,8 @@ When T, only the default value for primary keys and the joins are updated.")
   currency)
 
 (defslot-presentation clsql-wall-time-slot-presentation (mewa-relation-slot-presentation)
-       ()
+       ((input-id :accessor input-id :initform (arnesi:random-string 10 arnesi:+ascii-alphabet+))
+	(trigger-id :accessor trigger-id :initform (arnesi:random-string 10 arnesi:+ascii-alphabet+)))
        (:type-name clsql-sys:wall-time))
 
 (defmethod presentation-slot-value ((slot clsql-wall-time-slot-presentation) instance)
@@ -88,18 +90,19 @@ When T, only the default value for primary keys and the joins are updated.")
   (concatenate 'string (call-next-method) "  (m/d/y)"))
 
 (defmethod present-slot ((slot clsql-wall-time-slot-presentation) instance)
-  (let ((date (presentation-slot-value slot instance))
-	(input-id (string (gensym))))
+  (let ((date (presentation-slot-value slot instance)))
     (if (and date (not (editablep slot)))
 	(<:as-html date))
     (when (editablep slot)
-      (<ucw:input :accessor (presentation-slot-value slot instance) :id input-id)
+      (<ucw:input :accessor (presentation-slot-value slot instance) :id (input-id slot) :style "display:inline")
+      (<:button :id (trigger-id slot) (<:as-html "[...]"))
       (<:script :type "text/javascript" 
 		(<:as-is (format nil " 
-      Calendar.setup({
-        inputField     :    \"~a\",
-        ifFormat       :    \"%m/%d/%Y\",
-      });" input-id))))))
+      
+Calendar.setup({
+ inputField     :    \"~a\",
+ button         :    \"~a\",
+ ifFormat       :    \"%m/%d/%Y\" });" (input-id slot) (trigger-id slot)))))))
 
 (defslot-presentation  mewa-relation-slot-presentation (mewa-slot-presentation slot-presentation)
   ((foreign-instance :accessor foreign-instance)
@@ -231,17 +234,37 @@ When T, only the default value for primary keys and the joins are updated.")
 (defmethod present-slot ((slot has-many-slot-presentation) instance)
   (when (slot-boundp slot 'ucw::place)
     (<ucw:submit :action (add-to-has-many slot instance) :value (add-new-label slot)))
-  (let ((i (get-foreign-instances slot instance)))
-	
-    (<:ul 
-     (dolist (s i)
-       (let ((s s))
-	 (setf (foreign-instance slot) s)
-         (when (slot-boundp slot 'ucw::place)
-           (<ucw:a :action (view-instance slot s :initargs `(:global-properties ,(list :linkedp t :editablep nil)))
-		 (<:li   (setf (linkedp slot) nil)
-			 (present-relation slot instance)))))))))
-
+  (let* ((i (get-foreign-instances slot instance))
+	 (presentation (and i (make-presentation (car  i) :type :one-line))))
+    (when i
+      (flet ((linker (i string)
+	       (<ucw:a
+		:action (view-instance slot i
+				       :initargs
+				       `(:global-properties ,
+					 (list
+					  :linkedp t
+					  :editablep nil)))
+		(<:as-html string))))
+	(<:table
+	 (<:tr
+	  (<:th)			;empty col for (view) link
+	  (dolist (s (slots presentation))
+	    (<:th (<:as-html  (label s)))))
+	 (dolist (s i)
+	   (let ((s s))
+	     (setf (foreign-instance slot) s)
+	     (when (slot-boundp slot 'ucw::place)
+	       (<:tr
+		(<:td (linker s " (view) "))
+		(dolist (p (slots (make-presentation s :type :one-line
+						     :initargs
+						     '(:global-properties
+						       (:editablep nil)))))
+		  (<:td 	     
+				
+		   (present-slot p s))))))))))))
+		       
 
 (defmethod get-foreign-instances ((slot has-many-slot-presentation) instance)
   (slot-value instance (slot-name slot)))

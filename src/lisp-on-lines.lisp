@@ -10,7 +10,7 @@
 ;;;; ** Initialisation
 ;;;; The following macros are used to initialise a set of database tables as LoL objects.
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun generate-initialize-lol-for-table (table)
+  (defun generate-define-view-for-table (table)
     "
 Generates a form that, when evaluated, initialises the given table as an lol object.
 This involves creating a meta-model, a clsql view-class, and the setting up the default attributes for a mewa presentation"
@@ -19,19 +19,53 @@ This involves creating a meta-model, a clsql view-class, and the setting up the 
       (def-view-class-from-table ,table)
       (set-default-attributes (quote ,(meta-model::sql->sym table))))))
     
-(defmacro initialize-lol-for-table (&rest tables)
+(defmacro define-view-for-table (&rest tables)
   " expand to a form which initialises TABLES for use with LOL"
   `(progn
-    ,@(loop for tbl in tables collect (generate-initialize-lol-for-table tbl))
+    ,@(loop for tbl in tables collect (generate-define-view-for-table tbl))
     (values)))
 
-(defmacro initialize-lol-for-database ()
+(defmacro define-views-for-database ()
   "expands to init-i-f-t using the listing of tables provided by meta-model"
-  `(initialize-lol-for-table ,@(meta-model::list-tables)))
+  `(define-view-for-table ,@(meta-model::list-tables)))
 
-;;;; * AJAX stuff 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun %make-view (object type &rest attributes-and-args)
+    (let ((attributes (car attributes-and-args))
+	  (args (cdr attributes-and-args)))
+      `(mewa:make-presentation
+	,object
+	:type ,type
+	:initargs
+	'(,@ (when attributes
+	       `(:attributes ,attributes))) 
+	,@args)))) 
 
-;;;; TODO: This search stuff should probably me refactored elsewhere
+(defmethod make-view (object &rest args &key (type :viewer) (attributes nil)
+		      &allow-other-keys )
+  (apply #'make-presentation (cdr (%make-view object type (cons attributes args)))))
+
+(defmacro present-view ((object &optional (type :viewer))
+			&body attributes-and-args)
+  `(present ,(%make-view object type attributes-and-args)))
+
+
+(defmacro call-view ((object &optional (type :viewer) (component 'self component-supplied-p))
+		     &body attributes-and-args)
+  
+  
+  `(ucw:call-component
+    ,component
+    ,(%make-view object type attributes-and-args)))
+
+(defmethod slot-view ((self mewa) slot-name)
+  (mewa::find-attribute-slot self slot-name))
+
+(defmethod present-slot-view ((self mewa) slot-name &optional (instance (instance self)))
+  (present-slot (slot-view self slot-name) instance))
+
+
+
 
 (defmethod find-slots-of-type (model &key (type 'string)
 			      (types '((string)) types-supplied-p))

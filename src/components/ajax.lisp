@@ -165,8 +165,6 @@ but here's what i use."
 	:class "auto-complete-list-item"
 	(funcall (render auto-complete) value))))))
 
-
-
 (defcomponent fkey-auto-complete (auto-complete)
   ())
 
@@ -206,9 +204,11 @@ but here's what i use."
 	  
 (defaction revert-foreign-slot ((slot ajax-foreign-key-slot-presentation))
   (setf (lol::value (live-search slot)) nil)
-  (mewa::sync-foreign-instance slot (original-value slot)))
+  (when (original-value slot)
+  (mewa::sync-foreign-instance slot (original-value slot))))
 
 (defmethod present-slot :around ((slot ajax-foreign-key-slot-presentation) instance)
+
   (let ((foreign-instance 
 	 (if (lol::value (live-search slot))
 	     (lol::value (live-search slot))

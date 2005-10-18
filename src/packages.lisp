@@ -3,9 +3,15 @@
   (:nicknames :lol)
   (:export 
    ;;;; LoL 
-   :initialize-lol-for-table
-   :initialize-lol-for-database
+   :define-view-for-table
+   :define-views-for-database
 
+   ;;;;a wrapper for calling make-presentation
+   :call-view
+   :present-view
+   :slot-view
+   :present-slot-view
+   :make-view
    ;;;; Ajax
    :auto-complete
    :call-auto-complete
@@ -14,8 +20,11 @@
    :mewa ;the superclass of all mewa-presentations
    :make-presentation
    :call-presentation
+
    ;;attributes
    :attributes
+   :define-attributes
+   :with-default-attributes
    :set-default-attributes
    :set-attribute
    :find-attribute
@@ -25,6 +34,8 @@
    :define-attributes
 
    ;; presentation objects
+   :present
+   :instance
    :mewa-object-presentation
    :mewa-one-line-presentation
    :mewa-list-presentation
@@ -34,6 +45,7 @@
    :slot-name
    :mewa-relation-slot-presentation
    :has-many-slot-presentation
+   :present-slot
    ;; CRUD
    :instance-is-stored-p
 
