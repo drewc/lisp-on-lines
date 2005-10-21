@@ -26,8 +26,7 @@
 		     :cols (columns slot))
       (if (escape-html-p slot)
 	  (<:as-html (presentation-slot-value slot instance))
-	  (<:as-is (presentation-slot-value slot instance))
-	  )))
+	  (<:as-is (presentation-slot-value slot instance)))))
 
 
 (defcomponent mewa-slot-presentation ()
@@ -172,8 +171,6 @@ Calendar.setup({
       (when (and (ucw::parent slot) (slot-boundp slot 'ucw::place))
 	(setf (component.place pres) (component.place (ucw::parent slot))))
       (when i (<ucw:render-component :component pres))))
-
-
 
 (defmethod present-slot ((slot mewa-relation-slot-presentation) instance)
   (present-relation slot instance))
