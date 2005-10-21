@@ -315,7 +315,8 @@ attributes is an alist keyed on the attribute name."
 		    (classes self))))
     (setf (attribute-slot-map self) (find-slot-presentations self))
     (setf (slots self) (mapcar #'(lambda (x)(cdr x)) (attribute-slot-map self )))))
-  
+
+
 (defmethod make-presentation ((object t) &key (type :viewer) (initargs nil))
   (let* ((p (make-instance 'mewa-object-presentation))
 	 (a (progn (setf (slot-value p 'instance) object)
@@ -334,6 +335,15 @@ attributes is an alist keyed on the attribute name."
     (setf (slot-value i 'initializedp) t)
     i))
 
+(defmethod make-presentation ((list list) &key (type :listing) (initargs nil))
+
+  (let ((args (append
+	       `(:type ,type) 
+	       `(:initargs 
+		 (:instances ,list
+		  ,@initargs)))))
+    
+    (apply #'make-presentation (car list) args)))
 
 (defmethod initialize-slots-place ((place ucw::place) (mewa mewa))
   (setf (slots mewa) (mapcar #'(lambda (x) 
