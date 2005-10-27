@@ -8,29 +8,19 @@
 
 (in-package :coop.tech.systems)
 
-
-(defsystem :mewa
-  :components ((:module :src 
-		:pathname "src/mewa/"
-		:components 
-		((:file "packages")
-		 (:file "static-presentations")
-		 (:file "mewa")
-		 (:file "presentations" )
-		 (:file "slot-presentations"))
-		:serial t))
-  :depends-on (:ucw :meta-model))
-	  
 (defsystem :lisp-on-lines
-  :components ((:static-file "lisp-on-lines.asd")
-	       (:module :src
-			:components ((:file "packages")
-				     (:file "lisp-on-lines"))
-			:serial t)
-			
-	       (:module :components
-		:pathname "src/components/"
-                :components ((:file "range-list")
-			     (:file "ajax"))))
-  :serial t
-:depends-on (:meta-model :mewa :split-sequence))
+    :components ((:static-file "lisp-on-lines.asd")
+		 (:file "src/packages")
+		 (:module :src
+			  :components ((:file "static-presentations")
+				       (:file "mewa")
+				       (:file "lisp-on-lines")
+				       (:file "presentations")
+				       (:file "slot-presentations"))
+			  :serial t)
+		 (:module :components
+			  :pathname "src/components/"
+			  :components ((:file "range-list")
+				       (:file "ajax"))))
+    :serial t
+    :depends-on (:arnesi :ucw :meta-model :split-sequence))
