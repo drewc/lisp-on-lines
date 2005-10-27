@@ -98,7 +98,7 @@ attributes is an alist keyed on the attribute name."
 (defun find-presentation-attributes (model)
   (remove nil (mapcar #'(lambda (att)
 	      (when (keywordp (car att))
-		att))
+		(copy-list att) ))
 	  (cdr (find-class-attributes model)))))
 
 
@@ -318,7 +318,9 @@ attributes is an alist keyed on the attribute name."
 
 
 (defmethod make-presentation ((object t) &key (type :viewer) (initargs nil))
+  
   (let* ((p (make-instance 'mewa-object-presentation))
+	 
 	 (a (progn (setf (slot-value p 'instance) object)
 		   (initialize-slots p) 
 		   (assoc type (find-all-attributes p))))
@@ -330,6 +332,8 @@ attributes is an alist keyed on the attribute name."
 					  (symbol-name type)
 					  type))
 		   (plist-union initargs (cddr a)))))
+    
+    
     (setf (slot-value i 'instance) object)
     (initialize-slots i)
     (setf (slot-value i 'initializedp) t)
