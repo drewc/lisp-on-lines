@@ -1,15 +1,5 @@
-(in-package :mewa)
+(in-package :lisp-on-lines)
 
-
-
- (defun split-list (n list)  
-  (loop for cons on list
-        by #'(lambda (x) (nthcdr n x))
-        if (< 0 n)
-        collect (loop for atom in cons
-                      repeat n
-                      collect atom)
-        else return nil))
 
 (defaction edit-instance ((self mewa))
   (call-presentation (instance self) :type :editor))
@@ -126,7 +116,7 @@
 
 (defgeneric search-expr (criteria instance)
   (:documentation "Return ready to apply criteria.
-                   What to do with it is backend dependent."))
+                   to do with What it is backend dependent."))
 
 (defmacro def-search-expr (((self criteria-type)) (model-expr &body body))
   `(defmethod search-expr ((,self ,criteria-type) instance)

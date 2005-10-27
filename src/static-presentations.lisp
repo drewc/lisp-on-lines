@@ -1,6 +1,6 @@
 ;;;; -*- lisp -*-
 
-(in-package :mewa)
+(in-package :lisp-on-lines)
 
 (defcomponent presentation ()
   ((css-class :accessor css-class :initarg :css-class :initform nil))
@@ -422,8 +422,7 @@ This method is also used by relation-slot-presentations for the same reason."))
   (:type-name boolean))
 
 (defmethod present-slot ((slot boolean-slot-presentation) instance)
-  (<ucw:input :type "checkbox" :accessor (presentation-slot-value slot instance))
-  (setf (presentation-slot-value slot instance) nil))
+  (<ucw:input :type "checkbox" :accessor (presentation-slot-value slot instance)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; strings

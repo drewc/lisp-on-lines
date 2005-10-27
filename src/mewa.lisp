@@ -1,4 +1,4 @@
-(in-package :mewa)
+(in-package :lisp-on-lines)
  
 (defparameter *default-type* :ucw)
 
@@ -335,8 +335,7 @@ attributes is an alist keyed on the attribute name."
     (setf (slot-value i 'initializedp) t)
     i))
 
-(defmethod make-presentation ((list list) &key (type :listing) (initargs nil))
-
+(defmethod make-presentation ((list list) &key (type :listing) (initargs nil))  
   (let ((args (append
 	       `(:type ,type) 
 	       `(:initargs 
@@ -379,7 +378,7 @@ attributes is an alist keyed on the attribute name."
 
 (defaction cancel-save-instance ((self mewa))
   (cond  
-    ((instance-is-stored-p (instance self))
+    ((meta-model::persistentp (instance self))
       (meta-model::update-instance-from-records (instance self))
       (answer self))
     (t (answer nil))))

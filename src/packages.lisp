@@ -1,6 +1,14 @@
 (defpackage :lisp-on-lines
-  (:use :mewa :meta-model :common-lisp :it.bese.ucw :js :clsql)
-  (:nicknames :lol)
+  (:use :arnesi
+	:iterate
+	:meta-model
+	:common-lisp
+	:it.bese.ucw
+	:clsql)
+  (:shadowing-import-from
+   :iterate
+   :with)
+  (:nicknames :lol :mewa)
   (:export 
    ;;;; LoL 
    :define-view-for-table
@@ -39,11 +47,13 @@
    :mewa-object-presentation
    :mewa-one-line-presentation
    :mewa-list-presentation
-
+   :mewa-search-presentation
+   :mewa-presentation-search
    ;; SLOT presentations
    :defslot-presentation
    :slot-name
    :mewa-relation-slot-presentation
+   :mewa-string-slot-presentation
    :has-many-slot-presentation
    :present-slot
    ;; CRUD

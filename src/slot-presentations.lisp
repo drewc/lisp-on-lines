@@ -1,4 +1,4 @@
-(in-package :mewa)
+(in-package :lisp-on-lines)
 
 (defun multiple-value-funcall->list (function &rest args)
   "The function to be called by m-v-bf"
@@ -194,6 +194,7 @@ Calendar.setup({
     (if (slot-boundp slot 'ucw::place)
         (cond 
           ((editablep slot)
+	   (render)
            (<ucw:submit :action  (search-records slot instance) :value "Search" :style "display:inline")
            (<ucw:submit :action  (create-record-on-foreign-key slot instance) :value "Add New" :style "display:inline"))
           ((linkedp slot)
@@ -205,7 +206,15 @@ Calendar.setup({
         (render))))
 
 
+(defmethod find-foreign-instances ((slot foreign-key-slot-presentation))
+  (clsql:select (class-name (class-of (meta-model:explode-foreign-key (instance slot) (slot-name slot))))))
 
+(defslot-presentation has-a-slot-presentation (foreign-key-slot-presentation)
+  ()
+  (:type-name has-a))
+
+(defmethod present-slot ((slot has-a-slot-presentation) instance)
+  t)
 
 ;;;; HAS MANY 
 (defslot-presentation has-many-slot-presentation (mewa-relation-slot-presentation)
@@ -214,7 +223,7 @@ Calendar.setup({
 
 (defaction add-to-has-many ((slot has-many-slot-presentation) instance)
   ;; if the instance is not stored we must make sure to mark it stored now!
-  (unless (mewa::instance-is-stored-p instance)
+  (unless (meta-model::persistentp instance)
     (setf (mewa::modifiedp (ucw::parent self)) t))
   ;; sync up the instance
   ;;(mewa:ensure-instance-sync (parent slot))
@@ -331,7 +340,49 @@ Calendar.setup({
 	    (present (presentation slot)))
 	  (<:as-html "--"))))
 
+(defslot-presentation many-to-many-slot-presentation (mewa-relation-slot-presentation)
+  ((list-view :accessor list-view :initarg :list-view :initform :one-line)
+   (action-view :accessor action-view :initarg :action-view :initform :viewer)
+   (create-view :initform :creator))
+  (:type-name many-to-many)
+  (:default-initargs :label "many to many"))
 
+(defmethod present-slot ((slot many-to-many-slot-presentation) instance)
+  
+  (let ((instances (slot-value instance (slot-name slot))))
+    (<:ul
+     (<:li (<ucw:a :action (add-on-many-to-many slot instance)
+		   (<:as-html "Add New")))
+     (dolist* (i instances)
+       (<:li
+	(<ucw:a :action (call-view ((car i) (action-view slot) slot))
+		(<:as-html "(view) "))
+	(<ucw:a :action (delete-item (ucw::parent slot) (second i))
+		(<:as-html "(remove) "))
+	(present-view ((car i)  (list-view slot) (ucw::parent slot)))) ))))
+
+(defaction add-on-many-to-many ((slot many-to-many-slot-presentation) instance)
+  (let* (new
+	 (imd (getf (meta-model::find-slot-metadata instance (slot-name slot))
+		    :db-info))
+	 (jc (make-instance (getf imd :join-class)))
+	 (jcmd (getf (meta-model::find-slot-metadata jc (getf imd :target-slot))
+		     :db-info))
+	 (fc (make-instance (getf jcmd :join-class)))
+	 (c (call-view (fc :creator (ucw::parent slot)))))
+
+    (when c
+      (sync-instance c)
+      (setf (slot-value jc (getf imd :foreign-key))
+	    (slot-value instance (getf imd :home-key)))
+      (setf (slot-value jc (getf jcmd :home-key))
+	    (slot-value c (getf jcmd :foreign-key)))
+      (sync-instance jc)
+      (sync-instance instance)
+      c)))
+	 
+
+	
 
 
 
