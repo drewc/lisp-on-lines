@@ -374,11 +374,8 @@ attributes is an alist keyed on the attribute name."
   (call-next-method)
   (render-on res (slot-value self 'body)))
 
-(defmethod instance-is-stored-p ((instance clsql:standard-db-object))
-  (slot-value instance 'clsql-sys::view-database))
 
-(defmethod instance-is-stored-p ((mewa mewa))
-  (instance-is-stored-p (instance mewa)))
+
 
 (defaction cancel-save-instance ((self mewa))
   (cond  
