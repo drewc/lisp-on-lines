@@ -30,41 +30,44 @@ This involves creating a meta-model, a clsql view-class, and the setting up the 
   `(define-view-for-table ,@(meta-model::list-tables)))
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun %make-view (object type &rest attributes-and-args)
-    (let ((attributes (car attributes-and-args))
-	  (args (cdr attributes-and-args)))
+  (defun %make-view (object type attributes args)
+   
+      (when attributes
+	(setf args
+	      (cons `(:attributes ,attributes) args)))
       `(mewa:make-presentation
 	,object
 	:type ,type
-	:initargs
-	'(,@ (when attributes
-	       `(:attributes ,attributes))) 
-	,@args)))) 
+	,@(when args
+		`(:initargs
+		  '(,@ (mapcan #'identity args)))))))
 
 (defmethod make-view (object &rest args &key (type :viewer) (attributes nil)
 		      &allow-other-keys )
-  (apply #'make-presentation (cdr (%make-view object type (cons attributes args)))))
+  (apply #'make-presentation (cdr (%make-view object type attributes args))))
 
-(defmacro present-view ((object &optional (type :viewer))
+(defmacro present-view ((object &optional (type :viewer) (parent 'self))
 			&body attributes-and-args)
-  `(present ,(%make-view object type attributes-and-args)))
+  (arnesi:with-unique-names (view)
+    `(let ((,view (lol:make-view ,object
+				 :type ,type
+				 :attributes ,(car attributes-and-args)
+				 ,@ (cdr attributes-and-args))))
+      (setf (ucw::parent ,view) ,parent)
+      (lol:present ,view))))
 
 
 (defmacro call-view ((object &optional (type :viewer) (component 'self component-supplied-p))
-		     &body attributes-and-args)
-  
-  
+		     &body attributes-and-args)  
   `(ucw:call-component
     ,component
-    ,(%make-view object type attributes-and-args)))
+    ,(%make-view object type (car attributes-and-args) (cdr attributes-and-args))))
 
 (defmethod slot-view ((self mewa) slot-name)
   (mewa::find-attribute-slot self slot-name))
 
 (defmethod present-slot-view ((self mewa) slot-name &optional (instance (instance self)))
   (present-slot (slot-view self slot-name) instance))
-
-
 
 
 (defmethod find-slots-of-type (model &key (type 'string)
@@ -78,6 +81,16 @@ This involves creating a meta-model, a clsql view-class, and the setting up the 
 					 (first st)))
 	     (lisp-on-lines::list-slot-types model)))))
 
+
+
+(defun %delete-item (item)
+  (ignore-errors
+    (clsql:delete-instance-records item)))
+
+(defaction delete-item ((self component) instance)
+  (if (%delete-item instance)
+      (answer nil)
+      (call 'info-message :message "Could not remove item. Try removing associated items first.")))
 
 (defmethod word-search (class-name slots search-terms 
 			&key (limit 10) (where (sql-and t)))
@@ -104,3 +117,5 @@ This involves creating a meta-model, a clsql view-class, and the setting up the 
 			      slots)))
 	   search-terms)))
 
+
+  
