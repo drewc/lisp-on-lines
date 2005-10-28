@@ -343,25 +343,63 @@ Calendar.setup({
 (defslot-presentation many-to-many-slot-presentation (mewa-relation-slot-presentation)
   ((list-view :accessor list-view :initarg :list-view :initform :one-line)
    (action-view :accessor action-view :initarg :action-view :initform :viewer)
-   (create-view :initform :creator))
+   (create-view :initform :creator)
+   (select-view :initform :as-string :accessor select-view))
   (:type-name many-to-many)
   (:default-initargs :label "many to many"))
 
-(defmethod present-slot ((slot many-to-many-slot-presentation) instance)
-  
-  (let ((instances (slot-value instance (slot-name slot))))
+(defun %delete-item (item)
+  (clsql:with-default-database (clsql:*default-database*)
+    (ignore-errors
+    (clsql:delete-instance-records item))))
+
+(defaction delete-item ((self component) instance)
+  (multiple-value-bind (res err) (%delete-item instance)
+  (if (not err) 
+      (call 'info-message :message "Removed Instance")
+      (call 'info-message :message (format nil "Could not remove item. Try removing associated items first. ~A" instance)))))
+
+(defaction delete-relationship ((slot many-to-many-slot-presentation) rel instance)
+  (delete-item (ucw::parent self) rel)
+  (sync-instance instance)
+  (answer-component (ucw::parent self)   t))
+
+
+(defun find-many-to-many-join-class (slot instance)
+  (let* ((imd (getf (meta-model::find-slot-metadata instance (slot-name slot))
+		    :db-info))
+	 (jc (make-instance (getf imd :join-class)))
+	 (jcmd (getf (meta-model::find-slot-metadata jc (getf imd :target-slot))
+		     :db-info)))
+    (getf jcmd :join-class)))
+
+
+
+(defmethod find-all-instances ((slot many-to-many-slot-presentation) instance)
+  (clsql:select (find-many-to-many-join-class slot instance) :flatp t))
+
+(defmethod present-slot ((slot many-to-many-slot-presentation) instance)  
+  (let ((instances (slot-value instance (slot-name slot)))
+	new-instance)
     (<:ul
      (<:li (<ucw:a :action (add-on-many-to-many slot instance)
 		   (<:as-html "Add New")))
+     (<:li  (<ucw:button :action (add-to-many-to-many slot instance new-instance)
+			 (<:as-html "Add:"))
+	    (<ucw:select :accessor new-instance
+			 (arnesi:dolist* (i (find-all-instances slot instance))
+			   (<ucw:option
+			    :value i
+			    (lol:present-view (i (select-view slot) slot))))))
      (dolist* (i instances)
        (<:li
-	(<ucw:a :action (call-view ((car i) (action-view slot) slot))
+	(<ucw:a :action (call-view ((car i) (action-view slot) (ucw::parent slot)))
 		(<:as-html "(view) "))
-	(<ucw:a :action (delete-item (ucw::parent slot) (second i))
+	(<ucw:a :action (delete-relationship slot (second i) instance)
 		(<:as-html "(remove) "))
-	(present-view ((car i)  (list-view slot) (ucw::parent slot)))) ))))
+	(present-view ((car i) (list-view slot) (ucw::parent slot)))) ))))
 
-(defaction add-on-many-to-many ((slot many-to-many-slot-presentation) instance)
+(defaction add-to-many-to-many ((slot many-to-many-slot-presentation) instance &optional foreign-instance)
   (let* (new
 	 (imd (getf (meta-model::find-slot-metadata instance (slot-name slot))
 		    :db-info))
@@ -369,15 +407,19 @@ Calendar.setup({
 	 (jcmd (getf (meta-model::find-slot-metadata jc (getf imd :target-slot))
 		     :db-info))
 	 (fc (make-instance (getf jcmd :join-class)))
-	 (c (call-view (fc :creator (ucw::parent slot)))))
-
+	 (c (if
+	     foreign-instance
+	     foreign-instance
+	     (call-view (fc :creator (ucw::parent slot))))))
     (when c
       (sync-instance c)
+;      (error "~A ~A ~A" (getf imd :foreign-key) (getf jcmd :foreign-key) (getf imd :home-key))
       (setf (slot-value jc (getf imd :foreign-key))
 	    (slot-value instance (getf imd :home-key)))
       (setf (slot-value jc (getf jcmd :home-key))
 	    (slot-value c (getf jcmd :foreign-key)))
       (sync-instance jc)
+      
       (sync-instance instance)
       c)))
 	 
