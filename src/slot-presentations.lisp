@@ -14,19 +14,22 @@
 ;;;; ** Textarea Slot Presentation
 
 (defslot-presentation text-slot-presentation ()
-  ((rows :initarg :rows :accessor rows :initform 25)
+  ((rows :initarg :rows :accessor rows :initform 5)
    (columns :initarg :columns :accessor columns :initform 40)
    (escape-html-p :initarg :escape-html-p :accessor escape-html-p :initform nil))
   (:type-name text))
 
 (defmethod present-slot ((slot text-slot-presentation) instance)
-  (if (editablep slot)
-      (<ucw:textarea :accessor (presentation-slot-value slot instance)
-		     :rows (rows slot)
-		     :cols (columns slot))
-      (if (escape-html-p slot)
-	  (<:as-html (presentation-slot-value slot instance))
-	  (<:as-is (presentation-slot-value slot instance)))))
+    (if (editablep slot)
+	(<ucw:textarea
+	 :accessor (presentation-slot-value slot instance)
+	 :reader (or (presentation-slot-value slot instance)
+		 "")
+	 :rows (rows slot)
+	 :cols (columns slot))
+	(if (escape-html-p slot)
+	    (<:as-html (presentation-slot-value slot instance))
+	    (<:as-is (presentation-slot-value slot instance))))))
 
 
 (defcomponent mewa-slot-presentation ()
