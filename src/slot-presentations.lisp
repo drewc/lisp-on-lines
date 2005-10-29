@@ -29,7 +29,7 @@
 	 :cols (columns slot))
 	(if (escape-html-p slot)
 	    (<:as-html (presentation-slot-value slot instance))
-	    (<:as-is (presentation-slot-value slot instance))))))
+	    (<:as-is (presentation-slot-value slot instance)))))
 
 
 (defcomponent mewa-slot-presentation ()
