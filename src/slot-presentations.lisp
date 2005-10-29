@@ -398,7 +398,7 @@ Calendar.setup({
   (let ((instances (slot-value instance (slot-name slot)))
 	new-instance)
     (<:ul
-     (<:li (<ucw:a :action (add-on-many-to-many slot instance)
+     (<:li (<ucw:a :action (add-to-many-to-many slot instance)
 		   (<:as-html "Add New")))
      (<:li  (<ucw:button :action (add-to-many-to-many slot instance new-instance)
 			 (<:as-html "Add:"))
@@ -416,6 +416,8 @@ Calendar.setup({
 	(present-view ((car i) (list-view slot) (ucw::parent slot)))) ))))
 
 (defaction add-to-many-to-many ((slot many-to-many-slot-presentation) instance &optional foreign-instance)
+  ;;;; First things first, we sync.
+  (sync-instance instance)
   (let* (new
 	 (imd (getf (meta-model::find-slot-metadata instance (slot-name slot))
 		    :db-info))
