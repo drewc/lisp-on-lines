@@ -332,6 +332,8 @@ attributes is an alist keyed on the attribute name."
 					  (symbol-name type)
 					  type))
 		   (plist-union initargs (cddr a)))))
+
+    (warn "~A ~A " initargs (cddr a))
     
     
     (setf (slot-value i 'instance) object)

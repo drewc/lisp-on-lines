@@ -44,7 +44,10 @@ This involves creating a meta-model, a clsql view-class, and the setting up the 
 
 (defmethod make-view (object &rest args &key (type :viewer) (attributes nil)
 		      &allow-other-keys )
-  (apply #'make-presentation (cdr (%make-view object type attributes args))))
+  (warn "~A ~A ~A" attributes type object)
+  (remf args :type )
+  (remf args :attributes)
+  (apply #'make-presentation object (cddr (%make-view object type attributes args))))
 
 (defmacro present-view ((object &optional (type :viewer) (parent 'self))
 			&body attributes-and-args)
@@ -83,14 +86,8 @@ This involves creating a meta-model, a clsql view-class, and the setting up the 
 
 
 
-(defun %delete-item (item)
-  (ignore-errors
-    (clsql:delete-instance-records item)))
 
-(defaction delete-item ((self component) instance)
-  (if (%delete-item instance)
-      (answer nil)
-      (call 'info-message :message "Could not remove item. Try removing associated items first.")))
+
 
 (defmethod word-search (class-name slots search-terms 
 			&key (limit 10) (where (sql-and t)))
