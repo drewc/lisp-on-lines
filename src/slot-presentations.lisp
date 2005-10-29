@@ -212,12 +212,7 @@ Calendar.setup({
 (defmethod find-foreign-instances ((slot foreign-key-slot-presentation))
   (clsql:select (class-name (class-of (meta-model:explode-foreign-key (instance slot) (slot-name slot))))))
 
-(defslot-presentation has-a-slot-presentation (foreign-key-slot-presentation)
-  ()
-  (:type-name has-a))
 
-(defmethod present-slot ((slot has-a-slot-presentation) instance)
-  t)
 
 ;;;; HAS MANY 
 (defslot-presentation has-many-slot-presentation (mewa-relation-slot-presentation)
@@ -321,26 +316,46 @@ Calendar.setup({
 		   for i from 0 upto (number-to-display slot)
 		   collect (car cons))))
 
-(defslot-presentation has-a-slot-presentation (one-of-presentation)
-  ((key :initarg :key :accessor key))
+
+;;;; * Has-a
+(defslot-presentation has-a-slot-presentation (mewa-relation-slot-presentation)
+  ((allow-nil-p :accessor allow-nil-p :initarg :allow-nil-p :initform t)
+   (attributes :accessor attributes :initarg :attributes :initform nil))
   (:type-name has-a))
 
-(defmethod get-foreign-slot-value ((slot has-a-slot-presentation) (object t) (slot-name t))
-  (slot-value object slot-name))
+(defmethod find-foreign-slot-value ((slot has-a-slot-presentation) (object t))
+  (multiple-value-bind (c s)      
+      (meta-model:explode-foreign-key (instance (ucw::parent slot)) (slot-name slot))
+    (slot-value object s)))
+
+(defmethod get-foreign-instances ((slot mewa-relation-slot-presentation) instance)
+  (clsql:select (class-name (class-of
+			     (meta-model:explode-foreign-key instance (slot-name slot))))
+		:flatp t))
 
 (defmethod present-slot ((slot has-a-slot-presentation) instance)
-      (<:as-html (presentation-slot-value slot instance))
+;      (<:as-html (presentation-slot-value slot instance))
   (if (editablep slot)
-      (<ucw:select :accessor (presentation-slot-value slot instance) :test #'equalp
+      (progn (<ucw:select :accessor (presentation-slot-value slot instance) :test #'equalp
         (when (allow-nil-p slot)
-	  (<ucw:option :value nil (<:as-html (none-label slot))))
-	(dolist (option (get-foreign-instances (presentation slot) instance))
-	  (setf (instance (presentation slot)) option)
-	  (<ucw:option :value (get-foreign-slot-value slot option (key slot)) (present (presentation slot)))))
+	  (<ucw:option :value nil (<:as-html "none")))
+	(dolist (option (get-foreign-instances slot instance))
+	  (<ucw:option :value (find-foreign-slot-value slot option)
+		       (lol:present
+			(lol:make-presentation option
+			   :type :as-string
+			   :initargs
+			   `(:attributes ,(attributes slot)))
+			))))
+	     (<ucw:submit :action  (create-record-on-foreign-key slot instance) :value "Add New" :style "display:inline")) 
       (if (presentation-slot-value slot instance)
 	  (progn
-	    (setf (instance (presentation slot)) (presentation-slot-value slot instance))
-	    (present (presentation slot)))
+	   (lol:present
+	    (lol:make-presentation (meta-model:explode-foreign-key instance (slot-name slot))
+			   :type :one-line
+			   :initargs
+			   `(:attributes ,(attributes slot)))
+			   ))
 	  (<:as-html "--"))))
 
 (defslot-presentation many-to-many-slot-presentation (mewa-relation-slot-presentation)
@@ -375,8 +390,6 @@ Calendar.setup({
 	 (jcmd (getf (meta-model::find-slot-metadata jc (getf imd :target-slot))
 		     :db-info)))
     (getf jcmd :join-class)))
-
-
 
 (defmethod find-all-instances ((slot many-to-many-slot-presentation) instance)
   (clsql:select (find-many-to-many-join-class slot instance) :flatp t))

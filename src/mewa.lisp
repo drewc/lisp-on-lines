@@ -121,6 +121,7 @@ attributes is an alist keyed on the attribute name."
   (:viewer mewa-viewer)
   (:editor mewa-editor)
   (:creator mewa-creator)
+  (:as-string mewa-one-line-presentation)
   (:one-line mewa-one-line-presentation)
   (:listing mewa-list-presentation :global-properties (:editablep nil) :editablep t)
   (:search-model mewa-object-presentation))
@@ -277,13 +278,12 @@ attributes is an alist keyed on the attribute name."
 				(cons (car def) new)))
 			     ;;finally if we are just overiding the props
 			     ((and (listp x) (symbolp (car x)))
+			      
 			      (let ((new (cdr (apply #'make-attribute (cdr x))))
 				    (def (gen-att (car x))))
+				 
 				(setf (cdr new) (plist-union (cdr new) (cddr def)))
-				(cons (car def) (cons (second def) (cdr new)))))
-
-			      )
-			     )
+				(cons (car def) (cons (second def) (cdr new)))))))
 				   
 			(attributes self)))
       all-attributes))))
@@ -295,7 +295,7 @@ attributes is an alist keyed on the attribute name."
 			  (second attribute))
 		      *presentation-slot-type-mapping*) 
 	     (error  "Can't find slot type for ~A in ~A" attribute self ))))
-		
+    
     (cons (first attribute) (apply #'make-instance 
 				   class-name
 				   (append (cddr attribute) (list :parent self :size 30))))))
