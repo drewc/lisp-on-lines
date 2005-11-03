@@ -1,6 +1,5 @@
 (in-package :lisp-on-lines)
 
-
 (defaction edit-instance ((self mewa))
   (call-presentation (instance self) :type :editor))
 

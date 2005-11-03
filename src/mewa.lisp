@@ -318,7 +318,7 @@ attributes is an alist keyed on the attribute name."
 
 
 (defmethod make-presentation ((object t) &key (type :viewer) (initargs nil))
-  
+  ;(warn "Initargs : ~A" initargs)
   (let* ((p (make-instance 'mewa-object-presentation))
 	 
 	 (a (progn (setf (slot-value p 'instance) object)

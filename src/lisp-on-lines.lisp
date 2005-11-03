@@ -42,19 +42,20 @@ This involves creating a meta-model, a clsql view-class, and the setting up the 
 		`(:initargs
 		  '(,@ (mapcan #'identity args)))))))
 
-(defmethod make-view (object &rest args &key (type :viewer) (attributes nil)
+(defmethod make-view (object &rest args &key (type :viewer)
 		      &allow-other-keys )
-  (warn "~A ~A ~A" attributes type object)
-  (remf args :type )
-  (remf args :attributes)
-  (apply #'make-presentation object (cddr (%make-view object type attributes args))))
+  (remf args :type)
+  ;(warn "~A ~A" args `(:type ,type :initargs ,@args))
+  (apply #'make-presentation object `(:type ,type ,@ (when args
+						       `(:initargs ,args)))))
 
 (defmacro present-view ((object &optional (type :viewer) (parent 'self))
 			&body attributes-and-args)
   (arnesi:with-unique-names (view)
     `(let ((,view (lol:make-view ,object
 				 :type ,type
-				 :attributes ,(car attributes-and-args)
+				 ,@(when (car attributes-and-args)
+					 `(:attributes ',(car attributes-and-args))) 
 				 ,@ (cdr attributes-and-args))))
       (setf (ucw::parent ,view) ,parent)
       (lol:present ,view))))

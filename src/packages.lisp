@@ -49,6 +49,9 @@
    :mewa-list-presentation
    :mewa-search-presentation
    :mewa-presentation-search
+
+   :editablep
+   :global-properties
    ;; SLOT presentations
    :defslot-presentation
    :slot-name
@@ -56,6 +59,12 @@
    :mewa-string-slot-presentation
    :has-many-slot-presentation
    :present-slot
+
+   :has-a
+   :has-many
+   :has-very-many
+   :many-to-many
+   
    ;; CRUD
    :instance-is-stored-p
 
