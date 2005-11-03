@@ -43,7 +43,8 @@
 		     :documentation 
 		     "When nil, the instance is syncronised with the database. 
 When T, only the default value for primary keys and the joins are updated.")
-   (show-label-p :accessor show-label-p :initarg :show-label-p :initform t))
+   (show-label-p :accessor show-label-p :initarg :show-label-p :initform t)
+   (creatablep :accessor creatablep :initarg :creatablep :initform t))
   (:documentation "The superclass of all Mewa slot presentations"))
 
 ;;;; this has to be in the eval when i would think
@@ -250,7 +251,7 @@ Calendar.setup({
 					  :linkedp t
 					  :editablep nil)))
 		(<:as-html string))))
-	(<:table
+	(<:table :cellpadding 10
 	 (<:tr
 	  (<:th)			;empty col for (view) link
 	  (dolist (s (slots presentation))
@@ -347,7 +348,8 @@ Calendar.setup({
 			   :initargs
 			   `(:attributes ,(attributes slot)))
 			))))
-	     (<ucw:submit :action  (create-record-on-foreign-key slot instance) :value "Add New" :style "display:inline")) 
+	     (when (creatablep slot)
+	       (<ucw:submit :action  (create-record-on-foreign-key slot instance) :value "Add New" :style "display:inline"))) 
       (if (presentation-slot-value slot instance)
 	  (progn
 	   (lol:present
@@ -415,6 +417,7 @@ Calendar.setup({
 		(<:as-html "(remove) "))
 	(present-view ((car i) (list-view slot) (ucw::parent slot)))) ))))
 
+
 (defaction add-to-many-to-many ((slot many-to-many-slot-presentation) instance &optional foreign-instance)
   ;;;; First things first, we sync.
   (sync-instance instance)
@@ -440,11 +443,3 @@ Calendar.setup({
       
       (sync-instance instance)
       c)))
-	 
-
-	
-
-
-
-
-
