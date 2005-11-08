@@ -16,10 +16,24 @@
 (defslot-presentation text-slot-presentation ()
   ((rows :initarg :rows :accessor rows :initform 5)
    (columns :initarg :columns :accessor columns :initform 40)
-   (escape-html-p :initarg :escape-html-p :accessor escape-html-p :initform nil))
+   (escape-html-p :initarg :escape-html-p :accessor escape-html-p :initform nil)
+   (convert-newlines-p :initarg :convert-newlines-p :accessor convert-newlines-p :initform nil))
   (:type-name text))
 
 (defmethod present-slot ((slot text-slot-presentation) instance)
+  (flet ((maybe-convert-newline-and-escape-html-then-print ()
+	   (let ((string (if (convert-newlines-p slot)
+			     (with-output-to-string (new-string)
+			       (with-input-from-string
+				   (s (presentation-slot-value slot instance))
+				 (loop for line = (read-line s nil)
+				       while line
+				       do (format new-string "~A~A" line "<br/>"))))
+			     (presentation-slot-value slot instance))))
+	     (if (escape-html-p slot)
+		 (<:as-html string)
+		 (<:as-is string)))))
+    
     (if (editablep slot)
 	(<ucw:textarea
 	 :accessor (presentation-slot-value slot instance)
@@ -27,9 +41,7 @@
 		 "")
 	 :rows (rows slot)
 	 :cols (columns slot))
-	(if (escape-html-p slot)
-	    (<:as-html (presentation-slot-value slot instance))
-	    (<:as-is (presentation-slot-value slot instance)))))
+	(maybe-convert-newline-and-escape-html-then-print))))
 
 
 (defcomponent mewa-slot-presentation ()
