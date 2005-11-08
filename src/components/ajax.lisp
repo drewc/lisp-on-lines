@@ -228,7 +228,7 @@ but here's what i use."
 						     :type :one-line))))))
 	    
 	     (<ucw:render-component :component (live-search slot))
-	     (<ucw:submit :action (revert-foreign-slot slot)
+	     #+ (or) (<ucw:submit :action (revert-foreign-slot slot)
 			  :value "Undo")
 			      (<ucw:submit :action  (mewa::search-records slot instance) :value "find" :style "display:inline"))
 	    ((mewa::linkedp slot)
