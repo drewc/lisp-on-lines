@@ -41,7 +41,9 @@
 		 "")
 	 :rows (rows slot)
 	 :cols (columns slot))
-	(maybe-convert-newline-and-escape-html-then-print))))
+	(when (presentation-slot-value slot instance)
+	  (maybe-convert-newline-and-escape-html-then-print))
+	)))
 
 
 (defcomponent mewa-slot-presentation ()
