@@ -84,7 +84,8 @@ When T, only the default value for primary keys and the joins are updated.")
 
 (defslot-presentation clsql-wall-time-slot-presentation (mewa-relation-slot-presentation)
        ((input-id :accessor input-id :initform (arnesi:random-string 10 arnesi:+ascii-alphabet+))
-	(trigger-id :accessor trigger-id :initform (arnesi:random-string 10 arnesi:+ascii-alphabet+)))
+	(trigger-id :accessor trigger-id :initform (arnesi:random-string 10 arnesi:+ascii-alphabet+))
+	(default-to-now-p :accessor default-to-now-p :initarg :default-to-now-p :initform nil))
        (:type-name clsql-sys:wall-time))
 
 (defmethod presentation-slot-value ((slot clsql-wall-time-slot-presentation) instance)
@@ -99,15 +100,20 @@ When T, only the default value for primary keys and the joins are updated.")
     (unless (or (eql old-time new-time)
 		(when (and new-time old-time)
 		  (equal :equal (clsql:time-compare new-time old-time))))
-    (setf (presentation-slot-value slot instance) new-time ))))
+    (setf (presentation-slot-value slot instance) new-time))))
 
 (defmethod label :around ((slot clsql-wall-time-slot-presentation))
   (concatenate 'string (call-next-method) "  (m/d/y)"))
 
 (defmethod present-slot ((slot clsql-wall-time-slot-presentation) instance)
   (let ((date (presentation-slot-value slot instance)))
+    ;; Default values
+    (when (and (not date) (default-to-now-p slot))
+      (setf (presentation-slot-value slot instance) (clsql:get-time)))
+    ;;simple viewer
     (if (and date (not (editablep slot)))
 	(<:as-html date))
+    ;; editor
     (when (editablep slot)
       (<ucw:input :accessor (presentation-slot-value slot instance) :id (input-id slot) :style "display:inline")
       (<:button :id (trigger-id slot) (<:as-html "[...]"))
