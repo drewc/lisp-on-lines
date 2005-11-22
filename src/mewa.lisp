@@ -2,9 +2,22 @@
  
 (defparameter *default-type* :ucw)
 
-;;; some utilities for merging plists
+;;;; I think these are unused now
+(defmethod perform-set-attributes ((occurence-name t) definitions)
+  (dolist (def definitions)
+    (funcall #'set-attribute occurence-name (first def) (rest def))))
+
+(defmethod perform-set-attribute-properties ((occurence-name t) definitions)
+  (dolist (def definitions)
+    (funcall #'set-attribute-properties occurence-name (car def) (cdr def))))
+
+;;;; PLIST Utilities.
 
 (defun plist-nunion (new-props plist)
+  "Destructive Merge of plists. PLIST is modified and returned. 
+NEW-PROPS is merged into PLIST such that any properties
+in both PLIST and NEW-PROPS get the value in NEW-PROPS. 
+The other properties in PLIST are left untouched."
   (loop for cons on new-props by #'cddr
 	do (setf (getf plist (first cons)) (second cons))
 	finally (return plist)))
@@ -14,92 +27,165 @@
 		   (plist-nunion new-props (copy-list plist)))
 
 
-;;; an alist of model-class-name . attributes
-;;; should really be a hash-table.
-(defvar *attribute-map* (list))
+;;;; * Occurences
 
-(defun find-or-create-attributes (class-name)
-  "return an exisiting class attribute map or create one. 
+(defvar *occurence-map* (make-hash-table)
+  "Presentations are created by associating an 'occurence' 
+with an instance of a class. This is usually keyed off class-name,
+although an arbitrary occurence can be used with an arbitrary class.")
 
-A map is a cons of class-name . attributes. 
-attributes is an alist keyed on the attribute name."
-  (or (assoc class-name *attribute-map*) 
-      (progn 
-	(setf *attribute-map* (acons class-name (list (list)) *attribute-map*)) 
-	(assoc class-name *attribute-map*))))
+(define-layered-class
+    standard-occurence ()
+    ((attribute-map :accessor attribute-map :initform (make-hash-table)))
+    (:documentation
+     "an occurence holds the attributes like a class holds slot-definitions.
+Attributes are the metadata used to display, validate, and otherwise manipulate actual values stored in lisp objects."))
 
-(defgeneric find-class-attributes (class))
+(defun find-or-create-occurence (name)
+  "Returns the occurence associated with this name."
+  (let ((occurence (gethash name *occurence-map*)))
+    (if occurence
+	occurence
+	(let ((new-occurence (make-instance 'standard-occurence)))
+	  (setf (gethash name *occurence-map*) new-occurence)
+	  new-occurence))))
 
-(defmethod find-class-attributes ((model t))
-  (find-or-create-attributes (class-name (class-of model))))
+(defun clear-occurence (occurence)
+  "removes all attributes from the occurence"
+  (setf (attribute-map occurence) (make-hash-table)))
 
-(defmethod find-class-attributes ((model symbol))
-  (find-or-create-attributes model))
+(defgeneric find-occurence (name)
+  (:method ((name symbol))
+    (find-or-create-occurence name))
+  (:method (instance)
+    (find-or-create-occurence (class-name (class-of instance)))))
 
-(defmethod clear-class-attributes ((model t))
-  (setf (cdr (find-class-attributes model)) nil))
 
-(defmethod add-attribute ((model t) name def)
-  (let ((map (find-class-attributes model)))
-    (setf (cdr map) (acons name def (cdr map)))))
+;;;; * Attributes
 
-(defmethod find-attribute ((model t) name)
-  (assoc name (cdr (find-class-attributes model))))
+(define-layered-class
+    standard-attribute ()
+    ((name :layered-accessor attribute.name :initarg :name :initform "attribute")
+     (type :layered-accessor attribute.type :initarg :type :initform t :type symbol)
+     (plist :layered-accessor attribute.plist :initarg :plist :initform nil))
+    (:documentation "Attributes are used to display a part of a thing, such as a slot of an object, a text label, the car of a list, etc."))
 
-(defmethod (setf find-attribute) ((def list) (model t) name)
-  (let ((attr (find-attribute model name)))
-    (if attr
-	(prog2 
-	    (setf (cdr attr) def) 
-	    attr)
-        (prog2 
-	    (add-attribute model name def) 
-	    (find-attribute model name)))))
 
-(defmethod set-attribute ((model t) name definition &key (inherit t))
-  (setf (find-attribute model name) 
-	(if inherit
+(defmethod print-object ((self standard-attribute) stream)
+  (print-unreadable-object (self stream :type t)
+    (with-slots (name type) self
+      (format stream "~A ~A" name type))))
+
+(define-layered-class
+    presentation-attribute (standard-attribute)
+    ()
+    (:documentation "Presentation Attributes are used to display objects 
+using the attributes defined in an occurence. Presentation Attributes are always named using keywords."))
+
+(defun clear-attributes (name)
+  "removes all attributes from an occurance"
+  (clear-occurence (find-occurence name)))
+
+(defmethod find-attribute-class-for-name (name)
+  "presentation attributes are named using keywords"
+  (if (keywordp name)
+      'presentation-attribute
+      'standard-attribute))
+
+(defmethod ensure-attribute ((occurence standard-occurence) name type plist)
+  "Creates an attribute in the given occurence"
+  (setf (gethash name (attribute-map occurence))
+	(make-instance (find-attribute-class-for-name name)
+		       :name name :type type :plist plist)))
+
+(defmethod find-attribute ((occurence standard-occurence) name)
+  (gethash name (attribute-map occurence)))
+
+(defmethod find-all-attributes ((occurence standard-occurence))
+  (loop for att being the hash-values of (attribute-map occurence)
+	collect att))
+
+(defmethod ensure-attribute (occurence-name name type plist)
+  (ensure-attribute
+   (find-occurence occurence-name)
+   name
+   type
+   plist)) 
+
+;;;; The following functions make up the public interface to the
+;;;; MEWA Attribute Occurence system.
+
+(defmethod find-all-attributes (occurence-name)
+  (find-all-attributes (find-occurence occurence-name)))
+
+(defmethod find-attribute (occurence-name attribute-name)
+  "Returns the ATTRIBUTE named by ATTRIBUTE-NAME in OCCURANCE-name"
+  (find-attribute (find-occurence occurence-name) attribute-name))
+
+(defmethod (setf find-attribute) ((def list) occurence-name attribute-name)
+  (ensure-attribute occurence-name attribute-name (first def) (rest def)))
+
+(defmethod set-attribute (occurence-name attribute-name definition &key (inherit t))
+  (let ((att (find-attribute occurence-name attribute-name)))
+      (setf (find-attribute occurence-name attribute-name) 
+	(if (and att inherit) 
 	    (cons (car definition) 
 		  (plist-union (cdr definition)
-			 (cddr (find-attribute model name))))
-	    definition))) 
+			 (attribute.plist att)))
+	    definition)))) 
 
-(defmethod perform-set-attributes ((model t) definitions)
-  (dolist (def definitions)
-    (funcall #'set-attribute model (first def) (rest def))))
-
-(defmethod set-attribute-properties ((model t) attribute properties)
-  (let ((a (find-attribute model attribute)))
+(defmethod set-attribute-properties ((occurence-name t) attribute properties)
+  (let ((a (find-attribute occurence-name attribute)))
     (if a
-	(setf (cddr a) (plist-nunion properties (cddr a)))
-	(error "Attribute ~A does not exist" attribute) )))
+	(setf (attribute.plist a) (plist-nunion properties (attribute.plist a)))
+	(error "Attribute ~A does not exist" attribute))))
 
-(defmethod perform-set-attribute-properties ((model t) definitions)
-  (dolist (def definitions)
-    (funcall #'set-attribute-properties model (car def) (cdr def))))
-
-(defmethod perform-define-attributes ((model t) attributes)
+(defmethod perform-define-attributes ((occurence-name t) attributes)
   (loop for attribute in attributes
 	do (destructuring-bind (name type &rest args)
 		  attribute
 		(cond ((eq type t)
 		       ;;use the existing (default) type
-		       (set-attribute-properties model name args))
+		       (set-attribute-properties occurence-name name args))
 		      ((not (null type))
 		       ;;set the type as well
-		       (set-attribute model name (cons type args)))))))
+		       (set-attribute occurence-name name (cons type args)))))))
 		       
-(defmacro define-attributes (models &body attribute-definitions)
+(defmacro define-attributes (occurence-names &body attribute-definitions)
   `(progn
-    ,@(loop for model in models
-	    collect `(perform-define-attributes (quote ,model) (quote ,attribute-definitions)))
-  (mapcar #'find-class-attributes (quote ,models ))))
+    ,@(loop for occurence-name in occurence-names
+	    collect `(perform-define-attributes (quote ,occurence-name) (quote ,attribute-definitions)))))
 
-(defun find-presentation-attributes (model)
-  (remove nil (mapcar #'(lambda (att)
-	      (when (keywordp (car att))
-		(copy-list att) ))
-	  (cdr (find-class-attributes model)))))
+
+(defmethod setter (attribute)
+  (let ((setter (getf (attribute.plist attribute) :setter))
+	(slot-name (getf (attribute.plist attribute) :slot-name)))
+    (cond (setter
+	   setter)
+	  (slot-name
+	   #'(lambda (value object)
+	       (setf (slot-value object slot-name) value)))
+	  (t
+	   #'(lambda (value object)
+	     (warn "Can't find anywere to set ~A in ~A using ~A" value object attribute))))))
+    
+(defmethod getter (attribute)
+  (let ((getter (getf (attribute.plist attribute) :getter))
+	(slot-name (getf (attribute.plist attribute) :slot-name)))
+    (cond (getter
+	   getter)
+	  (slot-name
+	   #'(lambda (object)
+	       (when (slot-boundp object slot-name)
+		 (slot-value object slot-name)))))))
+
+(defgeneric attribute-value (instance attribute)
+  (:method (instance (attribute standard-attribute))
+    (funcall (getter attribute) instance)))
+
+(defgeneric (setf attribute-value) (value instance attribute)
+  (:method (value instance (attribute standard-attribute))
+    (funcall (setter attribute) value instance)))
 
 
 ;;;; ** Default Attributes
@@ -109,6 +195,10 @@ attributes is an alist keyed on the attribute name."
 ;;;; maps meta-model slot-types to slot-presentation
 
 (defvar *default-attributes-class-name* 'default)
+
+(defmacro with-default-attributes ((occurence-name) &body body)
+  `(let ((*default-attributes-class-name* ',occurence-name))
+    ,@body))
 
 (define-attributes (default)
   (boolean mewa-boolean)
@@ -126,25 +216,34 @@ attributes is an alist keyed on the attribute name."
   (:listing mewa-list-presentation :global-properties (:editablep nil) :editablep t)
   (:search-model mewa-object-presentation))
 
-  
-(defun find-default-presentation-attributes ()
+(defun find-presentation-attributes (occurence-name)
+  (loop for att in (find-all-attributes occurence-name)
+	when (typep att 'presentation-attribute)
+	 collect att))
+
+(defun attribute-to-definition (attribute)
+  (nconc (list (attribute.name attribute)
+	       (attribute.type attribute))
+	 (attribute.plist attribute)))
+
+(defun find-default-presentation-attribute-definitions ()
   (if (eql *default-attributes-class-name* 'default)
-      (find-presentation-attributes 'default)
-      (remove-duplicates (append
-			  (find-presentation-attributes 'default)
-			  (find-presentation-attributes
-			   *default-attributes-class-name*)))))
-
-
-(defmacro with-default-attributes ((model-name) &body body)
-  `(let ((*default-attributes-class-name* ',model-name))
-    ,@body))
-
+      (mapcar #'attribute-to-definition (find-presentation-attributes 'default)) 
+      (remove-duplicates (mapcar #'attribute-to-definition
+				 (append
+				  (find-presentation-attributes 'default)
+				  (find-presentation-attributes
+				   *default-attributes-class-name*))))))
 (defun gen-ptype (type)
-  (let ((type (if (consp type) (car type) type)))
-  (or (second (find-attribute *default-attributes-class-name* type))
-      (second (find-attribute 'default type))
-      type)))
+  (let* ((type (if (consp type) (car type) type))
+	 (possible-default (find-attribute *default-attributes-class-name* type))
+	 (real-default (find-attribute 'default type)))
+    (cond
+      (possible-default
+	(attribute.type possible-default))
+       (real-default
+	(attribute.type real-default))
+       (t type))))
 
 (defun gen-presentation-slots (instance)
   (mapcar #'(lambda (x) (gen-pslot (cadr x) 
@@ -157,11 +256,6 @@ attributes is an alist keyed on the attribute name."
   (copy-list `(,(gen-ptype type) 
 	       :label ,label
 	       :slot-name ,slot-name))) 
-
-(defun gen-presentation-args (instance args)
-  (declare (ignore instance))
-  (if args args nil))
-
 
 (defmethod find-default-attributes ((model t))
   "return the default attributes for a given model using the meta-model's meta-data"
@@ -180,20 +274,16 @@ attributes is an alist keyed on the attribute name."
 					 ,model 
 					 :type :one-line)))))
 		  (meta-model:list-has-many model))
-	  (find-default-presentation-attributes)))
+	  (find-default-presentation-attribute-definitions)))
 
 (defmethod set-default-attributes ((model t))
   "Set the default attributes for MODEL"
-  (clear-class-attributes model)
+  (clear-attributes model)
   (mapcar #'(lambda (x) 
 	      (setf (find-attribute model (car x)) (cdr x)))
 	  (find-default-attributes model)))
-
-
-(defgeneric attributes-getter (model))
 	  
 ;;;presentations 
-
 (defcomponent mewa ()
   ((instance :accessor instance :initarg :instance) 
    (attributes
@@ -240,68 +330,87 @@ attributes is an alist keyed on the attribute name."
   (mapcar #'class-name 
 	  (it.bese.arnesi.mopp:compute-class-precedence-list (class-of (instance self)))))
 
-(defmethod find-all-attributes ((self mewa))
-  (reduce #'append 
-	  (mapcar #'(lambda (x) 
-		      (cdr (find-class-attributes x)))
-		  (classes self))))
-
 (defun make-attribute (&rest props &key type &allow-other-keys)
 	(remf props :type)
 	(cons (gensym) (cons type props)))
 
+(defun make-presentation-for-attribute-list-item
+    (occurence att-name plist parent-presentation &optional type)
+  (declare (type list plist) (type symbol att-name))
+  "This is a ucw specific function that will eventually be factored elsewhere."
+  (let* ((attribute (find-attribute occurence att-name))
+	 (type (when attribute (or type (attribute.type attribute))))
+	 (class-name 
+	  (or (gethash (if (consp type)
+			   (car type)
+			   type)
+		       *presentation-slot-type-mapping*) 
+	      (error  "Can't find slot type for ~A in ~A from ~A" att-name occurence parent-presentation))))
+   
+    (cons (attribute.name attribute) (apply #'make-instance 
+				   class-name
+				   (append (plist-nunion
+					    plist
+					    (plist-union
+					     (global-properties parent-presentation)
+					     (attribute.plist attribute)))
+					   (list :size 30 :parent parent-presentation))))))
+
+(defmethod find-applicable-attributes-using-attribute-list (occurence attribute-list)
+  "Returns a list of functions that, when called with an object presentation, 
+returns the ucw slot presentation that will be used to present this attribute 
+in that object presentation."
+    (loop for att in attribute-list
+	  with funs = (list)
+	  do (let ((att att)) (cond 
+	       ;;simple casee
+	       ((symbolp att) 
+		(push #'(lambda (p)
+			  (make-presentation-for-attribute-list-item occurence att nil p))
+		      funs))
+	       ;;if the car is a keyword then this is an inline def
+	       ;; drewc nov 12 2005:
+	       ;; i never used this, and never told anybody about it.
+	       ;; removing it.
+	       #+ (or) ((and (listp x) (keywordp (car x)))
+			(let ((att (apply #'make-attribute x)))
+			  (setf (cddr att) 
+				(plist-union (cddr att) (global-properties self)))
+			  att))
+	     
+	       ;; if the plist has a :type	  
+	       ((and (listp att) (getf (cdr att) :type))
+		(let ((type (getf (cdr att) :type)))
+		  (push #'(lambda (p)
+			    (make-presentation-for-attribute-list-item
+			     occurence (first att)
+			     (cdr att)
+			     p
+			     type))
+			funs)))
+	       ;;finally if we are just overiding the props
+	       ((and (listp att) (symbolp (car att)))
+		(push #'(lambda (p)
+			  (make-presentation-for-attribute-list-item occurence (first att) (rest att) p))
+		      funs))))
+	  finally (return (nreverse funs))))
+
+
+(defun find-attribute-names (mewa)
+  (mapcar #'(lambda (x)
+	      (if (listp x)
+		  (first x)
+		  x))
+	  (attributes mewa)))
 
 (defmethod find-applicable-attributes ((self mewa))
-  (let ((all-attributes (find-all-attributes self)))
-    (flet ((gen-att (x) (let ((att (assoc x all-attributes)))
-				     (when att 
-				       (setf (cddr att) (plist-union (global-properties self) (cddr att)))
-				       att))))
-    (if (attributes self)
-	(remove 'nil 
-		(mapcar #'(lambda (x)
-			    (cond 
-			     ;;simple casee
-			     ((symbolp x) 
-			      (gen-att x))
-			     ;;if the car is a keyword then this is an inline def
-			     ((and (listp x) (keywordp (car x)))
-			      (let ((att (apply #'make-attribute x)))
-				(setf (cddr att) 
-				      (plist-union (cddr att) (global-properties self)))
-				att))
-			     ;; if the plist has a :type	  
-			     ((and (listp x) (getf (cdr x) :type))
-			      (let ((new (cdr (apply #'make-attribute (cdr x))))
-				    (def (gen-att (car x))))
-				(setf (cdr new) (plist-union (cdr new) (cddr def)))
-				(cons (car def) new)))
-			     ;;finally if we are just overiding the props
-			     ((and (listp x) (symbolp (car x)))
-			      
-			      (let ((new (cdr (apply #'make-attribute (cdr x))))
-				    (def (gen-att (car x))))
-				 
-				(setf (cdr new) (plist-union (cdr new) (cddr def)))
-				(cons (car def) (cons (second def) (cdr new)))))))
-				   
-			(attributes self)))
-      all-attributes))))
+  (if (attributes self)
+      (find-applicable-attributes-using-attribute-list (instance self) (attributes self))
+      (find-applicable-attributes-using-attribute-list (instance (get-attributes self)))))
 
-(defmethod find-slot-presentation-for-attribute ((self mewa) attribute)
-  (let ((class-name 
-	 (or (gethash (if (consp (second attribute))
-			  (car (second attribute))
-			  (second attribute))
-		      *presentation-slot-type-mapping*) 
-	     (error  "Can't find slot type for ~A in ~A" attribute self ))))
-    
-    (cons (first attribute) (apply #'make-instance 
-				   class-name
-				   (append (cddr attribute) (list :parent self :size 30))))))
 
 (defmethod find-slot-presentations ((self mewa))
-  (mapcar #'(lambda (a) (find-slot-presentation-for-attribute self a))
+  (mapcar #'(lambda (a) (funcall a self))
 	  (find-applicable-attributes self)))
 
 (defmethod find-attribute-slot ((self mewa) (attribute symbol))
@@ -319,19 +428,13 @@ attributes is an alist keyed on the attribute name."
 
 (defmethod make-presentation ((object t) &key (type :viewer) (initargs nil))
   ;(warn "Initargs : ~A" initargs)
-  (let* ((p (make-instance 'mewa-object-presentation))
-	 
-	 (a (progn (setf (slot-value p 'instance) object)
-		   (initialize-slots p) 
-		   (assoc type (find-all-attributes p))))
-	 (i (apply #'make-instance (or (second a)
-				      ;; if we didnt find the type, 
-				      ;; use the symbol as a class. 
-				      (if (eql (symbol-package type) 
-					       (find-package 'keyword))
-					  (symbol-name type)
-					  type))
-		   (plist-union initargs (cddr a)))))
+  (let* ((a (find-attribute object type))   
+	 (i (apply #'make-instance
+		   (if a
+		       (attribute.type a)
+		       type) 
+		   (plist-union initargs (when a
+					   (attribute.plist a))))))
     
     (setf (slot-value i 'instance) object)
     (initialize-slots i)

@@ -4,7 +4,8 @@
 	:meta-model
 	:common-lisp
 	:it.bese.ucw
-	:clsql)
+	:clsql
+	:contextl)
   (:shadowing-import-from
    :iterate
    :with)

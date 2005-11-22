@@ -14,6 +14,7 @@
 		 (:module :src
 			  :components ((:file "static-presentations")
 				       (:file "mewa")
+				       (:file "validation")
 				       (:file "lisp-on-lines")
 				       (:file "presentations")
 				       (:file "slot-presentations"))
@@ -23,4 +24,4 @@
 			  :components ((:file "range-list")
 				       (:file "ajax"))))
     :serial t
-    :depends-on (:arnesi :ucw :meta-model :split-sequence))
+    :depends-on (:arnesi :ucw :meta-model :split-sequence :contextl))

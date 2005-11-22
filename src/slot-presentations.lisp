@@ -1,5 +1,8 @@
+(declaim (optimize (speed 0) (space 3) (safety 0)))
 (in-package :lisp-on-lines)
 
+
+;;;; I dont think i'm using these anymore.
 (defun multiple-value-funcall->list (function &rest args)
   "The function to be called by m-v-bf"
 		   (multiple-value-call #'list (apply function args)))
@@ -42,12 +45,12 @@
 	 :rows (rows slot)
 	 :cols (columns slot))
 	(when (presentation-slot-value slot instance)
-	  (maybe-convert-newline-and-escape-html-then-print))
-	)))
+	  (maybe-convert-newline-and-escape-html-then-print)))))
 
 
 (defcomponent mewa-slot-presentation ()
-  ((slot-name :accessor slot-name 
+  ((validate-functions :accessor validate-functions :initform (list (constantly t)))
+   (slot-name :accessor slot-name 
 	      :initarg :slot-name 
 	      :documentation 
 	      "The name of the slot being accessed")
@@ -60,6 +63,8 @@ When T, only the default value for primary keys and the joins are updated.")
    (show-label-p :accessor show-label-p :initarg :show-label-p :initform t)
    (creatablep :accessor creatablep :initarg :creatablep :initform t))
   (:documentation "The superclass of all Mewa slot presentations"))
+
+
 
 ;;;; this has to be in the eval when i would think
 (eval-when (:compile-toplevel :load-toplevel :execute)
@@ -378,7 +383,7 @@ Calendar.setup({
 			   :initargs
 			   `(:attributes ,(attributes slot)))
 			   ))
-	  (<:as-html "--"))))
+	   (<:as-html "--"))))
 
 (defslot-presentation many-to-many-slot-presentation (mewa-relation-slot-presentation)
   ((list-view :accessor list-view :initarg :list-view :initform :one-line)

@@ -1,3 +1,4 @@
+(declaim (optimize (speed 0) (space 3) (safety 0)))
 (in-package :lisp-on-lines)
 
 (defaction edit-instance ((self mewa))
@@ -101,8 +102,7 @@
 		      :value "view"))))
     (dolist (slot (slots listing))
       (<:td :class "data-cell" (present-slot slot object)))
-    (<:td :class "index-number-cell")
-    ))
+    (<:td :class "index-number-cell")))
 
 (defmethod get-all-instances ((self mewa-list-presentation))
   (instances self))
