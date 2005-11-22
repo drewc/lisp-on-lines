@@ -1,5 +1,7 @@
+(declaim (optimize (speed 2) (space 3) (safety 0)))
+
 (in-package :lisp-on-lines)
- 
+
 (defparameter *default-type* :ucw)
 
 ;;;; I think these are unused now
