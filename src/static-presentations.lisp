@@ -561,7 +561,7 @@ This method is also used by relation-slot-presentations for the same reason."))
   (unless (string= "" value)
     (let ((i (parse-integer value :junk-allowed t)))
       (when i
-	(setf (presentation-slot-value slot instance) (parse-integer value))))))
+	(setf (presentation-slot-value slot instance) i)))))
 
 (defmethod present-slot ((slot integer-slot-presentation) instance)
   (if (editablep slot)

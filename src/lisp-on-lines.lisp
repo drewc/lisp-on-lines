@@ -101,8 +101,7 @@ This involves creating a meta-model, a clsql view-class, and the setting up the 
 
 
 (defmethod word-search (class-name slots (s string) &rest args)
-  (apply #'word-search class-name slots 
-	 (split-sequence:split-sequence #\Space s) args))
+  (apply #'word-search class-name slots (list s) args))
 
 (defmethod word-search-where (class-name slots search-terms &key (format-string "%~a%"))
   (sql-or 
