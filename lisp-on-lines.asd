@@ -15,13 +15,15 @@
 			  :components ((:file "static-presentations")
 				       (:file "mewa")
 				       (:file "validation")
+				       (:file "validation/email-address")
 				       (:file "lisp-on-lines")
 				       (:file "presentations")
-				       (:file "slot-presentations"))
+				       (:file "slot-presentations")
+				       (:file "slot-presentations/date"))
 			  :serial t)
 		 (:module :components
 			  :pathname "src/components/"
 			  :components ((:file "range-list")
 				       (:file "ajax"))))
     :serial t
-    :depends-on (:arnesi :ucw :meta-model :split-sequence :contextl))
+    :depends-on (:arnesi :ucw :meta-model :split-sequence :contextl :cl-ppcre))
