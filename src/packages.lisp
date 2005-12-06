@@ -6,10 +6,36 @@
 	:it.bese.ucw
 	:clsql
 	:contextl)
+  (:nicknames :lol :mewa)
+  
   (:shadowing-import-from
    :iterate
    :with)
-  (:nicknames :lol :mewa)
+
+  (:shadowing-import-from
+   :clsql
+   :time-difference
+   :make-time
+   :time-ymd
+   :date
+   :get-time
+   :time-element
+   :time+
+   :date-element)
+
+  (:shadow
+   :present
+   :present-slot
+   :presentation
+   :instance
+   :slot-presentation
+   :integer-slot-presentation
+   :string-slot-presentation
+   :object-presentation
+   :one-line-presentation
+   :presentation-slot-value
+   :get-foreign-instances)
+  
   (:export 
    ;;;; LoL 
    :define-view-for-table
@@ -43,8 +69,6 @@
    :define-attributes
 
    ;; presentation objects
-   :present
-   :instance
    :mewa-object-presentation
    :mewa-one-line-presentation
    :mewa-list-presentation
@@ -54,13 +78,10 @@
    :editablep
    :global-properties
    ;; SLOT presentations
-   :defslot-presentation
-   :slot-name
+  
    :mewa-relation-slot-presentation
    :mewa-string-slot-presentation
-   :has-many-slot-presentation
-   :present-slot
-
+   :has-many-slot-presentation 
    :has-a
    :has-many
    :has-very-many

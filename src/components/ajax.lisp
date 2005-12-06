@@ -30,7 +30,7 @@
     :documentation  "The lisp value of the object selecting in the drop down")
    (as-value :accessor as-value :initarg :as-value
              :documentation "Function which, when passed a value, returns the string to put in the text box.")
-   (render :accessor render :initarg :render
+   (render-it :accessor render-it :initarg :render
            :documentation "Function which, when passed the component and one of the values render it (the value).")
    (input-size :accessor input-size :initarg :input-size :initform 20)
    (submit-on-select-p 
@@ -71,30 +71,11 @@ but here's what i use."
   `(generate-ajax-request
     (make-action-url ,component (progn ,@action)))) 
 	
-(defaction call-auto-complete ((self t) auto-complete-id value index)
-    (let ((auto-complete (get-session-value (intern auto-complete-id))))
-    (if auto-complete
-        (if index
-	    (select-value auto-complete index)
-	    (call-auto-complete-from-output auto-complete auto-complete-id value self))
-        (call 'empty-page :message (error "Cannot find")))))
-
-(defaction call-auto-complete-from-output ((auto-complete auto-complete) auto-complete-id value output)
-  (setf (client-value auto-complete) value)
-  (let ((self output))
-    (call (output-component-name auto-complete) :auto-complete auto-complete)
-    (call 'empty-page :message (error "ASD"))))
-
-(defaction select-value ((self auto-complete) index)
-  (let ((index (when (< 0 (length index))
-		 (parse-integer index))))
-    (setf (index self) index)
-    (setf (value self) (nth index (list-of-values self)))))
 
 (defun make-auto-complete-url (input-id)
   "creates a url that calls the auto-complete entry-point for INPUT-ID."
   (format nil "auto-complete.ucw?&auto-complete-id=~A&~A=~A" 
-	  input-id  ucw::+session-parameter-name+ 
+	  input-id  "session"  
 	  (ucw::session.id (ucw::context.session ucw::*context*))))
 
 (defaction on-submit ((l auto-complete))
@@ -111,7 +92,7 @@ but here's what i use."
       (submit-form))))
    
 
-(defmethod render-on ((res response) (l auto-complete))
+(defmethod render ( (l auto-complete))
   ;; session-values are stored in an eql hash table.
   (let ((input-key (intern (input-id l))))
     ;; We are storing the input components in the session,
@@ -154,7 +135,7 @@ but here's what i use."
 (defcomponent auto-complete-output (window-component)
   ((auto-complete :initarg :auto-complete :accessor auto-complete)))
 
-(defmethod render-on ((res response) (output auto-complete-output))
+(defmethod render ((output auto-complete-output))
   (let ((auto-complete (auto-complete output)))
     (setf (list-of-values auto-complete)
 	  (funcall (values-generator auto-complete) (client-value auto-complete)))
@@ -163,7 +144,8 @@ but here's what i use."
      (arnesi:dolist* (value (list-of-values auto-complete))
        (<:li 
 	:class "auto-complete-list-item"
-	(funcall (render auto-complete) value))))))
+	(funcall (render-it auto-complete) value))))
+    (answer-component output t)))
 
 (defcomponent fkey-auto-complete (auto-complete)
   ())
@@ -197,7 +179,7 @@ but here's what i use."
 	    (word-search class-name  
 			 (search-slots slot)  input)))
 		    
-    (setf (lisp-on-lines::render l)
+    (setf (lisp-on-lines::render-it l)
 	  (lambda (val) 
 	    (<ucw:render-component 
 	     :component (make-presentation val :type :one-line))))))
@@ -216,7 +198,7 @@ but here's what i use."
 		   (when (presentation-slot-value slot instance) 
 		     (meta-model:explode-foreign-key instance (slot-name slot)))))))
     
-    (flet ((render () (when foreign-instance (call-next-method))))
+    (flet ((render-s () (when foreign-instance (call-next-method))))
       (if (slot-boundp slot 'ucw::place)
 	  (cond 
 	    ((editablep slot)
@@ -233,8 +215,8 @@ but here's what i use."
 			      (<ucw:submit :action  (mewa::search-records slot instance) :value "find" :style "display:inline"))
 	    ((mewa::linkedp slot)
 	     (<ucw:a :action (mewa::view-instance slot foreign-instance) 
-		     (render)))
+		     (render-s)))
 	    (t       
-	     (render)))
+	     (render-s)))
 	  ;; presentation is used only for rendering
-	  (render)))))
+	  (render-s)))))

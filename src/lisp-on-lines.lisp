@@ -9,6 +9,7 @@
 
 ;;;; ** Initialisation
 ;;;; The following macros are used to initialise a set of database tables as LoL objects.
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun generate-define-view-for-table (table)
     "
@@ -35,7 +36,7 @@ This involves creating a meta-model, a clsql view-class, and the setting up the 
       (when attributes
 	(setf args
 	      (cons `(:attributes ,attributes) args)))
-      `(mewa:make-presentation
+      `(mewa::make-presentation
 	,object
 	:type ,type
 	,@(when args
@@ -52,13 +53,13 @@ This involves creating a meta-model, a clsql view-class, and the setting up the 
 (defmacro present-view ((object &optional (type :viewer) (parent 'self))
 			&body attributes-and-args)
   (arnesi:with-unique-names (view)
-    `(let ((,view (lol:make-view ,object
+    `(let ((,view (lol::make-view ,object
 				 :type ,type
 				 ,@(when (car attributes-and-args)
 					 `(:attributes ',(car attributes-and-args))) 
 				 ,@ (cdr attributes-and-args))))
       (setf (ucw::parent ,view) ,parent)
-      (lol:present ,view))))
+      (lol::present ,view))))
 
 
 (defmacro call-view ((object &optional (type :viewer) (component 'self component-supplied-p))

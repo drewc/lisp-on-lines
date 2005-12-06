@@ -1,4 +1,7 @@
+;; i know this is horrible, but it works wonders.
 (declaim (optimize (speed 0) (space 3) (safety 0)))
+
+
 (in-package :lisp-on-lines)
 
 
@@ -95,12 +98,12 @@ When T, only the default value for primary keys and the joins are updated.")
 	(default-to-now-p :accessor default-to-now-p :initarg :default-to-now-p :initform nil))
        (:type-name clsql-sys:wall-time))
 
-(defmethod presentation-slot-value ((slot clsql-wall-time-slot-presentation) instance)
+(defmethod lol::presentation-slot-value ((slot clsql-wall-time-slot-presentation) instance)
   (let ((date (call-next-method)))
     (when date (multiple-value-bind (y m d) (clsql:time-ymd date)
       (format nil "~a/~a/~a" m d y)))))
 
-(defmethod (setf presentation-slot-value) ((value string) (slot clsql-wall-time-slot-presentation) instance)
+(defmethod (setf lol::presentation-slot-value) ((value string) (slot clsql-wall-time-slot-presentation) instance)
   (let ((new-time (clsql:parse-date-time (remove #\Space value)))
 	(old-time (when (slot-boundp instance (slot-name slot))
 		    (slot-value instance (slot-name slot)))))
@@ -112,17 +115,17 @@ When T, only the default value for primary keys and the joins are updated.")
 (defmethod label :around ((slot clsql-wall-time-slot-presentation))
   (concatenate 'string (call-next-method) "  (m/d/y)"))
 
-(defmethod present-slot ((slot clsql-wall-time-slot-presentation) instance)
-  (let ((date (presentation-slot-value slot instance)))
+(defmethod lol::present-slot ((slot clsql-wall-time-slot-presentation) instance)
+  (let ((date (lol::presentation-slot-value slot instance)))
     ;; Default values
     (when (and (not date) (default-to-now-p slot))
-      (setf (presentation-slot-value slot instance) (clsql:get-time)))
+      (setf (lol::presentation-slot-value slot instance) (clsql:get-time)))
     ;;simple viewer
     (if (and date (not (editablep slot)))
 	(<:as-html date))
     ;; editor
     (when (editablep slot)
-      (<ucw:input :accessor (presentation-slot-value slot instance) :id (input-id slot) :style "display:inline")
+      (<ucw:input :accessor (lol::presentation-slot-value slot instance) :id (input-id slot) :style "display:inline")
       (<:button :id (trigger-id slot) (<:as-html "[...]"))
       (<:script :type "text/javascript" 
 		(<:as-is (format nil " 
@@ -217,7 +220,7 @@ Calendar.setup({
 
 (defmethod  present-slot :around ((slot foreign-key-slot-presentation) instance)  
   (setf (foreign-instance slot) 
-	(when (presentation-slot-value slot instance) 
+	(when (lol::presentation-slot-value slot instance) 
 	  (meta-model:explode-foreign-key instance (slot-name slot))))
   (flet ((render () (when (foreign-instance slot)(call-next-method))))
     (if (slot-boundp slot 'ucw::place)
@@ -299,7 +302,7 @@ Calendar.setup({
 (defmethod get-foreign-instances ((slot has-many-slot-presentation) instance)
   (slot-value instance (slot-name slot)))
 
-(defmethod presentation-slot-value ((slot has-many-slot-presentation) instance)
+(defmethod lol::presentation-slot-value ((slot has-many-slot-presentation) instance)
   (get-foreign-instances slot instance))
 
 (defslot-presentation has-very-many-slot-presentation (has-many-slot-presentation)
@@ -360,24 +363,24 @@ Calendar.setup({
 		:flatp t))
 
 (defmethod present-slot ((slot has-a-slot-presentation) instance)
-;      (<:as-html (presentation-slot-value slot instance))
+;      (<:as-html (lol::presentation-slot-value slot instance))
   (if (editablep slot)
-      (progn (<ucw:select :accessor (presentation-slot-value slot instance) :test #'equalp
+      (progn (<ucw:select :accessor (lol::presentation-slot-value slot instance) :test #'equalp
         (when (allow-nil-p slot)
 	  (<ucw:option :value nil (<:as-html "none")))
 	(dolist (option (get-foreign-instances slot instance))
 	  (<ucw:option :value (find-foreign-slot-value slot option)
-		       (lol:present
-			(lol:make-presentation option
+		       (lol::present
+			(lol::make-presentation option
 			   :type :as-string
 			   :initargs
 			   `(:attributes ,(attributes slot)))
 			))))
 	     (when (creatablep slot)
 	       (<ucw:submit :action  (create-record-on-foreign-key slot instance) :value "Add New" :style "display:inline"))) 
-      (if (presentation-slot-value slot instance)
+      (if (lol::presentation-slot-value slot instance)
 	  (progn
-	   (lol:present
+	   (lol::present
 	    (lol:make-presentation (meta-model:explode-foreign-key instance (slot-name slot))
 			   :type :one-line
 			   :initargs

@@ -1,11 +1,15 @@
 (declaim (optimize (speed 0) (space 3) (safety 0)))
 (in-package :lisp-on-lines)
 
+
+(defmethod render ((self mewa))
+  (lol::present self))
+
 (defaction edit-instance ((self mewa))
   (call-presentation (instance self) :type :editor))
 
 ;;;one-line objects
-(defcomponent mewa-one-line-presentation (mewa one-line-presentation)
+(defcomponent mewa-one-line-presentation (mewa lol::one-line-presentation)
   ()
   (:default-initargs
    :attributes-getter #'one-line-attributes-getter
@@ -16,7 +20,7 @@
       (meta-model::list-keys (instance self))))
 
 ;;;objects
-(defcomponent mewa-object-presentation (mewa object-presentation) 
+(defcomponent mewa-object-presentation (mewa lol::object-presentation) 
   ((instance :accessor instance :initarg :instance :initform nil)))
 
 (defcomponent mewa-viewer (mewa-object-presentation)
@@ -37,7 +41,7 @@
     (dolist (slot (slots pres))
       (<:tr :class "presentation-slot-row"
 	    (present-slot-as-row pres slot))))
-    (render-options pres (instance pres)))
+  (render-options pres (instance pres)))
         
 (defmethod present-slot-as-row ((pres mewa-object-presentation) (slot slot-presentation))
   (<:td :class "presentation-slot-label" (<:as-html (label slot)))
