@@ -579,7 +579,7 @@ This method is also used by relation-slot-presentations for the same reason."))
 ;;;; Currency (double precision reals)
 
 (defslot-presentation currency-slot-presentation (real-slot-presentation)
-  ()
+  ((as-money-p :accessor as-money-p :initarg :as-money-p :initform nil))
   (:type-name currency))
 
 (defmethod (setf presentation-slot-value) ((value string) (c currency-slot-presentation) instance)
@@ -593,7 +593,10 @@ This method is also used by relation-slot-presentations for the same reason."))
   (if (editablep currency)
       (<ucw:input :type "text" :size 10
 		  :accessor (presentation-slot-value currency instance))
-      (<:as-html (presentation-slot-value currency instance))))
+      (<:as-html (format nil (if (as-money-p currency)
+				 "$~$"
+				 "~D")
+			 (presentation-slot-value currency instance)) )))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; dates and times

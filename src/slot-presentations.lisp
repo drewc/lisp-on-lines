@@ -300,7 +300,8 @@ Calendar.setup({
 		       
 
 (defmethod get-foreign-instances ((slot has-many-slot-presentation) instance)
-  (slot-value instance (slot-name slot)))
+  (sort (slot-value instance (slot-name slot)) #'<  
+	:key #'(lambda (x) (funcall (car (list-keys instance)) x))))
 
 (defmethod lol::presentation-slot-value ((slot has-many-slot-presentation) instance)
   (get-foreign-instances slot instance))

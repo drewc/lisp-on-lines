@@ -57,9 +57,11 @@ Attributes are the metadata used to display, validate, and otherwise manipulate 
   (setf (attribute-map occurence) (make-hash-table)))
 
 (defgeneric find-occurence (name)
+  (:method (thing)
+    nil)
   (:method ((name symbol))
     (find-or-create-occurence name))
-  (:method (instance)
+  (:method ((instance standard-object))
     (find-or-create-occurence (class-name (class-of instance)))))
 
 
