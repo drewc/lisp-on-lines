@@ -239,7 +239,8 @@ Calendar.setup({
 
 
 (defmethod find-foreign-instances ((slot foreign-key-slot-presentation))
-  (clsql:select (class-name (class-of (meta-model:explode-foreign-key (instance slot) (slot-name slot))))))
+  (clsql:select (class-name (class-of (meta-model:explode-foreign-key (instance slot) (slot-name slot))))
+		:order-by (car (list-keys (instance slot)))))
 
 
 
@@ -444,7 +445,7 @@ Calendar.setup({
 		(<:as-html "(view) "))
 	(<ucw:a :action (delete-relationship slot (second i) instance)
 		(<:as-html "(remove) "))
-	(present-view ((car i) (list-view slot) (ucw::parent slot)))) ))))
+	(present-view ((car i) (list-view slot) (ucw::parent slot))))))))
 
 
 (defaction add-to-many-to-many ((slot many-to-many-slot-presentation) instance &optional foreign-instance)

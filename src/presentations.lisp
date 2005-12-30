@@ -200,8 +200,6 @@
 (defmethod find-default-criteria (c mewa-string-slot-presentation)
   'string-contains)
 
-
-
 (defmethod render-criteria ((res response) (s mewa-presentation-search))
   (setf (criteria-input s) "")
   (<:ul

@@ -8,7 +8,41 @@
 ;;;; or Meta-Model.
 
 ;;;; ** Initialisation
+(defmethod find-default-attributes ((object t))
+  "return the default attributes for a given object using the meta-model's meta-data"
+  (append (mapcar #'(lambda (s) 
+		      (cons (car s) 
+			    (gen-pslot 
+			     (if (meta-model:foreign-key-p object (car s))
+				 'foreign-key
+				 (cadr s))
+			     (string (car s)) (car s)))) 
+		  (meta-model:list-slot-types object))
+	  (mapcar #'(lambda (s) 
+		      (cons s (append (gen-pslot 'has-many (string s) s) 
+				      `(:presentation 
+					(make-presentation 
+					 ,object 
+					 :type :one-line)))))
+		  (meta-model:list-has-many object))
+	  (find-default-presentation-attribute-definitions)))
+
+(defmethod set-default-attributes ((object t))
+  "Set the default attributes for MODEL"
+  (clear-attributes object)
+  (mapcar #'(lambda (x) 
+	      (setf (find-attribute object (car x)) (cdr x)))
+	  (find-default-attributes object)))
+
+;;;; This automagically initialises any meta model
+
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defmethod meta-model::generate-base-class-expander :after (meta-model name args)
+    (set-default-attributes name)))
+
 ;;;; The following macros are used to initialise a set of database tables as LoL objects.
+
+
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun generate-define-view-for-table (table)

@@ -74,6 +74,17 @@ Attributes are the metadata used to display, validate, and otherwise manipulate 
      (plist :layered-accessor attribute.plist :initarg :plist :initform nil))
     (:documentation "Attributes are used to display a part of a thing, such as a slot of an object, a text label, the car of a list, etc."))
 
+(defmacro defattribute (name supers slots &rest args)
+  (let ((type (or (second (assoc :type-name args)) name) ))
+    `(progn
+      
+      (define-layered-class
+	  ;;;; TODO: naive way of making sure s-a is a superclass
+	  ,name ,(or supers '(standard-attribute))
+	  ,slots
+	  #+ (or) ,@ (cdr args) )
+      (defmethod find-attribute-class-for-type ((type (eql ',type)))
+	',name))))
 
 (defmethod print-object ((self standard-attribute) stream)
   (print-unreadable-object (self stream :type t)
@@ -90,17 +101,24 @@ using the attributes defined in an occurence. Presentation Attributes are always
   "removes all attributes from an occurance"
   (clear-occurence (find-occurence name)))
 
+(defmethod find-attribute-class-for-type (type)
+  nil)
+
 (defmethod find-attribute-class-for-name (name)
   "presentation attributes are named using keywords"
   (if (keywordp name)
       'presentation-attribute
       'standard-attribute))
 
+(defun make-attribute (&key name type plist)
+  (make-instance (or (find-attribute-class-for-type type)
+		     (find-attribute-class-for-name name)) 
+		 :name name :type type :plist plist))
+
 (defmethod ensure-attribute ((occurence standard-occurence) name type plist)
   "Creates an attribute in the given occurence"
   (setf (gethash name (attribute-map occurence))
-	(make-instance (find-attribute-class-for-name name)
-		       :name name :type type :plist plist)))
+	(make-attribute :name name :type type :plist plist)))
 
 (defmethod find-attribute ((occurence standard-occurence) name)
   (gethash name (attribute-map occurence)))
@@ -162,6 +180,7 @@ using the attributes defined in an occurence. Presentation Attributes are always
 
 
 (defmethod setter (attribute)
+  (warn "Setting ~A in ~A" attribute *context*)
   (let ((setter (getf (attribute.plist attribute) :setter))
 	(slot-name (getf (attribute.plist attribute) :slot-name)))
     (cond (setter
@@ -183,13 +202,19 @@ using the attributes defined in an occurence. Presentation Attributes are always
 	       (when (slot-boundp object slot-name)
 		 (slot-value object slot-name)))))))
 
-(defgeneric attribute-value (instance attribute)
-  (:method (instance (attribute standard-attribute))
-    (funcall (getter attribute) instance)))
 
-(defgeneric (setf attribute-value) (value instance attribute)
-  (:method (value instance (attribute standard-attribute))
-    (funcall (setter attribute) value instance)))
+(define-layered-function attribute-value (instance attribute)
+  (:documentation " Like SLOT-VALUE for instances, the base method calls GETTER."))
+
+
+
+(define-layered-method attribute-value (instance (attribute standard-attribute))
+  (funcall (getter attribute) instance))
+
+(define-layered-function (setf attribute-value)  (value instance attribute))
+
+(define-layered-method (setf attribute-value) (value instance (attribute standard-attribute))
+  (funcall (setter attribute) value instance))
 
 
 ;;;; ** Default Attributes
@@ -261,31 +286,7 @@ using the attributes defined in an occurence. Presentation Attributes are always
 	       :label ,label
 	       :slot-name ,slot-name))) 
 
-(defmethod find-default-attributes ((model t))
-  "return the default attributes for a given model using the meta-model's meta-data"
-  (append (mapcar #'(lambda (s) 
-		      (cons (car s) 
-			    (gen-pslot 
-			     (if (meta-model:foreign-key-p model (car s))
-				 'foreign-key
-				 (cadr s))
-			     (string (car s)) (car s)))) 
-		  (meta-model:list-slot-types model))
-	  (mapcar #'(lambda (s) 
-		      (cons s (append (gen-pslot 'has-many (string s) s) 
-				      `(:presentation 
-					(make-presentation 
-					 ,model 
-					 :type :one-line)))))
-		  (meta-model:list-has-many model))
-	  (find-default-presentation-attribute-definitions)))
 
-(defmethod set-default-attributes ((model t))
-  "Set the default attributes for MODEL"
-  (clear-attributes model)
-  (mapcar #'(lambda (x) 
-	      (setf (find-attribute model (car x)) (cdr x)))
-	  (find-default-attributes model)))
 	  
 ;;;presentations 
 (defcomponent mewa ()
@@ -333,10 +334,6 @@ using the attributes defined in an occurence. Presentation Attributes are always
 (defmethod find-instance-classes ((self mewa))
   (mapcar #'class-name 
 	  (it.bese.arnesi.mopp:compute-class-precedence-list (class-of (instance self)))))
-
-(defun make-attribute (&rest props &key type &allow-other-keys)
-	(remf props :type)
-	(cons (gensym) (cons type props)))
 
 (defun make-presentation-for-attribute-list-item
     (occurence att-name plist parent-presentation &optional type)
@@ -479,8 +476,6 @@ in that object presentation."
 (defmethod render-on ((res response) (self about-dialog))
   (call-next-method)
   (render-on res (slot-value self 'body)))
-
-
 
 
 (defaction cancel-save-instance ((self mewa))
