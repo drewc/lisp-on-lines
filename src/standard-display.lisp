@@ -11,6 +11,8 @@
 
 (deflayer wrap-form)
 
+(deflayer as-table)
+
 (define-attributes (contextl-default)
   (:viewer viewer)
   (:editor editor)
@@ -30,8 +32,29 @@
 					(<:as-html ,object)
 					(display ,object ,@args))))))
 
-;;;;; Macros
+(defmethod find-plist (object)
+  (list))
+`
+(defmethod find-plist ((attribute standard-attribute))
+  (attribute.plist attribute))
 
+(defmacro with-plist ((plist-form &optional prefix)  &body body)
+  (with-unique-names (p)
+    (let ((get (intern (string-upcase (if prefix (strcat prefix '-getp) "GETP"))))
+	  (set (intern (string-upcase (if prefix (strcat prefix '-setp) "SETP"))))
+	  (props (intern (string-upcase (if prefix (strcat prefix '-properties) "PROPERTIES")))))
+      `(let ((,p ,plist-form))
+	(flet ((,get  (p)
+		 (getf ,p p))
+	       (,set (p v)
+		 (setf (getf ,p p) v))
+	       (,props ()
+		 ,p))
+	  (declare (ignorable #',get #',set #',props))
+	  ,@body)))))
+
+
+;;;;; Macros
 (defmacro do-attributes ((var occurence attributes) &body body)
   (with-unique-names (att plist type)
     `(loop for ,att in ,attributes
@@ -41,33 +64,8 @@
 		(,var (if ,type
 			  (make-attribute :name (first ,att) :type ,type :plist ,plist)
 			  (find-attribute ,occurence (first ,att)))))
-	   (flet ((display-attribute* (component object)
-		    (display-using-description
-		     ,var
-		     component
-		     object
-		     (rest ,att))))
-	     (with-plist ((plist-union (rest ,att) (find-plist ,var)) ,var)	   
-	       ,@body))))))
-
-
-(defmethod find-plist (object)
-  (list))
-
-(defmethod find-plist ((attribute standard-attribute))
-  (attribute.plist attribute))
-
-(defmacro with-plist ((plist-form &optional prefix)  &body body)
-  (with-unique-names (p)
-    (let ((get (intern (string-upcase (if prefix (strcat prefix '-getp) "GETP"))))
-	  (set (intern (string-upcase (if prefix (strcat prefix '-setp) "SETP")))))
-      `(let ((,p ,plist-form))
-	(flet ((,get  (p)
-		 (getf ,p p))
-	       (,set (p v)
-		 (setf (getf ,p p) v)))
-	  (declare (ignorable #',get #',set))
-	  ,@body)))))
+	   (with-plist ((plist-union (rest ,att) (find-plist ,var)) ,var)	   
+	     ,@body)))))
 
 
 (defmacro defdisplay ((&key
@@ -77,23 +75,25 @@
 		       (component 'component)
 		       ((:class object)  nil))
 		      &body body)
-
+  (let ((class-spec (if object (if (listp object) object (list object object)) 'object)))
   `(define-layered-method display-using-description
     ,@(when layer-supplied-p `(:in-layer ,in-layer))
     ,@(when combination-supplied-p `(,combination))
     (,description ,component
-     ,(if object (if (listp object) object (list object object)) 'object)  properties)
-    (declare (ignorable display-attribute))
+     ,class-spec  properties)
+    
 
     (with-plist ((plist-union properties (find-plist ,(car description))))
       
       ,(if (not description-supplied-p)
-	   `(flet ((display-attribute (attribute)
-		    (let ((a (ensure-list attribute)))
-		      (display-using-description (find-attribute ,(car description) (car a)) ,component ,(car (ensure-list object))  (cdr a)))))
+	   `(flet ((attributes ()
+		    (or (getp :attributes)
+			(list-slots ,(car (ensure-list class-spec))))))
+	     (declare (ignorable #'attributes))
 	     
 	     ,@body)
-	   `(progn ,@body)))))
+	   `(progn ,@body))))  )
+  )
 
 
 (define-layered-function display (component object &rest args)
@@ -102,10 +102,8 @@
 
  default action is to FUNCALL-WITH-LAYERS the DISPLAY-USING-DESCRIPTION method."))
 
-
-
 (define-layered-method display
-    ((component t) (object t) &rest args &key layers (type 'viewer)  &allow-other-keys)  
+  ((component t) (object standard-object) &rest args &key layers (type 'viewer)  &allow-other-keys)  
   (let* ((occurence (find-occurence object))
 	 (plist (attribute.plist
 		 (find-attribute occurence (intern (format nil "~A" type) :KEYWORD))))
@@ -117,18 +115,12 @@
      layers		 
      #'display-using-description  occurence component object (plist-union args plist))))
 
+
 (define-layered-method display
-    ((component t) (object symbol) &rest args &key (layers  '(+ viewer)) &allow-other-keys)
+  ((component t) (object t) &rest args &key (layers  '(+ viewer)) &allow-other-keys)
   (funcall-with-layers 
-     layers		 
-     #'display-using-description  t component object args))
-
-
-(define-layered-method display ((component t) (list list) &rest args)
-  "The Default Display* for LISTS"
-  (<:ul
-   (dolist* (item list)
-     (<:li  (apply #'display component item args)))))
+   layers		 
+   #'display-using-description  t component object args))
 
 
 (define-layered-function display-using-description (description component object properties)
@@ -140,8 +132,9 @@
   (declare (ignore component properties description))
   (<:as-html object))
 
+;;;; * Object Presentations
 (define-layered-method display-using-description
-    ((occurence standard-occurence) component object properties)
+  ((occurence standard-occurence) component object properties)
 
   (with-plist (properties o)
     (loop for att in (or (o-getp :attributes) (list-slots object))
@@ -157,33 +150,51 @@
 		       object
 		       (rest att))))))))
 
-(define-layered-method display-using-description
-  :in-layer one-line ((occurence standard-occurence) component object properties)
-  (with-plist (properties occurence)
-      (do-attributes (attribute occurence (or (occurence-getp :attributes)
-					      (list-slots object)))
-	(display-attribute* component object) (<:as-html " "))))
+;;;; ** One line
+(defdisplay (:in-layer one-line)
+  (do-attributes (attribute occurence (or (getp :attributes)
+					  (list-slots object)))
+	(display-using-description attribute component object (attribute-properties))
+	(<:as-html " ")))
+ 
+;;;; ** as-table
+
+(defdisplay (:in-layer as-table)
+  (<:table
+   (do-attributes (a occurence (attributes))
+     (<:tr
+      (<:td  (<:as-html (a-getp :label)))
+      (<:td (display-using-description a component object (a-properties)))))))
+
+;;;; List Displays
+(defdisplay (:class
+	     (list list)
+	     :description (desc t))
+  (<:ul
+   (dolist* (item list)
+     (<:li  (apply #'display component item properties)))))
 
 
-(define-layered-method display-using-description ((attribute standard-attribute) component object properties)
-  (let ((p (lol:make-view object :type :viewer))
-	(name (attribute.name attribute)))
-    (when name (present-slot-view p name))))
 
+;;;; Attributes 
 (defdisplay (:in-layer
 	     editor
  	     :description (attribute standard-attribute))
-  "Legacy editor using UCW presentations"
+    "Legacy editor using UCW presentations"
   (let ((p (lol:make-view object :type :editor)))
     (present-slot-view p (getf (find-plist attribute) :slot-name))))
 
-
+(define-layered-method display-using-description
+    ((attribute standard-attribute) component object properties)
+  (let ((p (lol:make-view object :type 'mewa-viewer))
+	(name (attribute.name attribute)))
+    (when name (present-slot-view p name))))
 
 (defdisplay (:class
 	     (button (eql 'standard-form-buttons))
 	     :description (description t))
-  (<ucw:submit :action (ok component)
-	       :value "Ok.")
+    (<ucw:submit :action (ok component)
+		 :value "Ok."))
 
 
 (defdisplay (:in-layer wrap-form
@@ -191,7 +202,8 @@
   (<ucw:form
    :action (refresh-component component)
    (call-next-method)
-   (display component 'standard-form-buttons))))
+   (display component 'standard-form-buttons)))
+
 
 (defclass/meta test-class ()
   ((test-string :initform "test string" :type string))

@@ -106,7 +106,11 @@ This involves creating a meta-model, a clsql view-class, and the setting up the 
   (mewa::find-attribute-slot self slot-name))
 
 (defmethod present-slot-view ((self mewa) slot-name &optional (instance (instance self)))
-  (present-slot (slot-view self slot-name) instance))
+  (let ((v (slot-view self slot-name)))
+
+     (if v
+	 (present-slot v instance)
+	 (<:as-html slot-name))))
 
 
 (defmethod find-slots-of-type (model &key (type 'string)

@@ -12,8 +12,7 @@
 (defattribute many-to-many ()
   ())
 
-(define-layered-method attribute-value (object (attribute many-to-many))
-  (call-next-method))
+
 
 (defdisplay (:description (attribute many-to-many))
     (let ((instances (select-instances object))
