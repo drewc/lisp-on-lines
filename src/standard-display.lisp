@@ -103,7 +103,7 @@
  default action is to FUNCALL-WITH-LAYERS the DISPLAY-USING-DESCRIPTION method."))
 
 (define-layered-method display
-  ((component t) (object standard-object) &rest args &key layers (type 'viewer)  &allow-other-keys)  
+  ((component t) (object t) &rest args &key layers (type 'viewer)  &allow-other-keys)  
   (let* ((occurence (find-occurence object))
 	 (plist (attribute.plist
 		 (find-attribute occurence (intern (format nil "~A" type) :KEYWORD))))
@@ -117,7 +117,7 @@
 
 
 (define-layered-method display
-  ((component t) (object t) &rest args &key (layers  '(+ viewer)) &allow-other-keys)
+  ((component t) (object t) &rest args &key layers (type 'viewer) &allow-other-keys)
   (funcall-with-layers 
    layers		 
    #'display-using-description  t component object args))

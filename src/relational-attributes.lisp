@@ -15,11 +15,11 @@
 
 
 (defdisplay (:description (attribute many-to-many))
-    (let ((instances (select-instances object))
+  (let ((instances (select-instances object t))
 	new-instance)
     (<:ul
      (<:li (<ucw:button :action (add-new-relation component object (getp slot-name))
-			 (<:as-html "Add New")))
+			(<:as-html "Add New")))
      (<:li  (<ucw:button :action (add-new-relation component object new-instance)
 			 (<:as-html "Add:"))
 	    (<ucw:select :accessor new-instance
