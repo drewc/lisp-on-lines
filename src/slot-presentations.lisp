@@ -430,10 +430,11 @@ Calendar.setup({
   (let ((instances (slot-value instance (slot-name slot)))
 	new-instance)
     (<:ul
-     (<:li (<ucw:button :action (add-to-many-to-many slot instance)
-			 (<:as-html "Add New")))
-     (<:li  (<ucw:button :action (add-to-many-to-many slot instance new-instance)
-			 (<:as-html "Add:"))
+     (<:li (<ucw:submit :action (add-to-many-to-many slot instance)
+			
+			 :value "Add New"))
+     (<:li  (<ucw:submit :action (add-to-many-to-many slot instance new-instance)
+			 :value "Add:")
 	    (<ucw:select :accessor new-instance
 			 (arnesi:dolist* (i (find-all-instances slot instance))
 			   (<ucw:option
