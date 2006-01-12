@@ -37,9 +37,20 @@
    :get-foreign-instances)
   
   (:export 
-   ;;;; LoL 
+   ;;;; CLSQL meta-model/default attributes definers
+   ;;;; TODO: should be moved to meta-model,
+   ;;;; with lol specific function implemented like the
+   ;;;; CLOS meta-model
    :define-view-for-table
    :define-views-for-database
+
+
+   ;;;; The LoL 3 displays
+   :defdisplay
+   :defattribute
+   :display
+   :display-using-description
+   :call-display
 
    ;;;;a wrapper for calling make-presentation
    :call-view

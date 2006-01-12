@@ -43,7 +43,6 @@
 ;;;; The following macros are used to initialise a set of database tables as LoL objects.
 
 
-
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun generate-define-view-for-table (table)
     "
