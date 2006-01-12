@@ -41,13 +41,13 @@
   `(call-component ,component (make-instance 'standard-display-component
 			 :display #'(lambda (component)
 				      (with-component (component)
-					(<:as-html ,object)
-					(display ,object ,@args))))))
+					(display ,component ,object ,@args))))))
 
 (defmethod find-plist (object)
   (list))
-`
+
 (defmethod find-plist ((attribute standard-attribute))
+  (warn "atttributre plist ~A" (attribute.plist attribute))
   (attribute.plist attribute))
 
 (defmacro with-plist ((plist-form &optional prefix)  &body body)
@@ -152,18 +152,21 @@
     (loop for att in (or (o-getp :attributes) (list-slots object))
 	  do (let* ((att (ensure-list att))
 		    (attribute (find-attribute occurence (first att))))
-	       (warn "trying to render ~A in ~A" attribute object)
 	       (with-plist ((plist-union (rest att) (find-plist attribute)))
 		 (<:p :class "attribute"
-		      (<:span :class "label" (<:as-html (getp :label) " "))	   
+		      (and (getp :show-labels-p) (<:span :class "label" (<:as-html (or (getp :label) "")  " ")))	   
 		      (display-using-description
 		       attribute
 		       component
 		       object
 		       (rest att))))))))
 
+
+
+
 ;;;; ** One line
 (defdisplay (:in-layer one-line)
+  "The one line presentation just displays the attributes with a #\Space between them"
   (do-attributes (attribute occurence (or (getp :attributes)
 					  (list-slots object)))
 	(display-using-description attribute component object (attribute-properties))
@@ -207,7 +210,6 @@
 	     :description (description t))
     (<ucw:submit :action (ok component)
 		 :value "Ok."))
-
 
 (defdisplay (:in-layer wrap-form
 		       :combination :around)
