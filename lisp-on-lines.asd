@@ -31,7 +31,7 @@
 				       (:file "ajax")
 				       (:file "dojo"))))
     :serial t
-    :depends-on (:arnesi :ucw :meta-model :split-sequence :contextl :cl-ppcre))
+    :depends-on (:arnesi :ucw :meta-model :split-sequence :contextl :cl-ppcre :cl-fad))
 
 (defsystem :lisp-on-lines.example
     :components (
