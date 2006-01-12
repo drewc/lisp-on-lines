@@ -64,18 +64,24 @@ This involves creating a meta-model, a clsql view-class, and the setting up the 
   "expands to init-i-f-t using the listing of tables provided by meta-model"
   `(define-view-for-table ,@(meta-model::list-tables)))
 
+
+
+;;;; These are some macros over the old presentation system.
+;;;; Considered depreciated, they will eventually be implemented in terms of the new
+;;;; display system, and delegated to backwards-compat-0.2.lisp
+
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun %make-view (object type attributes args)
    
-      (when attributes
-	(setf args
-	      (cons `(:attributes ,attributes) args)))
-      `(mewa::make-presentation
-	,object
-	:type ,type
-	,@(when args
-		`(:initargs
-		  '(,@ (mapcan #'identity args)))))))
+    (when attributes
+      (setf args
+	    (cons `(:attributes ,attributes) args)))
+    `(mewa::make-presentation
+      ,object
+      :type ,type
+      ,@(when args
+	      `(:initargs
+		'(,@ (mapcan #'identity args)))))))
 
 (defmethod make-view (object &rest args &key (type :viewer)
 		      &allow-other-keys )
