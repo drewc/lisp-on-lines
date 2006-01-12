@@ -394,7 +394,9 @@ Calendar.setup({
   ((list-view :accessor list-view :initarg :list-view :initform :one-line)
    (action-view :accessor action-view :initarg :action-view :initform :viewer)
    (create-view :initform :creator)
-   (select-view :initform :as-string :accessor select-view))
+   (select-view :initform :as-string :accessor select-view)
+   (can-add-new-p :initarg :can-add-new-p :accessor can-add-new-p :initform t)
+   (can-add-existing-p :initarg :can-add-existing-p :accessor can-add-existing-p :initform t))
   (:type-name many-to-many)
   (:default-initargs :label "many to many"))
 
@@ -430,16 +432,19 @@ Calendar.setup({
   (let ((instances (slot-value instance (slot-name slot)))
 	new-instance)
     (<:ul
-     (<:li (<ucw:submit :action (add-to-many-to-many slot instance)
+     (when (can-add-new-p slot)
+       (<:li 
+	(<ucw:submit :action (add-to-many-to-many slot instance)
 			
-			 :value "Add New"))
-     (<:li  (<ucw:submit :action (add-to-many-to-many slot instance new-instance)
-			 :value "Add:")
-	    (<ucw:select :accessor new-instance
-			 (arnesi:dolist* (i (find-all-instances slot instance))
-			   (<ucw:option
-			    :value i
-			    (lol:present-view (i (select-view slot) slot))))))
+		     :value "Add New")))
+     (when (can-add-existing-p slot )
+       (<:li  (<ucw:submit :action (add-to-many-to-many slot instance new-instance)
+			   :value "Add:")
+	      (<ucw:select :accessor new-instance
+			   (arnesi:dolist* (i (find-all-instances slot instance))
+			     (<ucw:option
+			      :value i
+			      (lol:present-view (i (select-view slot) slot)))))))
      (dolist* (i instances)
        (<:li
 	(<ucw:a :action (call-view ((car i) (action-view slot) (ucw::parent slot)))
