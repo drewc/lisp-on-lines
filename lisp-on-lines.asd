@@ -22,6 +22,7 @@
 				       (:file "slot-presentations/date")
 				       (:file "standard-display")
 				       (:file "standard-attributes")
+				       (:file "standard-wrappers")
 				       (:file "relational-attributes"))
 			  :serial t)
 		 (:module :components

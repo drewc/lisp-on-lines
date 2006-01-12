@@ -25,8 +25,20 @@
 	     (apply #'display ,component thing args)))
       ,@body)))
 
-(defmacro call-display (object &rest args)
-  `(call-component self (make-instance 'standard-display-component
+
+(define-layered-function find-display-type (object))
+
+(define-layered-method find-display-type (object)
+  'viewer)
+
+(define-layered-function find-display-layers (object))
+
+(define-layered-method find-display-layers (object)
+  "layered function"
+  nil)
+
+(defmacro call-display (component object &rest args)
+  `(call-component ,component (make-instance 'standard-display-component
 			 :display #'(lambda (component)
 				      (with-component (component)
 					(<:as-html ,object)
