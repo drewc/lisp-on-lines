@@ -22,7 +22,8 @@ in both PLIST and NEW-PROPS get the value in NEW-PROPS.
 The other properties in PLIST are left untouched."
   (loop for cons on new-props by #'cddr
 	do (setf (getf plist (first cons)) (second cons))
-	finally (return plist)))
+	finally (return plist))
+  plist)
 
 (defun plist-union (new-props plist)
   "Non-destructive version of plist-nunion"
@@ -75,14 +76,16 @@ Attributes are the metadata used to display, validate, and otherwise manipulate 
     (:documentation "Attributes are used to display a part of a thing, such as a slot of an object, a text label, the car of a list, etc."))
 
 (defmacro defattribute (name supers slots &rest args)
-  (let ((type (or (second (assoc :type-name args)) name) ))
+  (let ((type (or (second (assoc :type-name args)) name))
+	(properties (cdr (assoc :default-properties args))))
     `(progn
       
       (define-layered-class
-	  ;;;; TODO: naive way of making sure s-a is a superclass
+	  ;;;; TODO: fix the naive way of making sure s-a is a superclass
 	  ,name ,(or supers '(standard-attribute))
 	  ,slots
-	  #+ (or) ,@ (cdr args) )
+	  #+ (or) ,@ (cdr args)
+	  (:default-initargs :plist (list ,@properties)))
       (defmethod find-attribute-class-for-type ((type (eql ',type)))
 	',name))))
 
@@ -111,9 +114,12 @@ using the attributes defined in an occurence. Presentation Attributes are always
       'standard-attribute))
 
 (defun make-attribute (&key name type plist)
-  (make-instance (or (find-attribute-class-for-type type)
+  (let ((i (make-instance (or (find-attribute-class-for-type type)
 		     (find-attribute-class-for-name name)) 
-		 :name name :type type :plist plist))
+		 :name name :type type)))
+    (setf (attribute.plist i)
+	  (plist-union plist (attribute.plist i)))
+    i)) 
 
 (defmethod ensure-attribute ((occurence standard-occurence) name type plist)
   "Creates an attribute in the given occurence"
@@ -205,8 +211,6 @@ using the attributes defined in an occurence. Presentation Attributes are always
 
 (define-layered-function attribute-value (instance attribute)
   (:documentation " Like SLOT-VALUE for instances, the base method calls GETTER."))
-
-
 
 (define-layered-method attribute-value (instance (attribute standard-attribute))
   (funcall (getter attribute) instance))

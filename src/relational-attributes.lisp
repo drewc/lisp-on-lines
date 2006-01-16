@@ -1,4 +1,25 @@
-(in-package :lol)
+(in-package :lisp-on-lines)
+
+;;;; * Relational Attributes
+
+;;;; ** Has-Many attribute
+
+(defattribute has-many ()
+  ()
+  (:default-properties
+      :add-new-label "Add New"
+    :sort-arguments  (list #'< :key #'(lambda (x) (funcall (car (list-keys x)) x)))))
+
+
+(defdisplay (:description (attribute has-many))
+    ;
+  (<ucw:submit :action (add-to-has-many slot instance) :value (getp :add-new-label))
+  (let* ((i (apply #'sort (slot-value object (getp :slot-name))
+		  (getp :sort-arguments))))
+    (display component i
+	     :type'lol::one-line
+	     :layers '(+ wrap-link))))
+
 
 (defun find-many-to-many-class (slot-name instance)
   (let* ((imd (getf (meta-model::find-slot-metadata instance slot-name)
@@ -15,7 +36,9 @@
 
 
 (defdisplay (:description (attribute many-to-many))
-  (let ((instances (select-instances object t))
+  (<:as-html "ASDASD"))
+
+  #+nil(let ((instances (select-instances object t))
 	new-instance)
     (<:ul
      (<:li (<ucw:button :action (add-new-relation component object (getp slot-name))

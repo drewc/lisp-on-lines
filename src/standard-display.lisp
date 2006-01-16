@@ -154,7 +154,8 @@
 		    (attribute (find-attribute occurence (first att))))
 	       (with-plist ((plist-union (rest att) (find-plist attribute)))
 		 (<:p :class "attribute"
-		      (and (getp :show-labels-p) (<:span :class "label" (<:as-html (or (getp :label) "")  " ")))	   
+		      (and (o-getp :show-labels-p)
+			   (<:span :class "label" (<:as-html (or (getp :label) "")  " ")))	   
 		      (display-using-description
 		       attribute
 		       component
