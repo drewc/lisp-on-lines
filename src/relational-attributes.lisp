@@ -57,5 +57,5 @@
 	(<ucw:a :action (delete-relationship slot (second i) instance)
 		(<:as-html "(remove) "))
 	(display component object)))))
-  (display component (mapcar #'car (slot-value object (getp :slot-name)))))
+  ;(display component (mapcar #'car (slot-value object (getp :slot-name))))
 		      
