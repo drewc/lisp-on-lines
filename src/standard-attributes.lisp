@@ -1,5 +1,20 @@
 (in-package :lisp-on-lines)
 
+;;;; Strings
+
+(defattribute string-attribute ()
+  ()
+  (:type-name string)
+  (:default-properties
+      :escape-html-p t))
+
+(defdisplay object (:description (string string-attribute))
+  (<:as-html "ASD")
+  (if (getp :escape-html-p)
+      (<:as-html (attribute-value object string))
+      (<:as-is (attribute-value object string))))
+
+
 (defattribute image ()
   ())
 
