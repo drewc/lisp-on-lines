@@ -72,7 +72,7 @@ Attributes are the metadata used to display, validate, and otherwise manipulate 
     standard-attribute ()
     ((name :layered-accessor attribute.name :initarg :name :initform "attribute")
      (type :layered-accessor attribute.type :initarg :type :initform t :type symbol)
-     (plist :layered-accessor attribute.plist :initarg :plist :initform nil))
+     (properties :layered-accessor attribute.properties :initarg :properties :initform nil))
     (:documentation "Attributes are used to display a part of a thing, such as a slot of an object, a text label, the car of a list, etc."))
 
 (defmacro defattribute (name supers slots &rest args)
@@ -85,7 +85,7 @@ Attributes are the metadata used to display, validate, and otherwise manipulate 
 	  ,name ,(or supers '(standard-attribute))
 	  ,slots
 	  #+ (or) ,@ (cdr args)
-	  (:default-initargs :plist (list ,@properties)))
+	  (:default-initargs :properties (list ,@properties)))
       (defmethod find-attribute-class-for-type ((type (eql ',type)))
 	',name))))
 
@@ -113,18 +113,18 @@ using the attributes defined in an occurence. Presentation Attributes are always
       'presentation-attribute
       'standard-attribute))
 
-(defun make-attribute (&key name type plist)
+(defun make-attribute (&key name type properties)
   (let ((i (make-instance (or (find-attribute-class-for-type type)
 		     (find-attribute-class-for-name name)) 
 		 :name name :type type)))
-    (setf (attribute.plist i)
-	  (plist-union plist (attribute.plist i)))
+    (setf (attribute.properties i)
+	  (plist-union properties (attribute.properties i)))
     i)) 
 
-(defmethod ensure-attribute ((occurence standard-occurence) name type plist)
+(defmethod ensure-attribute ((occurence standard-occurence) name type properties)
   "Creates an attribute in the given occurence"
   (setf (gethash name (attribute-map occurence))
-	(make-attribute :name name :type type :plist plist)))
+	(make-attribute :name name :type type :properties properties)))
 
 (defmethod find-attribute ((occurence standard-occurence) name)
   (gethash name (attribute-map occurence)))
@@ -133,12 +133,12 @@ using the attributes defined in an occurence. Presentation Attributes are always
   (loop for att being the hash-values of (attribute-map occurence)
 	collect att))
 
-(defmethod ensure-attribute (occurence-name name type plist)
+(defmethod ensure-attribute (occurence-name name type properties)
   (ensure-attribute
    (find-occurence occurence-name)
    name
    type
-   plist)) 
+   properties)) 
 
 ;;;; The following functions make up the public interface to the
 ;;;; MEWA Attribute Occurence system.
@@ -159,13 +159,13 @@ using the attributes defined in an occurence. Presentation Attributes are always
 	(if (and att inherit) 
 	    (cons (car definition) 
 		  (plist-union (cdr definition)
-			 (attribute.plist att)))
+			 (attribute.properties att)))
 	    definition)))) 
 
 (defmethod set-attribute-properties ((occurence-name t) attribute properties)
   (let ((a (find-attribute occurence-name attribute)))
     (if a
-	(setf (attribute.plist a) (plist-nunion properties (attribute.plist a)))
+	(setf (attribute.properties a) (plist-nunion properties (attribute.properties a)))
 	(error "Attribute ~A does not exist" attribute))))
 
 (defmethod perform-define-attributes ((occurence-name t) attributes)
@@ -187,8 +187,8 @@ using the attributes defined in an occurence. Presentation Attributes are always
 
 (defmethod setter (attribute)
   (warn "Setting ~A in ~A" attribute *context*)
-  (let ((setter (getf (attribute.plist attribute) :setter))
-	(slot-name (getf (attribute.plist attribute) :slot-name)))
+  (let ((setter (getf (attribute.properties attribute) :setter))
+	(slot-name (getf (attribute.properties attribute) :slot-name)))
     (cond (setter
 	   setter)
 	  (slot-name
@@ -199,8 +199,8 @@ using the attributes defined in an occurence. Presentation Attributes are always
 	     (warn "Can't find anywere to set ~A in ~A using ~A" value object attribute))))))
     
 (defmethod getter (attribute)
-  (let ((getter (getf (attribute.plist attribute) :getter))
-	(slot-name (getf (attribute.plist attribute) :slot-name)))
+  (let ((getter (getf (attribute.properties attribute) :getter))
+	(slot-name (getf (attribute.properties attribute) :slot-name)))
     (cond (getter
 	   getter)
 	  (slot-name
@@ -257,7 +257,7 @@ using the attributes defined in an occurence. Presentation Attributes are always
 (defun attribute-to-definition (attribute)
   (nconc (list (attribute.name attribute)
 	       (attribute.type attribute))
-	 (attribute.plist attribute)))
+	 (attribute.properties attribute)))
 
 (defun find-default-presentation-attribute-definitions ()
   (if (eql *default-attributes-class-name* 'default)
@@ -358,7 +358,7 @@ using the attributes defined in an occurence. Presentation Attributes are always
 					    plist
 					    (plist-union
 					     (global-properties parent-presentation)
-					     (attribute.plist attribute)))
+					     (attribute.properties attribute)))
 					   (list :size 30 :parent parent-presentation))))))
 
 (defmethod find-applicable-attributes-using-attribute-list (occurence attribute-list)
@@ -439,7 +439,7 @@ in that object presentation."
 		       (attribute.type a)
 		       type) 
 		   (plist-union initargs (when a
-					   (attribute.plist a))))))
+					   (attribute.properties a))))))
     
     (setf (slot-value i 'instance) object)
     (initialize-slots i)
