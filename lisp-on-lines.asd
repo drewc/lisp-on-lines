@@ -20,6 +20,7 @@
 				       (:file "presentations")
 				       (:file "slot-presentations")
 				       (:file "slot-presentations/date")
+				       (:file "defdisplay")
 				       (:file "standard-display")
 				       (:file "standard-attributes")
 				       (:file "standard-wrappers")
