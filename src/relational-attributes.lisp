@@ -11,7 +11,7 @@
     :sort-arguments  (list #'< :key #'(lambda (x) (funcall (car (list-keys x)) x)))))
 
 
-(defdisplay (:description (attribute has-many))
+(defdisplay object (:description (attribute has-many))
     ;
   (<ucw:submit :action (add-to-has-many slot instance) :value (getp :add-new-label))
   (let* ((i (apply #'sort (slot-value object (getp :slot-name))
@@ -35,7 +35,7 @@
 
 
 
-(defdisplay (:description (attribute many-to-many))
+(defdisplay object (:description (attribute many-to-many))
   (<:as-html "ASDASD"))
 
   #+nil(let ((instances (select-instances object t))

@@ -3,11 +3,11 @@
 (defattribute image ()
   ())
 
-(defdisplay (:description (buttons (eql 'image-editor-buttons)))
+(defdisplay object (:description (buttons (eql 'image-editor-buttons)))
   (<ucw:a :action (ok component object)
 	  (<:as-html "select this image")))
 
-(defdisplay (:description (image image))
+(defdisplay object (:description (image image))
   (<:img
    :class (or (getp :css-class) "lol-image") 
    :src (arnesi:strcat
@@ -15,7 +15,7 @@
 	 (escape-as-uri
 	  (attribute-value object image)))))
 
-(defdisplay (:description (image image)
+(defdisplay object (:description (image image)
 	     :in-layer editor)
   (<:div
    :class "lol-image-thumbnails"

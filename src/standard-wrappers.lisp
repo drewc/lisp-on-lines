@@ -3,7 +3,7 @@
 ;;;;; Wrap a display in "back buttons"
 (deflayer wrap-back-buttons)
 
-(defdisplay (:in-layer
+(defdisplay object (:in-layer
 	     wrap-back-buttons
 	     :combination :around)
   (<ucw:a :class "wiz-button previous" :action (ok component t)
@@ -17,11 +17,11 @@
 
 (deflayer wrap-link)
 
-(defdisplay (:in-layer
+(defdisplay object (:in-layer
 	     wrap-link
 	     :combination :around)
   (let ((layers  (find-display-layers object)))
-    (<ucw:a :action (call-display component object
+    (<ucw:a :action (call-display self object
 				  :type (find-display-type object)
 				  :layers layers)
 				 
