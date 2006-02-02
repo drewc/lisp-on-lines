@@ -24,7 +24,9 @@
 				       (:file "standard-display")
 				       (:file "standard-attributes")
 				       (:file "standard-wrappers")
-				       (:file "relational-attributes"))
+				       (:file "relational-attributes")
+
+				       (:file "backwards-compat"))
 			  :serial t)
 		 (:module :components
 			  :pathname "src/components/"
