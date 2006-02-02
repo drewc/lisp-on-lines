@@ -422,7 +422,21 @@ This method is also used by relation-slot-presentations for the same reason."))
   (:type-name boolean))
 
 (defmethod present-slot ((slot boolean-slot-presentation) instance)
-  (<ucw:input :type "checkbox" :accessor (presentation-slot-value slot instance)))
+  (if (editablep slot)
+    (let ((callback (ucw::make-new-callback
+		   (lambda (val)
+		     
+		     (if (listp val)
+			 (setf (presentation-slot-value slot instance) t)
+			 (setf (presentation-slot-value slot instance) nil))))))
+    (<:input :type "hidden" :name callback :value "DEFAULT")
+    (<:input :type "checkbox"
+	     :name callback
+	     :checked  (slot-value instance (slot-name slot))))
+    (<:as-html
+     (if (presentation-slot-value slot instance)
+	 "YES"
+	 "NO"))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; strings
