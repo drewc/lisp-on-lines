@@ -199,6 +199,7 @@ but here's what i use."
 		     (meta-model:explode-foreign-key instance (slot-name slot)))))))
     
     (flet ((render-s () (when foreign-instance (call-next-method))))
+
       (if (slot-boundp slot 'ucw::place)
 	  (cond 
 	    ((editablep slot)
@@ -212,11 +213,12 @@ but here's what i use."
 	     (<ucw:render-component :component (live-search slot))
 	     #+ (or) (<ucw:submit :action (revert-foreign-slot slot)
 			  :value "Undo")
-			      (<ucw:submit :action  (mewa::search-records slot instance) :value "find" :style "display:inline"))
+			      #+ (or) (<ucw:submit :action  (mewa::search-records slot instance) :value "find" :style "display:inline"))
 	    ((mewa::linkedp slot)
 	     (<ucw:a :action (mewa::view-instance slot foreign-instance) 
 		     (render-s)))
 	    (t       
 	     (render-s)))
 	  ;; presentation is used only for rendering
-	  (render-s)))))
+	  (render-s))))
+)

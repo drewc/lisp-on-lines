@@ -1,12 +1,14 @@
 (in-package :lisp-on-lines)
 
 ;;;; LoL CLOS Test Class
-(defclass/meta test-class ()
-  ((test-string :initform "test string" :type string))
+(defclass lol-test-class ()
+  ((test-string :initform "test string"))
   (:documentation "foo"))
 
-(define-attributes (test-class)
-  (test-string t :label "String :" :editablep t))
+(set-default-attributes 'lol-test-class)
+
+(define-attributes (lol-test-class)
+  (test-string t :label "String :"))
   
 (defcomponent test-component ()
   ((display-types :accessor display-types :initform (list 'viewer 'editor 'creator 'one-line 'as-string))

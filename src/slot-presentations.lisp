@@ -217,11 +217,10 @@ Calendar.setup({
   ;; the viewed instance could have been changed/deleted, so we sync this instance
   (meta-model:sync-instance (instance (ucw::parent self))))
 
-
 (defmethod  present-slot :around ((slot foreign-key-slot-presentation) instance)  
   (setf (foreign-instance slot) 
 	(when (lol::presentation-slot-value slot instance) 
-	  (meta-model:explode-foreign-key instance (slot-name slot))))
+	  (meta-model:explode-foreign-key instance (slot-name slot) :nilp t)))
   (flet ((render () (when (foreign-instance slot)(call-next-method))))
     (if (slot-boundp slot 'ucw::place)
         (cond 

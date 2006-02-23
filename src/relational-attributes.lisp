@@ -2,23 +2,54 @@
 
 ;;;; * Relational Attributes
 
+
+;;;; ** has-a
+
+(defattribute has-a ()
+  ()
+  (:default-properties
+      :has-a nil))
+
+(define-layered-method attribute-value (object (attribute has-a))
+ (meta-model:explode-foreign-key object (slot-name attribute) :nilp t))		       
+		       
+(defdisplay ((attribute has-a) object)
+  (let ((args (plist-union (description.properties attribute) (has-a attribute)))
+	(val (attribute-value object attribute)))
+    (when val
+      (setf (getf args :type)
+	    'lol::one-line))	    
+    (apply #'display* val
+	   args)))
+
+
 ;;;; ** Has-Many attribute
 
 (defattribute has-many ()
   ()
   (:default-properties
       :add-new-label "Add New"
-    :sort-arguments  (list #'< :key #'(lambda (x) (funcall (car (list-keys x)) x)))))
+    :sort-arguments  (list #'< :key #'(lambda (x) (funcall (car (list-keys x)) x))))
+  (:default-initargs
+      :type 'lol::one-line))
 
 
-(defdisplay object (:description (attribute has-many))
+(define-layered-method
+    attribute-value (object (has-many has-many))
+  (slot-value object (slot-name has-many)))
+
+(defdisplay ((attribute has-many) object)
     ;
-  (<ucw:submit :action (add-to-has-many slot instance) :value (getp :add-new-label))
-  (let* ((i (apply #'sort (slot-value object (getp :slot-name))
-		  (getp :sort-arguments))))
-    (display component i
-	     :type'lol::one-line
-	     :layers '(+ wrap-link))))
+  ;(<ucw:submit :action (add-to-has-many slot instance) :value (add-new-label attribute))
+	    
+ (<:div  :style "clear:both;"
+	 (let* ((i (apply #'sort (slot-value object (slot-name attribute))
+			  (sort-arguments attribute))))
+	   (<:ul 
+	    (dolist* (x i)
+	      (<:li (display* x
+			      :type 'lol::one-line
+			      :layers '(+ wrap-link - label-attributes))))))))
 
 
 (defun find-many-to-many-class (slot-name instance)
@@ -35,13 +66,13 @@
 
 
 
-(defdisplay object (:description (attribute many-to-many))
+(defdisplay ((attribute many-to-many) object)
   (<:as-html "ASDASD"))
 
   #+nil(let ((instances (select-instances object t))
 	new-instance)
     (<:ul
-     (<:li (<ucw:button :action (add-new-relation component object (getp slot-name))
+     (<:li (<ucw:button :action (add-new-relation component object (.get slot-name))
 			(<:as-html "Add New")))
      (<:li  (<ucw:button :action (add-new-relation component object new-instance)
 			 (<:as-html "Add:"))
@@ -57,5 +88,5 @@
 	(<ucw:a :action (delete-relationship slot (second i) instance)
 		(<:as-html "(remove) "))
 	(display component object)))))
-  ;(display component (mapcar #'car (slot-value object (getp :slot-name))))
+  ;(display component (mapcar #'car (slot-value object (.get :slot-name))))
 		      

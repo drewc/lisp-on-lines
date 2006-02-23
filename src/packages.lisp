@@ -52,6 +52,7 @@
    :display-using-description
    :call-display
 
+
    ;;;;a wrapper for calling make-presentation
    :call-view
    :present-view
@@ -67,8 +68,11 @@
    :make-presentation
    :call-presentation
 
+   :find-occurence
+
    ;;attributes
    :attributes
+   :attribute-value
    :define-attributes
    :with-default-attributes
    :set-default-attributes

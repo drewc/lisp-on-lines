@@ -1,161 +1,143 @@
 (in-package :lisp-on-lines)
 
-
-;;;; The Standard Layer Hierarchy
+;;;; The Standard Layers
 (deflayer viewer)
-(deflayer editor (viewer))
-(deflayer creator (editor))
-
-;;;; 'Mixin' Layers
+(deflayer editor)
+(deflayer creator)
 (deflayer one-line)
-
-(deflayer wrap-form)
-
 (deflayer as-table)
+(deflayer as-string)
 
-(define-attributes (contextl-default)
-  (:viewer viewer)
-  (:editor editor)
-  (:creator creator))
+(defdisplay
+  :in-layer as-string (d o)
+  (do-attributes (a d)
+    (display-attribute a o)
+    (<:as-is " ")))
 
-
-(defmacro with-component ((component) &body body)
-  `(let ((self ,component))
-    (declare (ignorable self))
-    (flet ((display* (thing &rest args)
-	     (apply #'display ,component thing args))
-	   (display-using-description* (desc obj &optional props)
-	     (display-using-description desc ,component obj props)))
-      (declare (ignorable #'display* #'display-using-description*))
-      ,@body)))
+(defmethod list-slots (thing)
+  (list 'identity))
 
 
-(define-layered-function find-display-type (object))
+;;;; TODO : this doesn't work
 
-(define-layered-method find-display-type (object)
-  'viewer)
+(defaction call-display-with-context ((from component) object context &rest properties)
+  (call-component self (make-instance 'standard-display-component
+				      :context context
+				      :object object
+				      :args (if (cdr properties)
+						 properties
+						 (car properties)))))
 
-(define-layered-function find-display-layers (object))
+(defmacro call-display (component object &rest properties)
+  `(let ()
+    (call-display-with-context ,component ,object nil  ,@properties)))
 
-(define-layered-method find-display-layers (object)
-  "layered function"
-  nil)
+(defcomponent standard-display-component ()
+  ((context :accessor context :initarg :context)
+   (object :accessor object :initarg :object)
+   (args :accessor args :initarg :args)))
 
-(defmacro call-display (component object &rest args)
-  `(call-component ,component (make-instance 'standard-display-component
-			 :display #'(lambda (component)
-				      (with-component (component)
-					(display ,component ,object ,@args))))))
-
+(defmethod render ((self standard-display-component))
+  
+  (apply #'display self (object self) (args self)))
 
 
 ;;;; * Object displays.
 
 ;;;; We like to have a label for attributes, and meta-model provides a default.
-(defdisplay label
-    (:description (d (eql 'attribute-label)))
+(defdisplay ((desc (eql 'label)) label)
   (<:span
    :class "label"
    (<:as-html label)))
 
+;;;; TODO: all lisp types should have occurences and attributes defined for them.
 
-(define-layered-function display (component object &rest args)
-  (:documentation
-   "Displays OBJECT in COMPONENT. 
+(defdisplay ((description t) lisp-value)
+  (<:as-html lisp-value))
 
- default action is to FUNCALL-WITH-LAYERS the DISPLAY-USING-DESCRIPTION method."))
-
-(define-layered-method display
-    ((component t) (object standard-object) &rest args &key layers (type 'viewer)  &allow-other-keys)
-  (let* ((occurence (find-occurence object))
-	 (properties (attribute.properties
-		 (find-attribute occurence (intern (format nil "~A" type) :KEYWORD))))
-	 (layers (append (when type (loop for ty in (ensure-list type)
-					  nconc `(+ ,ty)))
-			 layers
-			 (getf properties :layers))))
-    (funcall-with-layers 
-     layers		 
-     #'display-using-description  occurence component object (plist-union args properties))))
-
-
-(define-layered-method display
-  ((component t) (object t) &rest args &key layers (type 'viewer) &allow-other-keys)
-  (funcall-with-layers 
-   layers		 
-   #'display-using-description  t component object args))
-
-
-(define-layered-function display-using-description (description component object properties)
-  (:documentation
-   "Render the object in component, using DESCRIPTION, which is an occurence, and attribute, or something else"))
-
-(define-layered-method display-using-description (description component object properties)
-  "The standard display simply prints the object"
-  (declare (ignore component properties description))
+(defdisplay (description (object string))
   (<:as-html object))
 
+(defdisplay (description object (component t))
+  "The default display for CLOS objects"
+  (print (class-name (class-of object)))
+  (dolist* (slot-name (list-slots object))
+  
+    (let ((boundp (slot-boundp object slot-name)))
+      (format t "~A~A : ~A" (strcat slot-name)
+	      (if boundp
+		  ""
+		  "(unbound)")
+	      (if boundp
+		  (slot-value object slot-name) "")))))
 
+(defdisplay ((description t) object)
+  "The default display for CLOS objects in UCW components"
+   (dolist* (slot-name (list-slots object))
 
-;;;; ** The default display
+      (let ((boundp (slot-boundp object slot-name)))
+	(<:label :class "lol-label"
+		 (display-attribute 'label  (strcat slot-name))
+	(if boundp
+	    ""
+	    "(unbound)"))
+      (<:as-html
+       (if boundp
+	   (slot-value object slot-name) "")))))
 
+;;;; ** The default displays for objects with a MEWA occurence
 
+(defdisplay (description object)
+ (<:div
+  :class "lol-display"	    
+  (do-attributes (attribute description)
+    (<:div
+     :class "lol-attribute-row"
+     (display-attribute attribute object)))))
 
 ;;;; ** One line
-(defdisplay object (:in-layer one-line)
-  "The one line presentation just displays the attributes with a #\Space between them"
-  (do-attributes* (attribute)
-	(display-current-attribute)
-	(<:as-html " ")))
+(defdisplay
+    :in-layer one-line (description object) 
+    "The one line presentation just displays the attributes with a #\Space between them"
+    (do-attributes (attribute description)
+      (display-attribute attribute object)
+      (<:as-html " ")))
  
 ;;;; ** as-table
 
-(defdisplay object (:in-layer as-table)
-  (<:table
-   (do-attributes* (a)
+(defdisplay :in-layer as-table (description object) 
+  (<:table 
+   (do-attributes (a description)
      (<:tr
-      (<:td  (<:as-html (a-getp :label)))
-      (<:td (display-current-attribute))))))
+      (<:td  :class "lol-label" (<:as-html (label a)))
+      (<:td (display-attribute a object))))))
 
 ;;;; List Displays
-(defdisplay (list list) ()
+(defdisplay (desc (list list))
   (<:ul
    (dolist* (item list)
-     (<:li  (apply #'display component item properties)))))
+     (<:li  (display* item)
+	    (<:as-html item)))))
 
 ;;;; Attributes 
-(defdisplay object (:in-layer
-	     editor
- 	     :description (attribute standard-attribute))
+(defdisplay
+    :in-layer editor
+    ((attribute standard-attribute) object)
     "Legacy editor using UCW presentations"
-    (warn "USING LEGACY EDITOR FOR ~A" (getf (find-properties attribute) :slot-name))
-  (let ((p (lol:make-view object :type :editor)))
-    (present-slot-view p (getf (find-properties attribute) :slot-name))))
+    
+    (warn "USING LEGACY EDITOR FOR ~A" (slot-name attribute)))
 
 (define-layered-method display-using-description
-  ((attribute standard-attribute) component object properties)
-  (<:as-html (attribute.type attribute) " ")
-    
+  ((attribute standard-attribute) object component)
+  (with-component (component)
+    (<ucw:a :action (call 'info-message :message (strcat (symbol-package (description.type attribute))":/::" (description.type attribute)))
+	    (<:as-html "*" )))
   (<:as-html (attribute-value object attribute)))
 
-(defdisplay (button (eql 'standard-form-buttons))
-    (:description (description t))
-    (<ucw:submit :action (ok component)
-		 :value "Ok."))
-
-(defdisplay object (:in-layer wrap-form
-		       :combination :around)
-  (<ucw:form
-   :action (refresh-component component)
-   (call-next-method)
-   (display component 'standard-form-buttons)))
 
 
-(defcomponent standard-display-component ()
-  ((display-function :accessor display-function :initarg :display)))
 
-(defmethod render ((self standard-display-component))
-  (funcall (display-function self) self))
+
 
 
        

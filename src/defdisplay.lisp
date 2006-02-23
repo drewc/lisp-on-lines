@@ -1,81 +1,145 @@
 (in-package :lisp-on-lines)
 
-(defmethod find-properties (object)
-  (list))
+(define-layered-function display-using-description (description object component)
+  (:documentation
+   "Render the object in component, 
+    using DESCRIPTION, which is an occurence, an attribute, or something else entirely."))
 
-(defmethod find-properties ((attribute standard-attribute))
-  (warn "atttributre properties ~A" (attribute.properties attribute))
-  (attribute.properties attribute))
+(define-layered-method
+    display-using-description (d o c)
+    (<:as-html "default :" o))
 
-(defmacro with-properties ((properties &optional prefix)  &body body)
-  (with-unique-names (p)
-    (let ((get (intern (string-upcase (if prefix (strcat prefix '-getp) "GETP"))))
-	  (set (intern (string-upcase (if prefix (strcat prefix '-setp) "SETP"))))
-	  (props (intern (string-upcase (if prefix (strcat prefix '-properties) "PROPERTIES")))))
-      `(let ((,p ,properties))
-	(flet ((,get  (p)
-		 (getf ,p p))
-	       (,set (p v)
-		 (setf (getf ,p p) v))
-	       (,props ()
-		 ,p))
-	  (declare (ignorable #',get #',set #',props))
-	  ,@body)))))
+(defmethod find-layer-for-type (type)
+  type)
 
+
+(define-layered-function display (component object &rest args)
+  (:documentation
+   "Displays OBJECT in COMPONENT."))
+
+(define-layered-method display ((component t) (object t)
+				&rest properties
+				&key type
+				&allow-other-keys)
+    "The default display calls out via FUNCALL-WITH-LAYERS to tche DISPLAY-USING-DESCRIPTION method."
+
+    (let* ((occurence (find-occurence object))
+	   (description (or (find-display-attribute
+			     occurence
+			     (setf type (or type (description.type occurence))))
+			   occurence)))
+      (if description
+	  (dletf (((description.type occurence) type)
+		  ((description.layers description) (append `(+
+
+							      ;;find-layer-for-type is a
+							      ;; backwards compat thing
+							   ,(find-layer-for-type
+							     type))
+							 (description.layers description)))
+		  ((attributes description) (or
+					     (attributes description)
+					     (list-slots object))))
+	    (funcall-with-description
+	     description properties
+	     #'display-using-description description object component))
+	  (error "no description for ~A" object))))
 
 ;;;;; Macros
-(defmacro do-attributes ((var occurence attributes) &body body)
+;;;; TODO: " should really be a funcall-with function with a small wrapper."
+
+(defun funcall-with-description (description properties function &rest args)
+  (if description
+      (dletf* (((description.type description) (or
+						(getf properties :type)
+						(description.type description)))
+	    
+	       ((description.layers description) (append 
+							 (description.layers description)
+							 (getf properties :layers)))
+	       ((description.properties description) properties))
+	(funcall-with-layers 
+	 (description.layers description)
+	 #'(lambda ()
+	     (funcall-with-special-initargs
+	      description properties
+	      #'(lambda ()
+		  (apply function args))))))
+      (apply function args)))
+
+
+
+(defmacro with-description ((description &rest properties) &body body)
+  `(funcall-with-description ,description (if ',(cdr properties)
+					       (list ,@properties)
+					       ,(car properties))
+    #'(lambda ()
+	,@body)))
+
+(defmacro do-attributes ((var description &optional (attributes `(attributes ,description))) &body body)
   (with-unique-names (att properties type)
-    `(loop for ,att in ,attributes
-      do (let* ((,att (ensure-list ,att))
+    `(dolist* (,att  ,attributes)
+      (let* ((,att (ensure-list ,att))
                 (,properties (rest ,att))
                 (,type (getf ,properties :type))
-                (,var (if ,type
-                          (make-attribute :name (first ,att) :type ,type :properties ,properties)
-                          (find-attribute ,occurence (first ,att)))))
-           (with-properties ((plist-union (rest ,att) (find-properties ,var)) ,var)
-             ,@body)))))
+                (,var (let ((a (find-attribute ,description (first ,att))))
+			(if ,type
+			    (apply #'make-attribute :name (first ,att) :type ,type ,properties)
+			    (if a a (make-attribute :name (first ,att) :slot-name (first ,att)))))))
+	(funcall-with-description ,var ,properties
+	  #'(lambda () ,@body))))))
+
+(defmacro with-component ((component) &body body)
+  `(let ((self ,component))
+    (declare (ignorable self))
+    (flet ((display* (thing &rest args)
+	     (apply #'display ,component thing args))
+	   (display-attribute (attribute obj &optional props)
+	     (if props
+		 (funcall-with-description
+		  attribute props
+		  #'display-using-description attribute obj ,component)
+		 (display-using-description attribute obj ,component))))
+      (declare (ignorable #'display* #'display-attribute))
+      ,@body)))
+
+(defmacro defdisplay (&body body)
+  (loop with in-layerp = (eq (car body) :in-layer)
+	with layer = (if in-layerp (cadr body) 't)
+	for tail on (if in-layerp (cddr body) body)
+	until (listp (car tail))
+	collect (car tail) into qualifiers
+	finally
+	(when (member :in-layer qualifiers)
+	  (error "Incorrect occurrence of :in-layer in defdisplay. Must occur before qualifiers."))
+	(return
+	  (destructuring-bind (description object &optional component) (car tail) 
+	    (with-unique-names (d c)
+	      (let (standard-description-p)
+		`(define-layered-method
+		  display-using-description
+		  :in-layer ,layer
+		  ,@qualifiers
+		
+		  (,(cond
+		     ((listp description)
+		      (setf d (car description))
+		      description)
+		     (t
+		      (setf d description)
+		      (setf standard-description-p t)
+		      `(,d description)))
+		   ,object
+		   ,(cond
+		     ((null component)
+		      `(,c component))
+		     ((listp component)
+		      (setf c (car component))
+		      component)
+		     (t
+		      (setf c component)
+		      `(,c component))))
+		  (with-component (,c)  
+			 ,@(cdr tail)))))))))
 
 
-
-
-(defmacro defdisplay (object (&key in-layer combination
-				   (description t
-						description-supplied-p)
-				   (component 'component
-					      component-supplied-p))
-		      &body body)
-  (with-unique-names (d c p)
-    (let ((obj (car (ensure-list object))))
-      `(define-layered-method display-using-description
-	,@(when in-layer `(:in-layer ,in-layer))
-	,@(when combination`(,combination))
-	(,(cond
-	   (description-supplied-p
-	    (setf d description))
-	   ((null description)
-	    d)
-	   (t
-	    `(,d standard-occurence)))
-	 ,(cond
-	   (component-supplied-p
-	    (setf c component))
-	   ((null component)
-	    c)
-	   (t
-	    `(,c component)))
-	 ,object ,p)
-	(with-component (,c) 
-	  (with-properties ((plist-union ,p (find-properties ,(car (ensure-list d) ))))
-	    ,(if (not description-supplied-p)
-		 `(progn
-		   
-		   (setp :attributes (or (getp :attributes) (list-slots ,obj)))		   
-		   (macrolet ((do-attributes* ((var &optional attributes) &body body)
-				`(do-attributes (,var ,',d (or ,attributes (getp :attributes)))
-				  
-				  (flet ((display-current-attribute ()
-					   (display-using-description* ,var ,',obj (,(intern (strcat var "-PROPERTIES"))))))
-				  ,@body))))
-		     ,@body))
-		 `(progn ,@body))))))))

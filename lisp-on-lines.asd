@@ -12,7 +12,11 @@
     :components ((:static-file "lisp-on-lines.asd")
 		 (:file "src/packages")
 		 (:module :src
-			  :components ((:file "static-presentations")
+			  :components ((:file "special-initargs")
+				       (:file "properties")
+				       ;;;; legacy UCW presentations
+				       (:file "static-presentations")
+				       
 				       (:file "mewa")
 				       (:file "validation")
 				       (:file "validation/email-address")
@@ -22,12 +26,17 @@
 				       (:file "slot-presentations/date")
 				       (:file "defdisplay")
 				       (:file "standard-display")
+				       (:file "standard-occurence")
 				       (:file "standard-attributes")
+				       (:file "dojo-attributes")
 				       (:file "standard-wrappers")
 				       (:file "relational-attributes")
 
 				       (:file "backwards-compat"))
 			  :serial t)
+		 (:module :attributes
+			  :pathname "src/attributes/"
+			  :components ((:file "numbers")))
 		 (:module :components
 			  :pathname "src/components/"
 			  :components ((:file "range-list")

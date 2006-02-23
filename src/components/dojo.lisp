@@ -72,8 +72,7 @@
 		      ,(lol::make-action-url
 			,component
 			(progn
-			  ,@actions
-			  (call-component nil (output-component self))))))
+			  ,@actions))))
 		 ,@ (unless
 			,(getf args :post-content)
 		      `(:post-content (+ ,,@(loop for c in callbacks
