@@ -505,7 +505,6 @@ in that object presentation."
 		       type) 
 		   (plist-union initargs (when a
 					   (description.properties a))))))
-    (warn "attribute? ~A ~A " (and a (description.type  (find-attribute object type)) ) 					   (description.properties a))
     (setf (slot-value i 'instance) object)
     (initialize-slots i)
     (setf (slot-value i 'initializedp) t)
