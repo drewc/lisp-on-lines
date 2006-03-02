@@ -77,7 +77,17 @@ Returns T if the ATTRIBUTE-VALUE in INSTANCE passes all the validation functions
 		:attribute attribute))))
 
 
-
+(defun validate-true (instance attribute)
+  
+  (warn "validate ~A ~A" instance attribute)
+  (let ((value (lol::attribute-value instance attribute)))
+    (warn "value is ~A" value)
+    (unless value 
+	 
+      (signal 'attribute-validation-condition
+	      :message (format nil "~A must be true."
+			       (getf (attribute.plist attribute) :label))
+	      :attribute attribute))))
 
 
 

@@ -76,7 +76,7 @@
 (defclass %date-field (date-field)
   ((day :component (%integer-range-field :min-value 1 :max-value 31))
    (month :component (%integer-range-field :min-value 1 :max-value 12))
-   (year :component (%integer-range-field :min-value 2005 :max-value 2015) ))
+   (year :component (%integer-range-field :min-value 2006 :max-value 2015) ))
   (:metaclass standard-component-class))
 
 (defmethod shared-initialize :after ((field %date-field) slot-names
