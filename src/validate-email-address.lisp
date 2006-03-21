@@ -22,5 +22,5 @@
 	 (not (< 0 (length value))))
 	(signal 'attribute-validation-condition
 		:message (format nil "You must enter a value for ~A."
-			      (getf (attribute.plist attribute) :label))
+				 (getf (description.properties attribute) :label))
 		:attribute attribute))))

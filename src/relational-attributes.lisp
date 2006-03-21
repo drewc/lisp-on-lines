@@ -4,14 +4,28 @@
 
 
 ;;;; ** has-a
+;;;; Used for foreign keys, currently only works with clsql.
 
 (defattribute has-a ()
   ()
   (:default-properties
-      :has-a nil))
+      :has-a nil
+    :test 'meta-model::generic-equal))
 
+;;
 (define-layered-method attribute-value (object (attribute has-a))
  (meta-model:explode-foreign-key object (slot-name attribute) :nilp t))		       
+
+(define-layered-method (setf attribute-value) ((value standard-object) object (attribute has-a))
+  (let ((val (slot-value value (find-if (curry #'primary-key-p value) (list-keys value)))))
+    (setf (attribute-value object attribute) val)))
+
+
+
+(define-layered-function find-all-foreign-objects (o a))
+
+(define-layered-method find-all-foreign-objects (object (attribute has-a))
+  (select (meta-model:find-join-class object (slot-name attribute)) :flatp t))
 		       
 (defdisplay ((attribute has-a) object)
   (let ((args (plist-union (description.properties attribute) (has-a attribute)))
@@ -21,6 +35,18 @@
 	    'lol::one-line))	    
     (apply #'display* val
 	   args)))
+
+
+(defdisplay
+  :in-layer editor ((attribute has-a) object)
+ (<ucw:select
+  :accessor (attribute-value object attribute)
+
+  :test (test attribute)
+  (dolist* (obj (find-all-foreign-objects object attribute))
+    (<ucw:option
+     :value obj
+     (display* obj :type 'as-string)))))
 
 
 ;;;; ** Has-Many attribute
@@ -33,10 +59,9 @@
   (:default-initargs
       :type 'lol::one-line))
 
-
 (define-layered-method
     attribute-value (object (has-many has-many))
-  (slot-value object (slot-name has-many)))
+    (slot-value object (slot-name has-many)))
 
 (defdisplay ((attribute has-many) object)
     ;

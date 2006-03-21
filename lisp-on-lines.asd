@@ -11,6 +11,8 @@
 (defsystem :lisp-on-lines
     :components ((:static-file "lisp-on-lines.asd")
 		 (:file "src/packages")
+		 (:module :patches			  
+			  :components ((:file "yaclml")))
 		 (:module :src
 			  :components ((:file "special-initargs")
 				       (:file "properties")
@@ -31,6 +33,8 @@
 				       (:file "dojo-attributes")
 				       (:file "standard-wrappers")
 				       (:file "relational-attributes")
+
+				       (:file "lines")
 
 				       (:file "backwards-compat"))
 			  :serial t)

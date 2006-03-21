@@ -3,16 +3,28 @@
 ;;;; The Standard Layers
 (deflayer viewer)
 (deflayer editor)
+
+(defdisplay
+    :in-layer editor :around (description object)
+ "It is useful to remove the viewer layer when in the editing layer.
+This allows us to dispatch to a subclasses editor."
+ (with-inactive-layers (viewer)
+   (call-next-method)))
+
 (deflayer creator)
 (deflayer one-line)
 (deflayer as-table)
+
+
+
 (deflayer as-string)
 
 (defdisplay
   :in-layer as-string (d o)
-  (do-attributes (a d)
-    (display-attribute a o)
-    (<:as-is " ")))
+  (with-inactive-layers (editor viewer creator one-line as-table label-attributes)
+    (do-attributes (a d)
+      (display-attribute a o)
+      (<:as-is " "))))
 
 (defmethod list-slots (thing)
   (list 'identity))
@@ -44,11 +56,7 @@
 
 ;;;; * Object displays.
 
-;;;; We like to have a label for attributes, and meta-model provides a default.
-(defdisplay ((desc (eql 'label)) label)
-  (<:span
-   :class "label"
-   (<:as-html label)))
+
 
 ;;;; TODO: all lisp types should have occurences and attributes defined for them.
 
@@ -89,10 +97,14 @@
 
 (defdisplay (description object)
  (<:div
-  :class "lol-display"	    
+  :class "lol-display"
+  (when (label description)
+    (<:span
+     :class "title"
+     (<:as-html (label description))))
   (do-attributes (attribute description)
     (<:div
-     :class "lol-attribute-row"
+     :class "attribute"
      (display-attribute attribute object)))))
 
 ;;;; ** One line

@@ -1,5 +1,20 @@
 (in-package :lol)
 
+(defclass form-element (widget-component)
+  ((client-value :accessor client-value :initform ""
+		 :initarg :client-value
+                 :documentation "Whetever the client's browse sent for this form element."
+                 :backtrack t)
+   (lisp-value :accessor lisp-value :initform +uninitialized+
+               :initarg :lisp-value
+               :documentation "The current lisp object in this form element."
+               :backtrack t))
+  (:metaclass standard-component-class)
+  (:documentation "A single value in a form.
+
+A form-element is, simply put, a wrapper for a value in an html
+form."))
+
 ;;;; Expiry date picker
 
 (defslot-presentation date-slot-presentation (clsql-wall-time-slot-presentation)
@@ -105,20 +120,7 @@ This obviously implies that you can't have a form element whose
 real value is +uninitialized+, since +uninitialized+ is a ucw
 internal symbol this shouldn't be a problem.")
 
-(defclass form-element (widget-component)
-  ((client-value :accessor client-value :initform ""
-		 :initarg :client-value
-                 :documentation "Whetever the client's browse sent for this form element."
-                 :backtrack t)
-   (lisp-value :accessor lisp-value :initform +uninitialized+
-               :initarg :lisp-value
-               :documentation "The current lisp object in this form element."
-               :backtrack t))
-  (:metaclass standard-component-class)
-  (:documentation "A single value in a form.
 
-A form-element is, simply put, a wrapper for a value in an html
-form."))
 
 (defgeneric read-client-value (element)
   (:method ((element form-element))

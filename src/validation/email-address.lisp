@@ -24,5 +24,5 @@
       (when (not (and (equal start 0) (equal end (length value))))
 	(signal 'attribute-validation-condition
 		:message (format nil "~A must be a valid email address."
-			      (getf (attribute.plist attribute) :label))
+				 (getf (description.properties attribute) :label))
 		:attribute attribute)))))

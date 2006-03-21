@@ -115,8 +115,6 @@ Attributes are the metadata used to display, validate, and otherwise manipulate 
       (defmethod find-attribute-class-for-type ((type (eql ',type)))
 	',name))))
 
-
-
 (define-layered-class
     display-attribute (attribute)
     ()
@@ -263,11 +261,10 @@ otherwise, (setf find-attribute)"
 	       (when (slot-boundp instance (attribute.name attribute))
 		 (slot-value instance (attribute.name attribute)))))))
 
-(define-layered-function (setf attribute-value)  (value instance attribute))
+(define-layered-function (setf attribute-value) (value instance attribute))
 
 (define-layered-method
     (setf attribute-value) (value instance (attribute standard-attribute))
-	       
   (with-slots (setter slot-name) attribute 
     (cond ((and (slot-boundp attribute 'setter) setter)
 
@@ -278,6 +275,7 @@ otherwise, (setf find-attribute)"
 	   (setf (slot-value instance (attribute.name attribute)) value))
 	  (t
 	   (error "Cannot set ~A in ~A" attribute instance)))))
+
 
 
 ;;;; ** Default Attributes

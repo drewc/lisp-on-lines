@@ -3,39 +3,38 @@
 (deflayer dojo)
 
 (define-layered-class
-    attribute :in-layer dojo ()
+    description :in-layer dojo ()
   ((dojo-type :accessor dojo-type :initarg :dojo-type :initform nil :special t)))
 
-
-(defgeneric display-as-dojo-type (type attribute object component))
+(define-layered-function display-as-dojo-type (type description object component))
 
 (defdisplay
-  :in-layer dojo :after ((attribute standard-attribute) object)
- (when (dojo-type attribute)
-   (display-as-dojo-type (dojo-type attribute) attribute object self)))
+  :in-layer dojo :after (description object)
+ (when (dojo-type description)
+   (display-as-dojo-type (dojo-type description) description object self)))
 
-(defcomponent dojo-test (window-component)
-  (
-   (results :accessor results :initarg :results)))
+(defcomponent combo-results ()
+  ())
 
-(defmethod render ((self dojo-test))
+(defmethod render ((self combo-results))
   (<:as-is (js:js* `(array
 		     ,@(loop for r in (results self)
 			     for n upfrom 0
 			     collect `(array , 
 				       (with-output-to-string (s)
 					 (yaclml:with-yaclml-stream s
-					   (display self r :type 'as-string))) ,n))))))
+					   (display self r :type 'as-string)))
+				       ,n))))))
 
 
-(defmethod display-as-dojo-type ((type (eql 'combo-box)) attribute object component)
+(define-layered-method display-as-dojo-type ((type (eql 'combo-box)) attribute object component)
   
   (let* ((search-function (search-function attribute))
 	(select-function (select-function attribute))
-	(select-callback (ucw::make-new-callback (lambda (x)
-						   (warn "setting index to ~A" 							    (parse-integer x))
-						   (funcall select-function 
-							    (parse-integer x))))))
+	(select-callback (ucw::make-new-callback
+			  (lambda (x)
+			    (funcall select-function 
+				     (parse-integer x))))))
     "The combo box widget"
   (<ucw:script
    `(dojo.require "dojo.*")
@@ -54,7 +53,7 @@
 				 component
 				 (call-component
 				  (context.window-component *context*)
-				  (make-instance 'dojo-test
+				  (make-instance 'combo-results
 						 :results
 						 (funcall search-function
 							  (attribute-value object attribute)))))

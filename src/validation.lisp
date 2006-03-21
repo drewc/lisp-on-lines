@@ -30,7 +30,7 @@ Returns T if the ATTRIBUTE-VALUE in INSTANCE passes all the validation functions
 
 
 (defmethod find-validation-functions (instance (attribute standard-attribute))
-  (getf (attribute.plist attribute) :validate-using))
+  (getf (description.properties attribute) :validate-using))
 
 
 ;;;; ** Instances
@@ -73,7 +73,7 @@ Returns T if the ATTRIBUTE-VALUE in INSTANCE passes all the validation functions
 	 (not (< 0 (length value))))
 	(signal 'attribute-validation-condition
 		:message (format nil "You must enter a value for ~A."
-			      (getf (attribute.plist attribute) :label))
+				 (getf (description.properties attribute) :label))
 		:attribute attribute))))
 
 
@@ -86,7 +86,7 @@ Returns T if the ATTRIBUTE-VALUE in INSTANCE passes all the validation functions
 	 
       (signal 'attribute-validation-condition
 	      :message (format nil "~A must be true."
-			       (getf (attribute.plist attribute) :label))
+			       (getf (description.properties attribute) :label))
 	      :attribute attribute))))
 
 

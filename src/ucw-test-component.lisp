@@ -1,18 +1,32 @@
 (in-package :lisp-on-lines)
 
-;;;; LoL CLOS Test Class
+;;;; LoL CLOS Tests
+;;;; 
 (defclass lol-test-class ()
-  ((test-string :initform "test string"))
+  ((test-slot-value :initform "slot-value")
+   (test-string :initform "Test String"))
   (:documentation "foo"))
 
-(set-default-attributes 'lol-test-class)
+(defvar *foo* nil)
+
+(defvar *standard-layers* '(viewer editor creator one-line as-string))
 
 (define-attributes (lol-test-class)
-  (test-string t :label "String :"))
+  (test-getter t
+	       :label "Getter"
+	       :getter (constantly "Hello World"))
+  (test-getter/setter t
+	       :label "Getter/Setter:"
+	       :getter (lambda ()
+			 *foo*)
+	       :setter #'(lambda (value)
+			   (setf *foo* value)))
+  (test-slot-value t)
+  (test-string string :label "String" :documentation))
   
 (defcomponent test-component ()
-  ((display-types :accessor display-types :initform (list 'viewer 'editor 'creator 'one-line 'as-string))
-   (current-type :accessor current-type :initform 'viewer)
+   (current-layer :accessor current-type :initform 'viewer)
+   (layer-spec :accessor layer-spec :initform nil)
    (instance :accessor instance :initform (make-instance 'test-class))))
 
 (defmethod render ((self test-component))
@@ -21,22 +35,13 @@
     (with-component (self)
       (<ucw:form
        :action (refresh-component self)
-       (<ucw:select :accessor (current-type self)
+       (<ucw:select :accessor (current-layer self)
 		    (dolist* (type (display-types self))
 		      (<ucw:option :value type (<:as-html type))))
        (<:input :type "Submit" :value "update")
        (<:fieldset
 	(<:legend (<:as-html (current-type self)))
-	(display test :type (current-type self)))))
-
-    (<:div
-     (<:h2
-      (<:as-html "UCW Presentation based displays (the old school"))
-     (dolist (type '(:viewer :editor :creator :one-line :as-string))
-       (<:h3 (<:as-html type))
-       (present-view (test type self))
-       (<ucw:a :action (call-view (test type self))
-	       (<:as-html "Call to " type))))))
+	(display test :type (current-type self)))))))
 
 
 (defcomponent standard-display-component ()

@@ -17,6 +17,7 @@
    :time-difference
    :make-time
    :time-ymd
+   :date-ymd
    :date
    :get-time
    :time-element

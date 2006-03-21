@@ -1,6 +1,7 @@
 (in-package :lisp-on-lines)
 
 (define-layered-function display-using-description (description object component)
+;  (:argument-precedence-order )
   (:documentation
    "Render the object in component, 
     using DESCRIPTION, which is an occurence, an attribute, or something else entirely."))
@@ -46,7 +47,7 @@
 	  (error "no description for ~A" object))))
 
 ;;;;; Macros
-;;;; TODO: " should really be a funcall-with function with a small wrapper."
+
 
 (defun funcall-with-description (description properties function &rest args)
   (if description
@@ -61,8 +62,8 @@
 	(funcall-with-layers 
 	 (description.layers description)
 	 #'(lambda ()
-	     (funcall-with-special-initargs
-	      description properties
+	     (contextl::funcall-with-special-initargs
+	      (list (cons description properties))
 	      #'(lambda ()
 		  (apply function args))))))
       (apply function args)))

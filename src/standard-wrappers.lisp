@@ -3,16 +3,21 @@
 ;;;;; Wrap a display in "back buttons"
 (deflayer wrap-back-buttons)
 
+(defvar *back-buttons-wrapped-p* nil)
+
 (defdisplay
-    :in-layer wrap-back-buttons :around
-    (description object)
-    
-    (<ucw:a :class "wiz-button previous" :action (ok component t)
-	    (<:as-html "Go Back"))
-    (<:div :style "clear:both;"
-	   (call-next-method))
-    (<ucw:a :class "wiz-button previous" :action (ok component t)
-	    (<:as-html "Go Back")))
+  :in-layer wrap-back-buttons :around
+  (description object)
+  (if  *back-buttons-wrapped-p*
+       (call-next-method)
+       (let ((*back-buttons-wrapped-p* t))
+	
+	 (<ucw:a :class "wiz-button previous" :action (ok self t)
+		 (<:as-html "Go Back"))
+	 (<:div :style "clear:both;"
+		(call-next-method))
+	 (<ucw:a :class "wiz-button previous" :action (ok self t)
+		 (<:as-html "Go Back")))))
 
 ;;;; Wrap an object display in with a link to the object
 
@@ -51,4 +56,23 @@
 
      (call-next-method)
      ;(display* 'standard-form-buttons)
-   )))
+     )))
+
+;;;; wrap a DIV
+
+
+(deflayer wrap-div)
+
+(define-layered-class description
+  :in-layer wrap-div ()
+  ((div-attributes :accessor div-attributes :initarg :div :special t :initform nil)))
+
+(defdisplay :in-layer wrap-div :around (description object)
+ (let ((args (div-attributes description)))
+   (with-inactive-layers (wrap-div)
+     (yaclml::funcall-with-tag
+      (cons '<:div args)
+      (lambda ()
+	(call-next-method))))))
+
+     
