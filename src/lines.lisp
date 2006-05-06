@@ -21,13 +21,16 @@
 	
 	,(or (cdr docstring-and-body) (car docstring-and-body)))))
 
-
-(defun line-out (component object &key (line #'line-in) args)
+(defun line-out (component object &rest args &key (line #'line-in) &allow-other-keys )
   (apply #'display component object (append args (funcall line object))))
+
+(defline line-in (thing)
+  '())
+
 
 (defmacro call-line (from line &rest args)
   (with-unique-names (lines object)
     `(multiple-value-bind (,lines ,object)
-      (funcall ,line)
-      (call-display-with-context ,from ,object nil (append ,args ,lines)))))
+	 (funcall ,line)
+       (call-display-with-context ,from ,object nil (append ,args ,lines)))))
 

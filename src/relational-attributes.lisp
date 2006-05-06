@@ -46,7 +46,7 @@
   (dolist* (obj (find-all-foreign-objects object attribute))
     (<ucw:option
      :value obj
-     (display* obj :type 'as-string)))))
+     (display* obj :layers '(+ as-string))))))
 
 
 ;;;; ** Has-Many attribute
@@ -73,7 +73,7 @@
 	   (<:ul 
 	    (dolist* (x i)
 	      (<:li (display* x
-			      :type 'lol::one-line
+			      :type 'lol::as-string
 			      :layers '(+ wrap-link - label-attributes))))))))
 
 

@@ -19,6 +19,10 @@
     :accessor description.properties
     :initform nil
     :special t)
+   (described-object
+    :layered-accessor object
+    :initform nil
+    :special t)
    (description-attributes
     :accessor attributes
     :initarg :attributes
@@ -68,12 +72,12 @@ Attributes are the metadata used to display, validate, and otherwise manipulate 
 
 (define-layered-class
     attribute (description)
-    ((name :layered-accessor attribute.name
+    ((attribute-name :layered-accessor attribute.name
 	   :initarg :name
 	   :initform (gensym "ATTRIBUTE-")
 	   :special t)
      (occurence :accessor occurence :initarg :occurence :initform nil)
-     (label :initarg :label :accessor label :initform nil :special t)))
+     (label :initarg :label :layered-accessor label :initform nil :special t)))
 
 ;;;; * Attributes
 (defmethod print-object ((self attribute) stream)
@@ -90,7 +94,9 @@ Attributes are the metadata used to display, validate, and otherwise manipulate 
     (:documentation "Attributes are used to display a part of a thing, such as a slot of an object, a text label, the car of a list, etc."))
 
 (defmacro defattribute (name supers slots &rest args)
-  (let ((type (or (second (assoc :type-name args)) name))
+  (let* (
+	(type-provided-p (second (assoc :type-name args)))
+	(type (or type-provided-p name))
 	(layer (or (second (assoc :in-layer args)) nil))
 	(properties (cdr (assoc :default-properties args)))
 	(cargs  (remove-if #'(lambda (key)
@@ -112,8 +118,9 @@ Attributes are the metadata used to display, validate, and otherwise manipulate 
 	  (:default-initargs :properties (list ,@properties)
 	    ,@ (cdr (assoc :default-initargs args))))
 
-      (defmethod find-attribute-class-for-type ((type (eql ',type)))
-	',name))))
+      ,(unless (not type-provided-p)
+	`(defmethod find-attribute-class-for-type ((type (eql ',type)))
+	   ',name)))))
 
 (define-layered-class
     display-attribute (attribute)
@@ -346,260 +353,6 @@ otherwise, (setf find-attribute)"
   (copy-list `(,(gen-ptype type) 
 	       :label ,label
 	       :slot-name ,slot-name))) 
-
-
-	  
-;;;; DEPRECIATED: Mewa presentations
-;;;; this is legacy cruft. 
-
-
-(defcomponent mewa ()
-  ((instance :accessor instance :initarg :instance) 
-   (attributes
-    :initarg :attributes
-    :accessor attributes
-    :initform nil)
-   (attributes-getter
-    :accessor attributes-getter
-    :initform #'get-attributes
-    :initarg :attributes-getter)
-   (attribute-slot-map
-    :accessor attribute-slot-map
-    :initform nil)
-   (global-properties
-    :initarg :global-properties
-    :accessor global-properties
-    :initform nil)
-   (classes 
-    :initarg :classes 
-    :accessor classes 
-    :initform nil)
-   (use-instance-class-p 
-    :initarg :use-instance-class-p 
-    :accessor use-instance-class-p 
-    :initform t)
-   (initializedp :initform nil)
-   (modifiedp :accessor modifiedp :initform nil :initarg :modifiedp)
-   (modifications :accessor modifications :initform nil)))
-
-
-(defmethod attributes :around ((self mewa))
-  (let ((a (call-next-method)))
-    (or a (funcall (attributes-getter self) self))))
-
-(defgeneric get-attributes (mewa))
-
-(defmethod get-attributes ((self mewa))
-  (if (instance self)
-  (append (meta-model:list-slots (instance self))
-	  (meta-model:list-has-many (instance self)))
-  nil))
-
-(defmethod find-instance-classes ((self mewa))
-  (mapcar #'class-name 
-	  (it.bese.arnesi.mopp:compute-class-precedence-list (class-of (instance self)))))
-
-(defun make-presentation-for-attribute-list-item
-    (occurence att-name plist parent-presentation &optional type)
-  (declare (type list plist) (type symbol att-name))
-  "This is a ucw specific function that will eventually be factored elsewhere."
-  (let* ((attribute (find-attribute occurence att-name))
-	 (type (when attribute (or type (description.type attribute))))
-	 (class-name 
-	  (or (gethash (if (consp type)
-			   (car type)
-			   type)
-		       *presentation-slot-type-mapping*) 
-	      (error  "Can't find slot type for ~A in ~A from ~A" att-name occurence parent-presentation))))
-
-    ;(warn "~%~% **** Making attribute ~A ~%~%" class-name)
-   (cons (attribute.name attribute) (apply #'make-instance 
-				   class-name
-				   (append (plist-nunion
-					    plist
-					    (plist-union
-					     (global-properties parent-presentation)
-					     (description.properties attribute)))
-					   (list :size 30 :parent parent-presentation))))))
-
-(defmethod find-applicable-attributes-using-attribute-list (occurence attribute-list)
-  "Returns a list of functions that, when called with an object presentation, 
-returns the ucw slot presentation that will be used to present this attribute 
-in that object presentation."
-    (loop for att in attribute-list
-	  with funs = (list)
-	  do (let ((att att)) (cond 
-	       ;;simple casee
-	       ((symbolp att) 
-		(push #'(lambda (p)
-			  (make-presentation-for-attribute-list-item occurence att nil p))
-		      funs))
-	       ;;if the car is a keyword then this is an inline def
-	       ;; drewc nov 12 2005:
-	       ;; i never used this, and never told anybody about it.
-	       ;; removing it.
-	       #+ (or) ((and (listp x) (keywordp (car x)))
-			(let ((att (apply #'make-attribute x)))
-			  (setf (cddr att) 
-				(plist-union (cddr att) (global-properties self)))
-			  att))
-	     
-	       ;; if the plist has a :type	  
-	       ((and (listp att) (getf (cdr att) :type))
-		(let ((type (getf (cdr att) :type)))
-		  (push #'(lambda (p)
-			    (make-presentation-for-attribute-list-item
-			     occurence (first att)
-			     (cdr att)
-			     p
-			     type))
-			funs)))
-	       ;;finally if we are just overiding the props
-	       ((and (listp att) (symbolp (car att)))
-		(push #'(lambda (p)
-			  (make-presentation-for-attribute-list-item occurence (first att) (rest att) p))
-		      funs))))
-	  finally (return (nreverse funs))))
-
-
-(defun find-attribute-names (mewa)
-  (mapcar #'(lambda (x)
-	      (if (listp x)
-		  (first x)
-		  x))
-	  (attributes mewa)))
-
-(defmethod find-applicable-attributes ((self mewa))
-  (if (attributes self)
-      (find-applicable-attributes-using-attribute-list (instance self) (attributes self))
-      (find-applicable-attributes-using-attribute-list (instance (get-attributes self)))))
-
-
-(defmethod find-slot-presentations ((self mewa))
-  (mapcar #'(lambda (a) (funcall a self))
-	  (find-applicable-attributes self)))
-
-(defmethod find-attribute-slot ((self mewa) (attribute symbol))
-  (cdr (assoc attribute (attribute-slot-map self))))
-
-(defmethod initialize-slots ((self mewa))
-  (when (instance self)
-    (when (use-instance-class-p self)
-      (setf (classes self) 
-	    (append (find-instance-classes self)
-		    (classes self))))
-    (setf (attribute-slot-map self) (find-slot-presentations self))
-    (setf (slots self) (mapcar #'(lambda (x)(cdr x)) (attribute-slot-map self )))))
-
-
-(defmethod make-presentation ((object t) &key (type :viewer) (initargs nil))
-  (warn "making old-style for ~A ~A ~A" object type initargs)
-  ;(warn "Initargs : ~A" initargs)
-  (let* ((a (find-attribute object type))
-	 (d-a (when a (find-display-attribute (occurence a) (description.type (occurence  a)))))
-	 (i (apply #'make-instance
-		   (if d-a 
-		       (find-old-type (description.type a))
-		       type) 
-		   (plist-union initargs (when a
-					   (description.properties a))))))
-    (setf (slot-value i 'instance) object)
-    (initialize-slots i)
-    (setf (slot-value i 'initializedp) t)
-    i))
-
-(defmethod make-presentation ((list list) &key (type :listing) (initargs nil))  
-  (let ((args (append
-	       `(:type ,type) 
-	       `(:initargs 
-		 (:instances ,list
-		  ,@initargs)))))
-    
-    (apply #'make-presentation (car list) args)))
-
-(defmethod initialize-slots-place ((place ucw::place) (mewa mewa))
-  (setf (slots mewa) (mapcar #'(lambda (x) 
-			       (prog1 x 
-				 (setf (component.place x) place)))
-                            (slots mewa))))
-  
-(arnesi:defmethod/cc call-component :before ((from standard-component) (to mewa))
-  (unless (slot-value to 'initializedp)
-    (initialize-slots to))
-  (setf (slot-value to 'initializedp) t)
-  (initialize-slots-place (component.place from) to)
-  to)
-
-
-
-(defmacro call-presentation (object &rest args)
-  `(present-object ,object :presentation (make-presentation ,object ,@args)))
-
-
-(defcomponent about-dialog (option-dialog)
-  ((body :initarg :body)))
-
-(defmethod render-on ((res response) (self about-dialog))
-  (call-next-method)
-  (render-on res (slot-value self 'body)))
-
-
-(defaction cancel-save-instance ((self mewa))
-  (cond  
-    ((meta-model::persistentp (instance self))
-      (meta-model::update-instance-from-records (instance self))
-      (answer self))
-    (t (answer nil))))
-
-(defaction save-instance ((self mewa))
-  (meta-model:sync-instance (instance self))
-  (setf (modifiedp self) nil)
-  (answer self))
-
-(defmethod confirm-sync-instance ((self mewa))
-  nil)
-
-(defaction ensure-instance-sync ((self mewa))
-  (when (modifiedp self)
-    (if nil
-	(let ((message (format nil "Record has been modified, Do you wish to save the changes?")))
-	  (case (call 'about-dialog
-		      :body (make-presentation (instance self) 
-					       :type :viewer)
-		      :message message
-		      :options '((:save . "Save changes to Database")
-				 (:cancel . "Cancel all changes")))
-	    (:cancel
-	     (cancel-save-instance self))
-	    (:save 
-	     (save-instance self))))
-	(save-instance self))))
-
-(defaction sync-and-answer ((self mewa))
-  (ensure-instance-sync self)
-  (answer (instance self)))
-
-(defaction ok ((self mewa) &optional arg)
-  "Returns the component if it has not been modified. if it has been, prompt user to save or cancel"
-  ;(declare (ignore arg))
-  (sync-and-answer self))
-
-(defmethod (setf presentation-slot-value) :around (value (slot slot-presentation) instance)
-  (let* ((old (prog1 
-		 (presentation-slot-value slot instance)
-	       (call-next-method)))
-	(new (presentation-slot-value slot instance)))
-  
-  (unless (equal new old )
-    (let ((self (ucw::parent slot)))
-      (setf (modifiedp self) instance
-	    (modifications self)  (append (list new old value slot instance) (modifications self)))))))
-
-
-
-
-
-
 
 ;; This software is Copyright (c) Drew Crampsie, 2004-2005.
 ;; You are granted the rights to distribute

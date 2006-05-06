@@ -53,6 +53,20 @@
    :display-using-description
    :call-display
 
+   ;;;; Standard Layers
+
+   :editor
+   :one-line
+   :as-string
+   :as-table
+   ;;;; "Lines", the newest creation.
+   :defline
+   :line-in
+   :line-out
+
+
+   :action
+   
 
    ;;;;a wrapper for calling make-presentation
    :call-view

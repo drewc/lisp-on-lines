@@ -20,36 +20,46 @@
 
 (define-layered-method display ((component t) (object t)
 				&rest properties
-				&key type
+				&key type (line #'line-in)
 				&allow-other-keys)
-    "The default display calls out via FUNCALL-WITH-LAYERS to tche DISPLAY-USING-DESCRIPTION method."
+  " The default display dispatch method
 
-    (let* ((occurence (find-occurence object))
-	   (description (or (find-display-attribute
-			     occurence
-			     (setf type (or type (description.type occurence))))
-			   occurence)))
-      (if description
-	  (dletf (((description.type occurence) type)
-		  ((description.layers description) (append `(+
+  DISPLAY takes two required arguments, 
+  COMPONENT : The component to display FROM (not neccesarily 'in')
+  OBJECT : The 'thing' we want to display... in this case it's the component
 
-							      ;;find-layer-for-type is a
-							      ;; backwards compat thing
-							   ,(find-layer-for-type
-							     type))
-							 (description.layers description)))
-		  ((attributes description) (or
-					     (attributes description)
-					     (list-slots object))))
-	    (funcall-with-description
-	     description properties
-	     #'display-using-description description object component))
-	  (error "no description for ~A" object))))
+  DISPLAY also takes keywords arguments which modify the DESCRIPTION,
+  that is to say the parameters that come together to create the output.
+
+The default display calls out via FUNCALL-WITH-LAYERS to tche DISPLAY-USING-DESCRIPTION method."
+
+  (let* ((occurence (find-occurence object))
+	 (description (or (find-display-attribute
+			   occurence
+			   (setf type (or type (description.type occurence))))
+			  occurence)))
+    (if description
+	(dletf (((description.type occurence) type)
+		((attributes description) (or
+					   (attributes description)
+					   (list-slots object))))
+	  ;; apply the default line to the description
+	  (funcall-with-description
+	   description
+	   (funcall line object)
+	   ;; apply the passed in arguments and call display-using-description
+	   #'(lambda ()		 
+	       (funcall-with-description
+		description
+		properties
+		#'display-using-description description object component))))
+	(error "no description for ~A" object))))
 
 ;;;;; Macros
 
 
 (defun funcall-with-description (description properties function &rest args)
+  
   (if description
       (dletf* (((description.type description) (or
 						(getf properties :type)
@@ -58,7 +68,7 @@
 	       ((description.layers description) (append 
 							 (description.layers description)
 							 (getf properties :layers)))
-	       ((description.properties description) properties))
+	       ((description.properties description) (append (description.properties description) properties)))
 	(funcall-with-layers 
 	 (description.layers description)
 	 #'(lambda ()
@@ -114,14 +124,18 @@
 	(when (member :in-layer qualifiers)
 	  (error "Incorrect occurrence of :in-layer in defdisplay. Must occur before qualifiers."))
 	(return
-	  (destructuring-bind (description object &optional component) (car tail) 
+	  (destructuring-bind (description &optional object component) (car tail) 
 	    (with-unique-names (d c)
 	      (let (standard-description-p)
 		`(define-layered-method
 		  display-using-description
 		  :in-layer ,layer
 		  ,@qualifiers
-		
+
+		  ,@(unless object
+			    (setf object description)
+			    (setf description d)
+			    nil)
 		  (,(cond
 		     ((listp description)
 		      (setf d (car description))
