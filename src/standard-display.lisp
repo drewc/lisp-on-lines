@@ -4,24 +4,24 @@
 (deflayer viewer)
 (deflayer editor)
 
+(define-layered-method label (anything)
+  nil)
+
 (defdisplay
     :in-layer editor :around (description object)
- "It is useful to remove the viewer layer when in the editing layer.
+  "It is useful to remove the viewer layer when in the editing layer.
 This allows us to dispatch to a subclasses editor."
- (with-inactive-layers (viewer)
-   (call-next-method)))
+  (with-inactive-layers (viewer)
+    (call-next-method)))
 
-(deflayer creator)
+;;;; These layers affect the layout of the object
 (deflayer one-line)
 (deflayer as-table)
-
-
-
 (deflayer as-string)
 
 (defdisplay
   :in-layer as-string (d o)
-  (with-inactive-layers (editor viewer creator one-line as-table label-attributes)
+  (with-inactive-layers (editor viewer one-line as-table show-attribute-labels)
     (do-attributes (a d)
       (display-attribute a o)
       (<:as-is " "))))
@@ -46,12 +46,12 @@ This allows us to dispatch to a subclasses editor."
 
 (defcomponent standard-display-component ()
   ((context :accessor context :initarg :context)
-   (object :accessor object :initarg :object)
+   (object :accessor object-of :initarg :object)
    (args :accessor args :initarg :args)))
 
 (defmethod render ((self standard-display-component))
   
-  (apply #'display self (object self) (args self)))
+  (apply #'display self (object-of self) (args self)))
 
 
 ;;;; * Object displays.
@@ -109,11 +109,11 @@ This allows us to dispatch to a subclasses editor."
 
 ;;;; ** One line
 (defdisplay
-    :in-layer one-line (description object) 
-    "The one line presentation just displays the attributes with a #\Space between them"
-    (do-attributes (attribute description)
-      (display-attribute attribute object)
-      (<:as-html " ")))
+  :in-layer one-line (description object) 
+  "The one line presentation just displays the attributes with a #\Space between them"
+  (do-attributes (attribute description)
+    (display-attribute attribute object)
+    (<:as-html " ")))
  
 ;;;; ** as-table
 
@@ -125,11 +125,19 @@ This allows us to dispatch to a subclasses editor."
       (<:td (display-attribute a object))))))
 
 ;;;; List Displays
+
+(deflayer list-display-layer)
+
+(define-layered-class description
+  :in-layer list-display-layer ()
+  ((list-item :initarg :list-item :initform nil :special t :accessor list-item)))
+
 (defdisplay (desc (list list))
-  (<:ul
-   (dolist* (item list)
-     (<:li  (display* item)
-	    (<:as-html item)))))
+ (with-active-layers (list-display-layer)
+   	    
+   (<:ul
+    (dolist* (item list)
+      (<:li  (apply #'display* item (list-item desc)))))))
 
 ;;;; Attributes 
 (defdisplay

@@ -9,6 +9,11 @@
   ()
   (:type-name integer))
 
+(defattribute integer-attribute (number-attribute integer-field)
+  ()
+  (:in-layer editor)
+  (:type-name integer))
+
 
 (define-layered-method (setf attribute-value) ((value string) object (attribute integer-attribute)) 	       
   (let ((*read-eval* nil))

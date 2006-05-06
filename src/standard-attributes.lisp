@@ -1,5 +1,6 @@
 (in-package :lisp-on-lines)
 
+;;;; A few layers related to attributes
 (deflayer omit-nil-attributes)
 
 (defdisplay :in-layer omit-nil-attributes
@@ -7,17 +8,36 @@
  (when (attribute-value object attribute)
    (call-next-method)))
 
-(deflayer label-attributes)
+(deflayer show-attribute-labels)
 
-(defdisplay :in-layer label-attributes
-	    :around ((attribute standard-attribute) object)
+(defdisplay
+    :in-layer show-attribute-labels
+    :around ((attribute standard-attribute) object)
+    
+  (<:span
+   :class "lol-label"
+   (<:as-html (or (label attribute) (attribute.name attribute)) " "))
+  (<:span
+   :class "lol-attribute"
+   (call-next-method)))
 
-    (<:span
-     :class "lol-label"
-     (<:as-html (or (label attribute) (attribute.name attribute))))
-    (<:span
-     :class "lol-attribute"
-     (call-next-method)))
+(deflayer use-pretty-labels)
+
+(define-layered-method label
+   :in-layer use-pretty-labels
+   :around (standard-attribute)
+ (let ((label (call-next-method)))
+   (when label   
+     (string-capitalize
+      (substitute #\Space #\- label)))))
+
+(defattribute display ()
+  ()
+  (:documentation "Apply the display function to this object"))
+
+(defdisplay ((attribute display) object)
+  (apply #'display self (attribute-value object attribute)
+	 (description.properties attribute)))
 
 ;;;; * Base Types
 
@@ -27,38 +47,62 @@
 (defdisplay ((base base-attribute) object)
  (<:as-html (attribute-value object base)))
 
-
-(defattribute base-attribute ()
+(defattribute base-attribute (ucw::string-field)
   ()
   (:in-layer editor)
   (:default-properties
       :callback nil))
 
+(defmethod ucw:client-value ((self base-attribute))
+  (attribute-value (object self) self))
+
+(defmethod (setf ucw:client-value) (value (attribute base-attribute))
+  (setf (attribute-value (object attribute) attribute) value))
+
+
+(defmethod render ((field base-attribute))
+  "this can only be used within a display-using-description call in the editor context, 
+ it is a hack to integrate lol with ucw's new form stuff"
+  (call-next-method))
+
+  #+ (or)
+(LET ((value (attribute-value (object field) field)))
+  (<:as-html "asd" value)
+  (<:input
+   :NAME
+   (callback field)
+   :VALUE (escape-as-html value)
+   :TYPE
+   "text"
+   :ID
+   (DOM-ID FIELD)
+   :SIZE
+   (ucw::INPUT-SIZE FIELD)))
+
+
+
+(defdisplay
+    :in-layer editor  ((string base-attribute) object)
+ (render string))
+
+
 (defdisplay
     :in-layer editor :around ((string base-attribute) object)
     (dletf (((callback string) (ucw::make-new-callback
 				#'(lambda (val)
-				    (setf (attribute-value object string) val)))))
+				    (setf (attribute-value object string) val))))
+	    ((object string) object))
       (call-next-method)))
 
 ;;;; Strings
 
-(defattribute string-attribute ()
+(defattribute string-attribute (base-attribute)
   ()
   (:type-name string)
   (:default-properties
       :escape-html-p t
     :size nil
     :max-length nil))
-
-(defdisplay
-    :in-layer editor ((string base-attribute) object)
- (<:input
-  :type "text"
-  :id (id string)
-  :name (callback string)
-  :value (or (attribute-value object string) "")))
-
 
 (defdisplay :in-layer omit-nil-attributes
 	    :around ((attribute string-attribute) object)

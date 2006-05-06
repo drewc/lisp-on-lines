@@ -40,23 +40,37 @@
 	    (<ucw:a :action (call-display self object link)
 		    (call-next-method)))))))
 
-
-
 ;;; wrap-a-form
 (deflayer wrap-form)
 
-(defdisplay ((description t) (button (eql 'standard-form-buttons)))
-  (<ucw:submit :action (ok self)
-	       :value "Ok."))
+(define-layered-class description
+  :in-layer wrap-form ()
+  ((form-buttons :initarg :form-buttons :initform nil :special t :accessor form-buttons)))
 
-(defdisplay :in-layer wrap-form :around (object description)
+
+(defdisplay ((description (eql 'standard-form-buttons)) description-object)	    
+  (macrolet ((submit (&key action value )
+	       `(<ucw::simple-submit
+		 :action (funcall ,action)
+		 
+		 (<:as-html ,value))))
+    (loop for button in (form-buttons description-object)
+	 do 
+	 (let ((button button))
+	   (with-properties (button)
+	     (let ((action (.get :action)))
+	       (submit :value (.get :value)
+		       :action action)))))))
+
+
+
+(defdisplay :in-layer wrap-form :around (description object)
   (<ucw:form
    :action (refresh-component self)
    (with-inactive-layers (wrap-form)
 
      (call-next-method)
-     ;(display* 'standard-form-buttons)
-     )))
+     (display-attribute 'standard-form-buttons description))))
 
 ;;;; wrap a DIV
 
