@@ -23,6 +23,11 @@
     :layered-accessor object
     :initform nil
     :special t)
+   (description-default-attributes
+    :accessor default-attributes
+    :initarg :default-attributes
+    :initform nil
+    :special t)
    (description-attributes
     :accessor attributes
     :initarg :attributes
@@ -43,7 +48,8 @@ although an arbitrary occurence can be used with an arbitrary class.")
 
 (define-layered-class
     standard-occurence (description)
-    ((attribute-map :accessor attribute-map :initform (make-hash-table)))
+    ((occurence-name :accessor name :initarg :name)
+     (attribute-map :accessor attribute-map :initform (make-hash-table)))
     (:documentation
      "an occurence holds the attributes like a class holds slot-definitions.
 Attributes are the metadata used to display, validate, and otherwise manipulate actual values stored in lisp objects."))
@@ -53,7 +59,7 @@ Attributes are the metadata used to display, validate, and otherwise manipulate 
   (let ((occurence (gethash name *occurence-map*)))
     (if occurence
 	occurence
-	(let ((new-occurence (make-instance 'standard-occurence)))
+	(let ((new-occurence (make-instance 'standard-occurence :name name)))
 	  (setf (gethash name *occurence-map*) new-occurence)
 	  new-occurence))))
 
@@ -82,15 +88,15 @@ Attributes are the metadata used to display, validate, and otherwise manipulate 
 ;;;; * Attributes
 (defmethod print-object ((self attribute) stream)
   (print-unreadable-object (self stream :type t)
-    (with-slots (name description-type) self
-      (format stream "~A ~A" description-type name))))
+    (with-slots (attribute-name description-type) self
+      (format stream "~A ~A" description-type attribute-name))))
 
 (define-layered-class
     standard-attribute (attribute)
     ((setter :accessor setter :initarg :setter :special t :initform nil)
      (getter :accessor getter :initarg :getter :special t :initform nil)
-     (slot-name :accessor slot-name :initarg :slot-name :special t)
-     (id :accessor id :initarg :id :special t :initform (random-string)))
+     (value :accessor value :initarg :value :special t)
+     (slot-name :accessor slot-name :initarg :slot-name :special t :initform nil))
     (:documentation "Attributes are used to display a part of a thing, such as a slot of an object, a text label, the car of a list, etc."))
 
 (defmacro defattribute (name supers slots &rest args)
@@ -99,7 +105,7 @@ Attributes are the metadata used to display, validate, and otherwise manipulate 
 	(type (or type-provided-p name))
 	(layer (or (second (assoc :in-layer args)) nil))
 	(properties (cdr (assoc :default-properties args)))
-	(cargs  (remove-if #'(lambda (key)
+	(cargs (remove-if #'(lambda (key)
 		   (or (eql key :type-name)
 		       (eql key :default-properties)
 		       (eql key :default-initargs)
@@ -118,10 +124,11 @@ Attributes are the metadata used to display, validate, and otherwise manipulate 
 	  (:default-initargs :properties (list ,@properties)
 	    ,@ (cdr (assoc :default-initargs args))))
 
-      ,(unless (not type-provided-p)
-	`(defmethod find-attribute-class-for-type ((type (eql ',type)))
+      ,(when (or
+	     type-provided-p
+	     (not (find-attribute-class-for-type name)))
+	 `(defmethod find-attribute-class-for-type ((type (eql ',type)))
 	   ',name)))))
-
 (define-layered-class
     display-attribute (attribute)
     ()
@@ -135,27 +142,36 @@ using the attributes defined in an occurence. Presentation Attributes are always
 (defmethod find-attribute-class-for-type (type)
   nil)
 
-(defmethod find-attribute-class-for-name (name)
-  "presentation attributes are named using keywords"
-  (if (keywordp name)
-      'display-attribute
-      'standard-attribute))
-
-(defun make-attribute (&rest args &key name type &allow-other-keys)
+(defun make-attribute (&rest args &key type &allow-other-keys)
   (apply #'make-instance
 	 (or (find-attribute-class-for-type type)
-	     (find-attribute-class-for-name name))
+	     'standard-attribute)
+	 :properties args
 	 args)) 
 
 (defmethod ensure-attribute ((occurence standard-occurence) &rest args &key name &allow-other-keys)
   "Creates an attribute in the given occurence"
   (let ((attribute (apply #'make-attribute :occurence occurence args)))
-    (setf (description.properties attribute) args)
-    (setf (gethash name (attribute-map occurence))
-	  attribute)))
+    (setf (find-attribute occurence name) attribute)))
+
+(defmethod find-attribute ((occurence null) name)
+  nil)
 
 (defmethod find-attribute ((occurence standard-occurence) name)
-  (gethash name (attribute-map occurence)))
+  (or (gethash name (attribute-map occurence))
+      (let* ((class (ignore-errors (find-class (name occurence))))
+	     (class-direct-superclasses
+	      (when class
+		(closer-mop:class-direct-superclasses
+		 class))))
+	(when class-direct-superclasses 
+	  (let ((attribute
+		 (find-attribute
+		  (find-occurence (class-name
+				   (car
+				    class-direct-superclasses)))
+		  name)))
+	    attribute)))))
 
 (defmethod find-all-attributes ((occurence standard-occurence))
   (loop for att being the hash-values of (attribute-map occurence)
@@ -181,6 +197,18 @@ using the attributes defined in an occurence. Presentation Attributes are always
   "Create a new attribute in the occurence.
 ATTRIBUTE-SPEC: a list of (type name &rest initargs)"
   (apply #'ensure-attribute occurence-name :name attribute-name :type (first attribute-spec) (rest attribute-spec)))
+
+(defmethod (setf find-attribute) ((attribute standard-attribute) occurence attribute-name)
+  "Create a new attribute in the occurence.
+ATTRIBUTE-SPEC: a list of (type name &rest initargs)"
+  (setf (gethash attribute-name (attribute-map occurence))
+	  attribute))
+
+(defmethod (setf find-attribute) ((attribute null) occurence attribute-name)
+  "Create a new attribute in the occurence.
+ATTRIBUTE-SPEC: a list of (type name &rest initargs)"
+  (setf (gethash attribute-name (attribute-map occurence))
+	  attribute))
 
 
 (defmethod find-attribute ((attribute-with-occurence attribute) attribute-name)
@@ -240,6 +268,7 @@ otherwise, (setf find-attribute)"
 	 type)
 	occurence)))
 
+;;"Unused???"
 (defmethod setter (attribute)
   (warn "Setting ~A in ~A" attribute *context*)
   (let ((setter (getf (description.properties attribute) :setter))
@@ -257,16 +286,37 @@ otherwise, (setf find-attribute)"
 (define-layered-function attribute-value (instance attribute)
   (:documentation " Like SLOT-VALUE for instances, the base method calls GETTER."))
 
+(defmethod attribute-slot-value (instance attribute)
+  "Return (VALUES slot-value-or-nil existsp boundp"
+  (let (existsp boundp slot-value-or-nil)
+    (cond 
+      ((and (slot-boundp attribute 'slot-name) (slot-name attribute))
+	 (when (slot-exists-p instance (slot-name attribute))
+	   (setf existsp t)
+	   (when (slot-boundp instance (slot-name attribute))
+	     (setf boundp t
+		   slot-value-or-nil (slot-value
+				      instance
+				      (slot-name attribute))))))
+	((and (slot-exists-p instance (attribute.name attribute)))
+	 (setf existsp t)
+	 (when (slot-boundp instance (attribute.name attribute))
+	   (setf boundp t
+		 slot-value-or-nil (slot-value
+				    instance
+				    (attribute.name attribute))))))
+    (VALUES slot-value-or-nil existsp boundp)))
+  
 (define-layered-method attribute-value (instance (attribute standard-attribute))
-    (with-slots (getter slot-name) attribute 
-      (cond ((and (slot-boundp attribute 'getter) getter) 
-	     (funcall getter instance))
-	    ((and (slot-boundp attribute 'slot-name) slot-name)
-	     (when (slot-boundp instance slot-name)
-		 (slot-value instance slot-name)))
-	    ((and (slot-exists-p instance (attribute.name attribute)) )
-	       (when (slot-boundp instance (attribute.name attribute))
-		 (slot-value instance (attribute.name attribute)))))))
+ "return the attribute value or NIL if it cannot be found"		       
+    (with-slots (getter value) attribute
+      (when (slot-boundp attribute 'value)
+	(setf getter (constantly value)))
+      (if (and (slot-boundp attribute 'getter) getter)
+	  ;;;; call the getter
+	  (funcall getter instance)
+	  ;;;; or default to the attribute-slot-value
+	  (attribute-slot-value instance attribute))))
 
 (define-layered-function (setf attribute-value) (value instance attribute))
 
@@ -274,11 +324,10 @@ otherwise, (setf find-attribute)"
     (setf attribute-value) (value instance (attribute standard-attribute))
   (with-slots (setter slot-name) attribute 
     (cond ((and (slot-boundp attribute 'setter) setter)
-
 	   (funcall setter value instance))
 	  ((and (slot-boundp attribute 'slot-name) slot-name)
 	   (setf (slot-value instance slot-name) value))
-	  ((and (slot-exists-p instance (attribute.name attribute)) slot-name)
+	  ((and (slot-exists-p instance (attribute.name attribute)))
 	   (setf (slot-value instance (attribute.name attribute)) value))
 	  (t
 	   (error "Cannot set ~A in ~A" attribute instance)))))
@@ -298,20 +347,13 @@ otherwise, (setf find-attribute)"
     ,@body))
 
 (define-attributes (default)
-  (boolean mewa-boolean)
-  (string mewa-string)
-  (number mewa-currency)
-  (integer   mewa-integer)
-  (currency  mewa-currency)
-  (clsql:generalized-boolean mewa-boolean)
-  (foreign-key foreign-key)
-  (:viewer mewa-viewer)
-  (:editor mewa-editor)
-  (:creator mewa-creator)
-  (:as-string mewa-one-line-presentation)
-  (:one-line mewa-one-line-presentation)
-  (:listing mewa-list-presentation :global-properties (:editablep nil) :editablep t)
-  (:search-model mewa-object-presentation))
+  (boolean boolean)
+  (string string)
+  (number currency)
+  (integer   integer)
+  (currency  currency)
+  (clsql:generalized-boolean boolean)
+  (foreign-key foreign-key))
 
 (defun find-presentation-attributes (occurence-name)
   (loop for att in (find-all-attributes occurence-name)
@@ -355,8 +397,3 @@ otherwise, (setf find-attribute)"
 	       :slot-name ,slot-name))) 
 
 ;; This software is Copyright (c) Drew Crampsie, 2004-2005.
-;; You are granted the rights to distribute
-;; and use this software as governed by the terms
-;; of the Lisp Lesser GNU Public License
-;; (http://opensource.franz.com/preamble.html),
-;; known as the LLGPL.
