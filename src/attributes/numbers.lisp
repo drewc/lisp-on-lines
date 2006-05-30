@@ -12,6 +12,9 @@
 (defattribute integer-attribute (number-attribute integer-field)
   ()
   (:in-layer editor)
+  (:default-initargs
+      :default-value ""
+    :default-value-predicate (complement #'numberp))
   (:type-name integer))
 
 
@@ -41,10 +44,6 @@
   ()
   (:type-name currency))
 
-(defdisplay
-   ((currency currency-attribute) object)
- (<:as-html "$")
- (call-next-method))
 
 (defdisplay :in-layer editor
    ((currency currency-attribute) object)

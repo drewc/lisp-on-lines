@@ -29,31 +29,6 @@ This allows us to dispatch to a subclasses editor."
 (defmethod list-slots (thing)
   (list 'identity))
 
-
-;;;; TODO : this doesn't work
-
-(defaction call-display-with-context ((from component) object context &rest properties)
-  (call-component self (make-instance 'standard-display-component
-				      :context context
-				      :object object
-				      :args (if (cdr properties)
-						 properties
-						 (car properties)))))
-
-(defmacro call-display (component object &rest properties)
-  `(let ()
-    (call-display-with-context ,component ,object nil  ,@properties)))
-
-(defcomponent standard-display-component ()
-  ((context :accessor context :initarg :context)
-   (object :accessor object-of :initarg :object)
-   (args :accessor args :initarg :args)))
-
-(defmethod render ((self standard-display-component))
-  
-  (apply #'display self (object-of self) (args self)))
-
-
 ;;;; * Object displays.
 
 
@@ -134,7 +109,6 @@ This allows us to dispatch to a subclasses editor."
 
 (defdisplay (desc (list list))
  (with-active-layers (list-display-layer)
-   	    
    (<:ul
     (dolist* (item list)
       (<:li  (apply #'display* item (list-item desc)))))))
@@ -143,9 +117,7 @@ This allows us to dispatch to a subclasses editor."
 (defdisplay
     :in-layer editor
     ((attribute standard-attribute) object)
-    "Legacy editor using UCW presentations"
-    
-    (warn "USING LEGACY EDITOR FOR ~A" (slot-name attribute)))
+    (call-next-method))
 
 (define-layered-method display-using-description
   ((attribute standard-attribute) object component)

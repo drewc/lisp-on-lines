@@ -14,7 +14,14 @@
 
 ;;
 (define-layered-method attribute-value (object (attribute has-a))
- (meta-model:explode-foreign-key object (slot-name attribute) :nilp t))		       
+ (multiple-value-bind (obj key class)
+     (meta-model:explode-foreign-key object (slot-name attribute) :nilp t)		       
+  (if (persistentp object)
+      obj
+      (first  (select class
+		      :where [= [slot-value class key] (call-next-method)]
+		      :flatp t
+		      )))))		       
 
 (define-layered-method (setf attribute-value) ((value standard-object) object (attribute has-a))
   (let ((val (slot-value value (find-if (curry #'primary-key-p value) (list-keys value)))))
