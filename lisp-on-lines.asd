@@ -19,7 +19,6 @@
 				     (:file "properties")				       
 				     (:file "mewa")
 				     (:file "validation")
-			       
 				     (:file "lisp-on-lines")  
 				     (:file "defdisplay")
 				     (:file "standard-display")

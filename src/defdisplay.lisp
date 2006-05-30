@@ -2,6 +2,7 @@
 
 (define-layered-function display-using-description (description object component)
 ;  (:argument-precedence-order )
+  (:method-combination wrapping-standard)
   (:documentation
    "Render the object in component, 
     using DESCRIPTION, which is an occurence, an attribute, or something else entirely."))
@@ -33,13 +34,10 @@
 
 The default display calls out via FUNCALL-WITH-LAYERS to tche DISPLAY-USING-DESCRIPTION method."
 
-  (let* ((occurence (find-occurence object))
-	 (description (or (find-display-attribute
-			   occurence
-			   (setf type (or type (description.type occurence))))
-			  occurence)))
+  (let* ((description (find-occurence object)))
+
     (if description
-	(dletf (((description.type occurence) type)
+	(dletf (((description.type description) type)
 		((attributes description) (or
 					   (attributes description)
 					   (list-slots object))))
@@ -87,18 +85,31 @@ The default display calls out via FUNCALL-WITH-LAYERS to tche DISPLAY-USING-DESC
     #'(lambda ()
 	,@body)))
 
-(defmacro do-attributes ((var description &optional (attributes `(attributes ,description))) &body body)
+(define-layered-function find-do-attributes (desc))
+
+(define-layered-method find-do-attributes ((description description))
+
+  (loop
+     :for att
+     :in (attributes description)
+     :collect (let ((default (find (car (ensure-list att))
+				   (default-attributes description)
+				   :key #'car)))
+		(or default att))))
+
+(defmacro do-attributes ((var description &optional (attributes `(find-do-attributes ,description))) &body body)
   (with-unique-names (att properties type)
     `(dolist* (,att  ,attributes)
-      (let* ((,att (ensure-list ,att))
-                (,properties (rest ,att))
-                (,type (getf ,properties :type))
-                (,var (let ((a (find-attribute ,description (first ,att))))
-			(if ,type
-			    (apply #'make-attribute :name (first ,att) :type ,type ,properties)
-			    (if a a (make-attribute :name (first ,att) :slot-name (first ,att)))))))
-	(funcall-with-description ,var ,properties
-	  #'(lambda () ,@body))))))
+       (let* ((,att (ensure-list ,att))
+	      (,properties (rest ,att))
+	      (,type (getf ,properties :type))
+	      (,var (let ((a (find-attribute ,description (first ,att))))
+		      (if ,type
+			  (apply #'make-attribute :name (first ,att) :type ,type ,properties)
+			  (if a a (make-attribute :name (first ,att) :slot-name (first ,att)))))))
+	 (funcall-with-description ,var ,properties
+				   #'(lambda ()
+				       ,@body))))))
 
 (defmacro with-component ((component) &body body)
   `(let ((self ,component))
