@@ -34,18 +34,29 @@
 
 
    ;;;; The LoL 3 displays
-   :defdisplay
-   :defattribute
-   :display
-   :display-using-description
-   :call-display
+   #:defdisplay
+   #:defdescription
+   #:defattribute
+   #:display
+   #:display*
+   #:display-using-description
+   #:display-attribute
+   #:call-display
 
-   ;;;; Standard Layers
+   #:standard-attribute
+   #:attribute.name
 
-   :editor
-   :one-line
-   :as-string
-   :as-table
+;;;; Standard Layers
+
+   #:editor
+   #:one-line
+   #:as-string
+   #:as-table
+;;;; Wrapping layers
+   #:wrap-div
+   #:wrap-link
+   
+   #:show-attribute-labels
    ;;;; "Lines", the newest creation.
    :defline
 
@@ -64,9 +75,10 @@
    :set-attribute
    :find-attribute
 
-   ;;;; Meta Model Exports))
-   :define-meta-model
-   :def-view-class-from-table
-   :def-view-class/meta
-   :list-slot-types
-   ))
+   ;; Some CRUD
+   #:crud
+   #:crud-editor
+   #:crud-viewer
+   #:crud-summary
+   #:crud-database
+   #:instance))
