@@ -12,8 +12,7 @@
 
 (defdisplay
     :in-layer show-attribute-labels
-    :around ((attribute standard-attribute) object)
-    
+    :around ((attribute standard-attribute) object)    
   (<:span
    :class "lol-label"
    (<:as-html (or (label attribute) (attribute.name attribute)) " "))
@@ -31,18 +30,64 @@
      (string-capitalize
       (substitute #\Space #\- label)))))
 
-(defattribute display ()
-  ()
+(deflayer inspect-attributes)
+
+(defdisplay :in-layer inspect-attributes
+	    :around ((attribute standard-attribute) object)
+ (call-next-method)
+  (<ucw:a :action (ucw::call-inspector self attribute)
+	  :title
+	  (strcat "Inspect "
+			 (attribute.name attribute) ":"
+			 (description.type attribute) ":"
+			 (type-of attribute))
+	  (<:as-html "(i)")))
+
+;;;; Functional attributes
+(defattribute display-attribute ()
+  ((display-arguments
+    :accessor display-arguments
+    :initarg :display
+    :special t
+    :initform nil))
+  (:type-name display)
   (:documentation "Apply the display function to this object"))
 
-(defdisplay ((attribute display) object)
+(defdisplay ((attribute display-attribute) object)
   (apply #'display self (attribute-value object attribute)
-	 (description.properties attribute)))
+	 (display-arguments attribute)))
+
+(defattribute function-attribute ()
+  ((function :accessor function-of
+	     :initarg :function
+	     :initform #'funcall
+	     :special t))
+  (:type-name function)
+  (:documentation ""))
+
+(defdisplay ((function function-attribute) object)
+  (funcall (function-of function)
+	   (attribute-value object function)))
+
+
+;;;; Attribute Grouping
+(defattribute attribute-group ()
+  ()
+  (:default-properties
+   :group nil)
+  (:type-name group))
+
+(defdisplay ((group attribute-group) object)
+  (apply #'display self object
+	 :attributes (attributes group)
+	 (group group)))
 
 ;;;; * Base Types
 
 (defattribute base-attribute ()
-  ())
+  ()
+  (:default-properties
+      :default-value ""))
 
 (defdisplay ((base base-attribute) object)
  (<:as-html (attribute-value object base)))
@@ -50,47 +95,38 @@
 (defattribute base-attribute (ucw::string-field)
   ()
   (:in-layer editor)
-  (:default-properties
-      :callback nil))
+  (:default-properties 
+    :callback nil
+    :default-value nil
+    :default-value-predicate #'null))
 
-(defmethod ucw:client-value ((self base-attribute))
-  (attribute-value (object self) self))
-
-(defmethod (setf ucw:client-value) (value (attribute base-attribute))
-  (setf (attribute-value (object attribute) attribute) value))
-
-
-(defmethod render ((field base-attribute))
-  "this can only be used within a display-using-description call in the editor context, 
- it is a hack to integrate lol with ucw's new form stuff"
-  (call-next-method))
-
-  #+ (or)
-(LET ((value (attribute-value (object field) field)))
-  (<:as-html "asd" value)
-  (<:input
-   :NAME
-   (callback field)
-   :VALUE (escape-as-html value)
-   :TYPE
-   "text"
-   :ID
-   (DOM-ID FIELD)
-   :SIZE
-   (ucw::INPUT-SIZE FIELD)))
-
-
+(define-layered-function display-value (attribute value)
+  (:method (attribute value)
+    (if (funcall (default-value-predicate attribute) value)
+	(default-value attribute)
+	value)))
 
 (defdisplay
-    :in-layer editor  ((string base-attribute) object)
- (render string))
-
+  :in-layer editor ((field base-attribute) object)
+  (LET ((value (attribute-value (object field) field)))
+    (<:input
+     :NAME
+     (callback field)
+     :VALUE (escape-as-html (strcat (display-value field value)))
+     :TYPE
+     "text"
+     :ID
+     (DOM-ID FIELD)
+     :SIZE
+     (ucw::INPUT-SIZE FIELD))))
 
 (defdisplay
     :in-layer editor :around ((string base-attribute) object)
-    (dletf (((callback string) (ucw::make-new-callback
-				#'(lambda (val)
-				    (setf (attribute-value object string) val))))
+    (dletf (((callback string)
+	     (or (callback string)
+		 (ucw::make-new-callback
+		  #'(lambda (val)
+		      (setf (attribute-value object string) val)))))
 	    ((object string) object))
       (call-next-method)))
 
@@ -102,7 +138,8 @@
   (:default-properties
       :escape-html-p t
     :size nil
-    :max-length nil))
+    :max-length nil
+    :default-value ""))
 
 (defdisplay :in-layer omit-nil-attributes
 	    :around ((attribute string-attribute) object)
@@ -159,7 +196,7 @@
 
 (defdisplay :in-layer editor ((string text-attribute) object)
  (<:textarea
-  :id (id string)
+  :id (dom-id string)
   :name (callback string)
   (or (attribute-value object string) "")))
 
