@@ -41,6 +41,9 @@ This allows us to dispatch to a subclasses editor."
 (defdisplay (description (object string))
   (<:as-html object))
 
+(defdisplay (description (object symbol))
+  (<:as-html object))
+
 (defdisplay (description object (component t))
   "The default display for CLOS objects"
   (print (class-name (class-of object)))

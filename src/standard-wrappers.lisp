@@ -27,18 +27,32 @@
 
 (define-layered-class description
   :in-layer wrap-link ()
-  ((link :initarg :link :initform nil :special t :accessor link)))
+  ((link :initarg :link-action
+	 :initarg :action
+	 :initform nil :special t :accessor link-action)))
+
+(defaction call-action-with--component-and-object ((self component) action-id object)
+  (funcall (ucw::find-action (ucw::context.current-frame *context*) action-id)
+	   self
+	   object))
 
 (defdisplay
-  :in-layer wrap-link :around (description object)
-  (let ((link (link description)))
+    :in-layer wrap-link :around (description object)
+    (let ((link (link-action description)))
 
-    (with-inactive-layers (wrap-link)
-      (if *link-wrapped-p*
-	  (call-next-method)
-	  (let ((*link-wrapped-p* t))
-	    (<ucw:a :action (call-display self object link)
-		    (call-next-method)))))))
+      (with-inactive-layers (wrap-link)
+	(if *link-wrapped-p*
+	    (call-next-method)
+	    (let ((*link-wrapped-p* t))
+	      (<ucw:a :action (call-action-with--component-and-object
+			       self
+			       (ucw::make-new-action
+				(ucw::context.current-frame *context*)
+				(if (consp link)
+				    (eval link)
+				    link))
+			       object)
+		      (call-next-method)))))))
 
 ;;; wrap-a-form
 (deflayer wrap-form)
@@ -47,14 +61,16 @@
   :in-layer wrap-form ()
   ((form-buttons :initarg :form-buttons :initform nil :special t :accessor form-buttons)))
 
+(defattribute form-button-attribute ()
+  ((form-buttons :initarg :form-buttons :initform nil :special t :accessor form-buttons)))
 
-(defdisplay ((description (eql 'standard-form-buttons)) description-object)	    
+(defdisplay ((description form-button-attribute) object)	    
   (macrolet ((submit (&key action value )
 	       `(<ucw::simple-submit
-		 :action (funcall ,action)
+		 :action (funcall ,action self object)
 		 
 		 (<:as-html ,value))))
-    (loop for button in (form-buttons description-object)
+    (loop for button in (form-buttons description)
 	 do 
 	 (let ((button button))
 	   (with-properties (button)
@@ -68,9 +84,14 @@
   (<ucw:form
    :action (refresh-component self)
    (with-inactive-layers (wrap-form)
-
      (call-next-method)
-     (display-attribute 'standard-form-buttons description))))
+     (with-inactive-layers (show-attribute-labels)
+       (display-attribute
+	(make-instance
+	 'form-button-attribute
+	 :form-buttons
+	 (form-buttons description))
+	object)))))
 
 ;;;; wrap a DIV
 
@@ -81,7 +102,7 @@
   :in-layer wrap-div ()
   ((div-attributes :accessor div-attributes :initarg :div :special t :initform nil)))
 
-(defdisplay :in-layer wrap-div :around (description object)
+(defdisplay :in-layer wrap-div :wrap-around (description object)
  (let ((args (div-attributes description)))
    (with-inactive-layers (wrap-div)
      (yaclml::funcall-with-tag
