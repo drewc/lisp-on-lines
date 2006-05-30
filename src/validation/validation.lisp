@@ -6,31 +6,34 @@
   ((message :accessor message :initarg :message :initform "Invalid value")
    (value :accessor value :initarg :value :initform (warn "condition was not given a value"))))
 
-
 ;;;; ** Attributes
 (define-condition attribute-validation-condition (validation-condition)
   ((attribute :accessor attribute :initarg :attribute :initform nil)))
 
-(defgeneric validate-attribute (instance attribute)
+(defgeneric validate-attribute (instance attribute &optional value)
   (:documentation "
 Returns T if the ATTRIBUTE-VALUE in INSTANCE passes all the validation functions. Otherwise, returns (values nil conditions) where CONDITIONS is a list of conditions representing the validation errors the slot.")
-  (:method (instance attribute)
-      (let (conditions)
-	(handler-bind ((attribute-validation-condition
-			#'(lambda (c)
-			    (setf conditions (cons c conditions))
-			    (signal c))))
-	      (dolist (f (find-validation-functions instance attribute))
-		       (funcall f instance attribute)))
-	(if conditions
-	    (values nil conditions)
-	    t)))
-  (:method (instance (attribute symbol))
-    (validate-attribute instance (find-attribute instance attribute))))
+  (:method (instance attribute &optional (value nil value-provided-p))
+    (let ((val (if value-provided-p
+		     value
+		     (attribute-value instance attribute)))
+	  (conditions))
+      (handler-bind ((attribute-validation-condition
+		      #'(lambda (c)
+			  (setf conditions (cons c conditions))
+			  (signal c))))
+	
+	  (dolist (f (find-validation-functions instance attribute))
+	    (funcall f instance attribute val)))
+      (if conditions
+	  (values nil conditions)
+	  t))))
 
 
 (defmethod find-validation-functions (instance (attribute standard-attribute))
-  (getf (description.properties attribute) :validate-using))
+  (let ((foo  (validate-using attribute)))
+    (warn "validation?~A " foo)
+    foo))
 
 
 ;;;; ** Instances
@@ -62,31 +65,26 @@ Returns T if the ATTRIBUTE-VALUE in INSTANCE passes all the validation functions
 	
 	t)))
 
+
 ;;;; Attribute Validation Functions
 ;;;; I have not quite figured all this out yet.
 ;;;; A generic validation system needs more thought than i've given it, but this is a start.
 
-(defun validate-string-exists (instance attribute)
-  (let ((value (lol::attribute-value instance attribute)))
+(defun validate-string-exists (instance attribute value)
     (if (or
 	 (not (stringp value))
 	 (not (< 0 (length value))))
 	(signal 'attribute-validation-condition
 		:message (format nil "You must enter a value for ~A."
-				 (getf (description.properties attribute) :label))
-		:attribute attribute))))
+				 (label attribute))
+		:attribute attribute)))
 
 
-(defun validate-true (instance attribute)
-  
-  (warn "validate ~A ~A" instance attribute)
-  (let ((value (lol::attribute-value instance attribute)))
-    (warn "value is ~A" value)
+(defun validate-true (instance attribute value)
     (unless value 
-	 
       (signal 'attribute-validation-condition
-	      :message (format nil "~A must be true."
-			       (getf (description.properties attribute) :label))
+	      :message (format nil "~A is required."
+			       (label attribute))
 	      :attribute attribute))))
 
 

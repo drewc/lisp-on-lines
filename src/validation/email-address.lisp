@@ -17,12 +17,11 @@
 
 (defvar scanner (cl-ppcre:create-scanner +email-regexp+))
 
-(defun validate-email-address (instance attribute)
-  (let ((value (lol::attribute-value instance attribute)))
-    (multiple-value-bind (start end)
-	(cl-ppcre:scan scanner value)
-      (when (not (and (equal start 0) (equal end (length value))))
-	(signal 'attribute-validation-condition
-		:message (format nil "~A must be a valid email address."
-				 (getf (description.properties attribute) :label))
-		:attribute attribute)))))
+(defun validate-email-address (instance attribute value)
+  (multiple-value-bind (start end)
+      (cl-ppcre:scan scanner value)
+    (when (not (and (equal start 0) (equal end (length value))))
+      (signal 'attribute-validation-condition
+	      :message (format nil "~A must be a valid email address."
+			       (getf (description.properties attribute) :label))
+	      :attribute attribute))))
