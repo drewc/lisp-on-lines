@@ -85,9 +85,4 @@ Returns T if the ATTRIBUTE-VALUE in INSTANCE passes all the validation functions
       (signal 'attribute-validation-condition
 	      :message (format nil "~A is required."
 			       (label attribute))
-	      :attribute attribute))))
-
-
-
-
-
+	      :attribute attribute)))

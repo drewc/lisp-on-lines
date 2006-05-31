@@ -33,6 +33,12 @@
 							   (:file "relational-attributes")
 							   (:file "dojo-attributes"))
 					      :serial t)
+				     (:module :validation
+					      :components
+					      ((:file "validation")
+					       (:file "standard-validation")
+					       (:file "email-address"))
+					      :serial t)
 				     (:module :components
 					      :components ((:file "crud"))))
 			:serial t))

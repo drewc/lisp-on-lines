@@ -7,13 +7,38 @@
 
 (deflayer validate (editor))
 
-(defattribute base-attribute ()
-  ()
-  (:in-layer validate)
-  (:default-properties
-      :validate-using nil
-    :requiredp nil
-    :required-test 'validate-true))
+(defcomponent validation-mixin ()
+  ((validation-conditions
+    :accessor validation-conditions
+    :initform nil
+    :backtrack t)
+   (inhibit-call-if-invalid-p
+    :accessor inhibit-call-if-invalid-p
+    :initform t
+    :initarg :inhibit-call-if-invalid-p)
+   (inhibit-answer-if-invalid-p
+    :accessor inhibit-answer-if-invalid-p
+    :initform t
+    :initarg :inhibit-answer-if-invalid-p)))
+
+(defmethod render :wrap-around ((self validation-mixin))
+  (call-next-method)
+  (setf (validation-conditions self) nil))
+
+(defun component-valid-p (component)
+  (not (validation-conditions component)))
+
+(defmethod/cc call-component :around ((from validation-mixin) to)
+   (if (inhibit-call-if-invalid-p from)
+      (when (component-valid-p from)
+	(call-next-method from to))
+      (call-next-method from to)))
+
+(defmethod answer-component :around ((target validation-mixin) value)
+  (if (inhibit-answer-if-invalid-p target)
+      (when (component-valid-p target)
+	(call-next-method))
+      (call-next-method)))
 
 (defparameter *invalid-attribute-renderer*
   #'(lambda (invalid-attribute-value next-method)
@@ -24,6 +49,14 @@
 	     (dolist (c (invalid-attribute-value-conditions invalid-attribute-value))
 	       (<:li (<:as-html (message c)))))
 	    (funcall next-method))))
+
+(defattribute string-attribute ()
+  ()
+  (:in-layer validate)
+  (:default-properties
+      :validate-using nil
+    :requiredp nil
+    :required-test 'validate-string-exists))
 
 (defdisplay :in-layer validate
 	    :around ((attribute base-attribute) object)
@@ -39,9 +72,13 @@ and create invalid-attribute-values when things don't validate. duh "
 	;;;; a totally different dynamic scope.
 	(validators (validate-using attribute))
 	(label (label attribute)))
+    
+    ;;;; We have a convenience property for :requiredp
     (when (requiredp attribute)
       (push (required-test attribute) validators))
-   (dletf (((callback attribute)
+
+    ;;;; Now we create the validation callback
+    (dletf (((callback attribute)
 	    (ucw::make-new-callback
 	     #'(lambda (val)
 		 (flet ((setter (value)
@@ -53,17 +90,20 @@ and create invalid-attribute-values when things don't validate. duh "
 		 ;; We have to do DLETF ,as we will no longer be
 		 ;; in the validation layer at callback-application time. 
 		   (dletf (((validate-using attribute) validators)
-			   ((slot-value attribute 'label) label)
-			   )
+			   ((slot-value attribute 'label) label))
 		     (multiple-value-bind (validp conditions)
 			 (validate-attribute object attribute val)
 		       (if validp
 			   (setter val)
-			   (setter
-			    (make-invalid-attribute-value
-			     :initial-value (attribute-value object attribute)
-			     :invalid-value val
-			     :conditions conditions))))))))))
+			   (progn
+			     (setter
+			      (make-invalid-attribute-value
+			       :initial-value (attribute-value object attribute)
+			       :invalid-value val
+			       :conditions conditions))
+			     (when (subtypep (type-of self) 'validation-mixin)
+			       (setf (validation-conditions self)
+				     (append conditions (validation-conditions self)))))))))))))
 
 
      ;;;; Ok, so if the attribute-value holds an
