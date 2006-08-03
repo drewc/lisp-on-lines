@@ -1,8 +1,4 @@
-(declaim (optimize (speed 2) (space 3) (safety 0)))
-
 (in-package :lisp-on-lines)
-
-(defparameter *default-type* :ucw)
 
 (define-layered-class description ()
   ((description-type
@@ -18,7 +14,8 @@
    (description-properties
     :accessor description.properties
     :initform nil
-    :special t)
+    :special t
+    :documentation "TODO: not used much anymore, and shouldn't be relied on")
    (described-object
     :layered-accessor object
     :initform nil
@@ -32,7 +29,26 @@
     :accessor attributes
     :initarg :attributes
     :initform nil
+    :special t)
+   (description-default-properties
+    :accessor default-properties
+    :initarg :default-properties
+    :initform '()
     :special t)))
+
+(defmethod attributes :around ((description description))
+  "Add any default properties to the attributes"
+  
+  (let ((default-properties (default-properties description)))
+    (if (and (listp default-properties)
+	     (not (null default-properties)))
+	(let ((a (mapcar #'(lambda (att)
+		    (append (ensure-list att) default-properties))
+		(call-next-method))))
+	  
+
+	  a) 
+	(call-next-method))))
 
 (defmethod print-object ((self description) stream)
   (print-unreadable-object (self stream :type t)
@@ -85,6 +101,7 @@ Attributes are the metadata used to display, validate, and otherwise manipulate 
      (occurence :accessor occurence :initarg :occurence :initform nil)
      (label :initarg :label :layered-accessor label :initform nil :special t)))
 
+
 ;;;; * Attributes
 (defmethod print-object ((self attribute) stream)
   (print-unreadable-object (self stream :type t)
@@ -98,6 +115,9 @@ Attributes are the metadata used to display, validate, and otherwise manipulate 
      (value :accessor value :initarg :value :special t)
      (slot-name :accessor slot-name :initarg :slot-name :special t :initform nil))
     (:documentation "Attributes are used to display a part of a thing, such as a slot of an object, a text label, the car of a list, etc."))
+
+(define-layered-method label :around ((attribute standard-attribute))
+ (or (call-next-method) (attribute.name attribute)))
 
 (defmacro defattribute (name supers slots &rest args)
   (let* (
@@ -129,11 +149,6 @@ Attributes are the metadata used to display, validate, and otherwise manipulate 
 	     (not (find-attribute-class-for-type name)))
 	 `(defmethod find-attribute-class-for-type ((type (eql ',type)))
 	   ',name)))))
-(define-layered-class
-    display-attribute (attribute)
-    ()
-    (:documentation "Presentation Attributes are used to display objects 
-using the attributes defined in an occurence. Presentation Attributes are always named using keywords."))
 
 (defun clear-attributes (name)
   "removes all attributes from an occurance"
@@ -175,7 +190,7 @@ using the attributes defined in an occurence. Presentation Attributes are always
 
 (defmethod find-all-attributes ((occurence standard-occurence))
   (loop for att being the hash-values of (attribute-map occurence)
-	collect att))
+     collect att))
 
 (defmethod ensure-attribute (occurence-name &rest args &key name type &allow-other-keys)
   (declare (ignore name type))
@@ -209,7 +224,6 @@ ATTRIBUTE-SPEC: a list of (type name &rest initargs)"
 ATTRIBUTE-SPEC: a list of (type name &rest initargs)"
   (setf (gethash attribute-name (attribute-map occurence))
 	  attribute))
-
 
 (defmethod find-attribute ((attribute-with-occurence attribute) attribute-name)
   (find-attribute (occurence attribute-with-occurence) attribute-name))
@@ -258,15 +272,10 @@ otherwise, (setf find-attribute)"
     ,@(loop for occurence-name in occurence-names
 	    collect `(perform-define-attributes (quote ,occurence-name) (quote ,attribute-definitions)))))
 
-(defmethod find-display-attribute (occurence name)
-  (find-attribute occurence (intern (symbol-name name) "KEYWORD")))
 
 (defmethod find-description (object type)
   (let ((occurence (find-occurence object)))
-    (or (find-display-attribute
-	 occurence
-	 type)
-	occurence)))
+	occurence))
 
 ;;"Unused???"
 (defmethod setter (attribute)
@@ -338,8 +347,8 @@ we return slot-value-or nil either boundp or not."
 
 
 ;;;; ** Default Attributes
-
-
+;;;; TODO: This is mosty an ugly hack and should be reworked.
+;;;; 
 ;;;; The default mewa class contains the types use as defaults.
 ;;;; maps meta-model slot-types to slot-presentation
 
@@ -356,12 +365,7 @@ we return slot-value-or nil either boundp or not."
   (integer   integer)
   (currency  currency)
   (clsql:generalized-boolean boolean)
-  (foreign-key foreign-key))
-
-(defun find-presentation-attributes (occurence-name)
-  (loop for att in (find-all-attributes occurence-name)
-	when (typep att 'display-attribute)
-	 collect att))
+  (foreign-key has-a))
 
 (defun attribute-to-definition (attribute)
   (nconc (list (attribute.name attribute)
@@ -369,13 +373,8 @@ we return slot-value-or nil either boundp or not."
 	 (description.properties attribute)))
 
 (defun find-default-presentation-attribute-definitions ()
-  (if (eql *default-attributes-class-name* 'default)
-      (mapcar #'attribute-to-definition (find-presentation-attributes 'default)) 
-      (remove-duplicates (mapcar #'attribute-to-definition
-				 (append
-				  (find-presentation-attributes 'default)
-				  (find-presentation-attributes
-				   *default-attributes-class-name*))))))
+  nil)
+
 (defun gen-ptype (type)
   (let* ((type (if (consp type) (car type) type))
 	 (possible-default (find-attribute *default-attributes-class-name* type))

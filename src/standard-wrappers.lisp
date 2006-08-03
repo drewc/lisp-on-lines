@@ -31,7 +31,7 @@
 	 :initarg :action
 	 :initform nil :special t :accessor link-action)))
 
-(defaction call-action-with--component-and-object ((self component) action-id object)
+(defaction call-action-with-component-and-object ((self component) action-id object)
   (funcall (ucw::find-action (ucw::context.current-frame *context*) action-id)
 	   self
 	   object))
@@ -44,7 +44,7 @@
 	(if *link-wrapped-p*
 	    (call-next-method)
 	    (let ((*link-wrapped-p* t))
-	      (<ucw:a :action (call-action-with--component-and-object
+	      (<ucw:a :action (call-action-with-component-and-object
 			       self
 			       (ucw::make-new-action
 				(ucw::context.current-frame *context*)
@@ -66,17 +66,19 @@
 
 (defdisplay ((description form-button-attribute) object)	    
   (macrolet ((submit (&key action value )
-	       `(<ucw::simple-submit
+	       `(<ucw::value-submit
 		 :action (funcall ,action self object)
 		 
-		 (<:as-html ,value))))
+		 :value ,value)))
     (loop for button in (form-buttons description)
 	 do 
 	 (let ((button button))
 	   (with-properties (button)
 	     (let ((action (.get :action)))
 	       (submit :value (.get :value)
-		       :action action)))))))
+		       :action (if (consp action)
+				   (eval action)
+				   action))))))))
 
 
 

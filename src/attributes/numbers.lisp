@@ -45,11 +45,20 @@
   (:type-name currency))
 
 
-(defdisplay :in-layer editor
+(defdisplay
+  :in-layer t
    ((currency currency-attribute) object)
-    (<:as-html "$")
+
+   (<:as-html (format nil "$~$" (or (attribute-value object currency) ""))))
+
+(defdisplay
+  :in-layer editor
+  ((currency currency-attribute) object)
+    (LET ((value (attribute-value (object currency) currency)))
     (<:input
-     :type "text"
-     :id (id currency)
-     :name (callback currency)
-     :value (format nil "~$" (or (attribute-value object currency) ""))))
+     :NAME
+     (callback currency)
+     :VALUE (escape-as-html (strcat (display-value currency value)))
+     :TYPE
+     "text"))
+  )

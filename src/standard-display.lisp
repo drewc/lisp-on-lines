@@ -10,7 +10,8 @@
 (defdisplay
     :in-layer editor :around (description object)
   "It is useful to remove the viewer layer when in the editing layer.
-This allows us to dispatch to a subclasses editor."
+This allows us to dispatch to a subclasses editor.
+"
   (with-inactive-layers (viewer)
     (call-next-method)))
 
@@ -108,13 +109,34 @@ This allows us to dispatch to a subclasses editor."
 
 (define-layered-class description
   :in-layer list-display-layer ()
-  ((list-item :initarg :list-item :initform nil :special t :accessor list-item)))
+  ((list-item :initarg :list-item
+	      :initarg :table-item
+	      :initform nil
+	      :special t
+	      :accessor list-item)))
 
 (defdisplay (desc (list list))
  (with-active-layers (list-display-layer)
    (<:ul
     (dolist* (item list)
       (<:li  (apply #'display* item (list-item desc)))))))
+
+(defdisplay :in-layer as-table (description (list list))
+  (with-active-layers (list-display-layer)
+    (let ((item-description (find-occurence (first list))))
+      (<:table
+	(funcall
+	 (apply #'lol::make-display-function self (first list)
+		(list-item description))
+	 (lambda (desc item component)
+	   (<:tr
+	    (do-attributes (a desc)
+	      (<:th (<:as-html (label a)))))
+	   
+	   (dolist* (obj list)
+	     (<:tr 
+	      (do-attributes (a desc)
+		(<:td (display-attribute a obj)))))))))))
 
 ;;;; Attributes 
 (defdisplay

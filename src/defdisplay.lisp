@@ -11,9 +11,33 @@
     display-using-description (d o c)
     (<:as-html "default :" o))
 
-(defmethod find-layer-for-type (type)
-  type)
+(defun make-display-function (component object
+			      &rest properties
+			      &key type (line #'line-in)
+			      &allow-other-keys)
+  "returns a function that expects a 3 argument function as its argument
 
+The function (which is usually display-using-description) will be called with the proper environment for display all set up nice n pretty like."
+
+  (lambda (function)
+    (let* ((description (find-occurence object)))
+
+      (if description
+	  (dletf (((description.type description) type)
+		  ((attributes description) (or
+					     (attributes description)
+					     (list-slots object))))
+	    ;; apply the default line to the description
+	    (funcall-with-description
+	     description
+	     (funcall line object)
+	     ;; apply the passed in arguments and call display-using-description
+	     #'(lambda ()		 
+		 (funcall-with-description
+		  description
+		  properties
+		  function description object component))))
+	  (error "no description for ~A" object)))))
 
 (define-layered-function display (component object &rest args)
   (:documentation
@@ -75,8 +99,6 @@ The default display calls out via FUNCALL-WITH-LAYERS to tche DISPLAY-USING-DESC
 	      #'(lambda ()
 		  (apply function args))))))
       (apply function args)))
-
-
 
 (defmacro with-description ((description &rest properties) &body body)
   `(funcall-with-description ,description (if ',(cdr properties)

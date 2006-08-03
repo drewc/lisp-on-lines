@@ -3,10 +3,21 @@
 ;;;; * Relational Attributes
 
 
+(defvar *parent-relations* nil)
+
 ;;;; ** has-a
 ;;;; Used for foreign keys, currently only works with clsql.
 
-(defattribute has-a ()
+(defattribute relational-attribute ()
+  ())
+
+(defdisplay :wrap-around ((attribute relational-attribute) object)
+	    (print (cons "parent-r" *parent-relations*))
+ (dletf (((value attribute) (attribute-value object attribute)))
+   (unless (find (value attribute) *parent-relations* :test #'meta-model::generic-equal)
+     (call-next-method))))
+
+(defattribute has-a (relational-attribute)
   ()
   (:default-properties
       :has-a nil
@@ -27,8 +38,6 @@
   (let ((val (slot-value value (find-if (curry #'primary-key-p value) (list-keys value)))))
     (setf (attribute-value object attribute) val)))
 
-
-
 (define-layered-function find-all-foreign-objects (o a))
 
 (define-layered-method find-all-foreign-objects (object (attribute has-a))
@@ -39,7 +48,7 @@
 	(val (attribute-value object attribute)))
     (when val
       (setf (getf args :type)
-	    'lol::one-line))	    
+	    'lol::one-line))
     (apply #'display* val
 	   args)))
 
@@ -55,13 +64,13 @@
      :value obj
      (display* obj :layers '(+ as-string))))))
 
-
 ;;;; ** Has-Many attribute
 
 (defattribute has-many ()
   ()
   (:default-properties
       :add-new-label "Add New"
+    :has-many nil
     :sort-arguments  (list #'< :key #'(lambda (x) (funcall (car (list-keys x)) x))))
   (:default-initargs
       :type 'lol::one-line))
@@ -70,18 +79,17 @@
     attribute-value (object (has-many has-many))
     (slot-value object (slot-name has-many)))
 
+
 (defdisplay ((attribute has-many) object)
     ;
   ;(<ucw:submit :action (add-to-has-many slot instance) :value (add-new-label attribute))
 	    
  (<:div  :style "clear:both;"
 	 (let* ((i (apply #'sort (slot-value object (slot-name attribute))
-			  (sort-arguments attribute))))
-	   (<:ul 
-	    (dolist* (x i)
-	      (<:li (display* x
-			      :type 'lol::as-string
-			      :layers '(+ wrap-link - label-attributes))))))))
+			  (sort-arguments attribute)))
+		(*parent-relations* (cons object *parent-relations*)))
+
+	   (apply #'display* i (has-many attribute)))))
 
 
 (defun find-many-to-many-class (slot-name instance)

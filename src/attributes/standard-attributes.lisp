@@ -13,7 +13,7 @@
 (defdisplay
     :in-layer show-attribute-labels
     :around ((attribute standard-attribute) object)    
-  (<:span
+  (<:label
    :class "lol-label"
    (<:as-html (or (label attribute) (attribute.name attribute)) " "))
   (<:span
@@ -82,6 +82,24 @@
 	 :attributes (attributes group)
 	 (group group)))
 
+
+(defattribute select-attribute (display-attribute)
+  ()
+  (:default-properties
+    :test 'meta-model::generic-equal
+    :options-getter (constantly nil))
+  (:type-name select))
+
+(defdisplay ((attribute select-attribute) object)
+ (<ucw:select
+  :accessor (attribute-value object attribute)
+
+  :test (test attribute)
+  (dolist* (obj (funcall (options-getter attribute) object))
+    (<ucw:option
+     :value obj
+     (apply #'display* obj (display-arguments attribute))))))
+
 ;;;; * Base Types
 
 (defattribute base-attribute ()
@@ -92,13 +110,15 @@
 (defdisplay ((base base-attribute) object)
  (<:as-html (attribute-value object base)))
 
-(defattribute base-attribute (ucw::string-field)
+(defattribute base-attribute ()
   ()
   (:in-layer editor)
   (:default-properties 
     :callback nil
     :default-value nil
-    :default-value-predicate #'null))
+    :default-value-predicate #'null
+    :dom-id (js:gen-js-name-string :prefix "_ucw_")
+    :input-size nil))
 
 (define-layered-function display-value (attribute value)
   (:method (attribute value)
@@ -118,7 +138,7 @@
      :ID
      (DOM-ID FIELD)
      :SIZE
-     (ucw::INPUT-SIZE FIELD))))
+     (INPUT-SIZE FIELD))))
 
 (defdisplay
     :in-layer editor :around ((string base-attribute) object)

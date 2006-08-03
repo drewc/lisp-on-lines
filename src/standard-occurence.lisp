@@ -1,4 +1,3 @@
-
 (in-package :lisp-on-lines)
 
 ;;;; STRINGS

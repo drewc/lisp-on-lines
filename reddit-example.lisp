@@ -2,7 +2,7 @@
 
 (defvar *lol-example-application*
   (make-instance 'cookie-session-application
-                 :url-prefix "/"
+                 :url-prefix "/lisp-on-lines/"
                  :tal-generator (make-instance 'yaclml:file-system-generator
                                                :cachep t
                                                :root-directories (list *ucw-tal-root*))
