@@ -26,16 +26,16 @@
 	       :layers '(+ as-string)))))
 
 (defaction delete-instance ((self component) instance)
-    (when  (call 'option-dialog
-		 :message (format nil "Really Delete ~A" (display-as-string instance))
-		 :options '((t "Yes, really delete it,")
-			    (nil "No, i'll hold on to this one.")))
-      (let ((delete-failed (%delete-instance-and-return-nil instance)))
-	(if (not delete-failed)
-	(answer t)
-	(progn
-	  (call 'info-message :message delete-failed)
-	  (answer t))))))
+  (when  (call 'option-dialog
+	       :message (format nil "Really Delete ~A" (display-as-string instance))
+	       :options '((t "Yes, really delete it,")
+			  (nil "No, i'll hold on to this one.")))
+    (let ((delete-failed (%delete-instance-and-return-nil instance)))
+      (if (not delete-failed)
+	  (answer t)
+	  (progn
+	    (call 'info-message :message delete-failed)
+	    (answer t))))))
 
 
 (defmethod breadcrumb-name (component)
@@ -43,28 +43,28 @@
 
 (defun render-breadcrumb (self)
   (<:p :class "breadcrumb"
-      (let ((count 0)
-	    (trail-length 3))
-	(labels ((find-call-stack-for-crumbs (component list-of-parents)
-		   (cond ((and (not (null component))
-			       (> trail-length count))
-			  (incf count)		      
-			  (find-call-stack-for-crumbs
-			   (when (slot-boundp component 'ucw::calling-component)
-			     (slot-value component 'ucw::calling-component))
-			   (cons component list-of-parents)))
-			 (t
-			  list-of-parents))))
-	  (loop
-	     :for c
-	     :on (find-call-stack-for-crumbs self nil)
-	     :do (let ((c c))
-		   (<:as-html " / ")
-		   (if (cdr c)
-		       (<ucw:a
-			:action (answer-component (second c) nil)
-			(<:as-html (breadcrumb-name (first c))))
-		       (<:as-html (breadcrumb-name (first c))))))))))
+       (let ((count 0)
+	     (trail-length 3))
+	 (labels ((find-call-stack-for-crumbs (component list-of-parents)
+		    (cond ((and (not (null component))
+				(> trail-length count))
+			   (incf count)		      
+			   (find-call-stack-for-crumbs
+			    (when (slot-boundp component 'ucw::calling-component)
+			      (slot-value component 'ucw::calling-component))
+			    (cons component list-of-parents)))
+			  (t
+			   list-of-parents))))
+	   (loop
+	      :for c
+	      :on (find-call-stack-for-crumbs self nil)
+	      :do (let ((c c))
+		    (<:as-html " / ")
+		    (if (cdr c)
+			(<ucw:a
+			 :action (answer-component (second c) nil)
+			 (<:as-html (breadcrumb-name (first c))))
+			(<:as-html (breadcrumb-name (first c))))))))))
 
 (defcomponent crud ()
  ((instance :accessor instance :initarg :instance :initform nil))
