@@ -50,7 +50,7 @@
 	       (<:li (<:as-html (message c)))))
 	    (funcall next-method))))
 
-(defattribute string-attribute ()
+(defattribute base-attribute ()
   ()
   (:in-layer validate)
   (:default-properties

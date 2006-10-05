@@ -57,9 +57,12 @@
 ;;; wrap-a-form
 (deflayer wrap-form)
 
+(defvar *in-form-p* nil)
+
 (define-layered-class description
   :in-layer wrap-form ()
-  ((form-buttons :initarg :form-buttons :initform nil :special t :accessor form-buttons)))
+  ((form-buttons :initarg :form-buttons :initform nil :special t :accessor form-buttons)
+   (form-type :initarg :form-type :initform '<ucw:simple-form :special t :accessor form-type)))
 
 (defattribute form-button-attribute ()
   ((form-buttons :initarg :form-buttons :initform nil :special t :accessor form-buttons)))
@@ -81,19 +84,28 @@
 				   action))))))))
 
 
-
-(defdisplay :in-layer wrap-form :around (description object)
-  (<ucw:form
-   :action (refresh-component self)
-   (with-inactive-layers (wrap-form)
-     (call-next-method)
-     (with-inactive-layers (show-attribute-labels)
-       (display-attribute
-	(make-instance
-	 'form-button-attribute
-	 :form-buttons
-	 (form-buttons description))
-	object)))))
+(defdisplay
+  :in-layer wrap-form
+  :around (description object)
+  (flet ((body ()
+	   (with-inactive-layers (wrap-form)
+	     (call-next-method)
+	     (with-inactive-layers (show-attribute-labels)
+	       (display-attribute
+		(make-instance
+		 'form-button-attribute
+		 :form-buttons
+		 (form-buttons description))
+		object)))))
+    (ecase (form-type description)
+      ('<ucw:simple-form
+       (<ucw:simple-form
+	:action (refresh-component self)
+	(body)))
+      ('<ucw:form
+       (<ucw:form
+	:action (refresh-component self)
+	(body))))))
 
 ;;;; wrap a DIV
 
