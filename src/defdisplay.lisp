@@ -1,7 +1,6 @@
 (in-package :lisp-on-lines)
 
 (define-layered-function display-using-description (description object component)
-;  (:argument-precedence-order )
   (:method-combination wrapping-standard)
   (:documentation
    "Render the object in component, 
