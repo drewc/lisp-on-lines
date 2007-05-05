@@ -138,7 +138,7 @@ note the omitted COMPONENT argument. sugar is all."
   "Around every attribute of a CRUD instance, i'd like to wrap a div."
   (<:div
    :class (format nil "crud-~A" (string-downcase
-				 (string (attribute.name attribute))))
+				 (string (attribute-name attribute))))
    (call-next-method)))
 
 ;;;; A description contains attributes.

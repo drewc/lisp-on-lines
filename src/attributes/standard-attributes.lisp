@@ -1,5 +1,11 @@
 (in-package :lisp-on-lines)
 
+
+;TODO: get rid of this.
+(defun attribute.name (attribute)
+  (attribute-name attribute))
+
+
 ;;;; A few layers related to attributes
 (deflayer omit-nil-attributes)
 
@@ -8,17 +14,30 @@
  (when (attribute-value object attribute)
    (call-next-method)))
 
+;;;; Labels
 (deflayer show-attribute-labels)
+
+(defattribute attribute-label (attribute)
+  ()
+  (:default-properties
+      :attribute nil))
+
+(defdisplay
+  ((label attribute-label) object)    
+ (<:label
+  :class "lol-label"
+  (<:as-html (or (label (attribute label))
+		 (attribute-name (attribute label)) " ")
+	     "   ")))  
+
+(defvar *attribute-label-attribute*
+  (make-instance 'attribute-label))
 
 (defdisplay
     :in-layer show-attribute-labels
     :around ((attribute standard-attribute) object)    
-  (<:label
-   :class "lol-label"
-   (<:as-html (or (label attribute) (attribute.name attribute)) " "))
-  (<:span
-   :class "lol-attribute"
-   (call-next-method)))
+ (display-attribute *attribute-label-attribute* object :attribute attribute)
+ (call-next-method))
 
 (deflayer use-pretty-labels)
 
@@ -35,11 +54,11 @@
 (defdisplay :in-layer inspect-attributes
 	    :around ((attribute standard-attribute) object)
  (call-next-method)
-  (<ucw:a :action (ucw::call-inspector self attribute)
+ (<ucw:a :action-body (ucw::call-inspector self attribute)
 	  :title
 	  (strcat "Inspect "
-			 (attribute.name attribute) ":"
-			 (description.type attribute) ":"
+			 (attribute-name attribute) ":"
+			 (description-type attribute) ":"
 			 (type-of attribute))
 	  (<:as-html "(i)")))
 
@@ -144,7 +163,7 @@
     :in-layer editor :around ((string base-attribute) object)
     (dletf (((callback string)
 	     (or (callback string)
-		 (ucw::make-new-callback
+		 (ucw::register-callback
 		  #'(lambda (val)
 		      (setf (attribute-value object string) val)))))
 	    ((object string) object))
@@ -161,6 +180,9 @@
     :max-length nil
     :default-value ""))
 
+
+#| 
+
 (defdisplay :in-layer omit-nil-attributes
 	    :around ((attribute string-attribute) object)
  (when (< 0 (length  (attribute-value object attribute)))
@@ -175,7 +197,7 @@
 
 
 ;;;; editor
-(defattribute string-attribute (base-attribute)
+#+nil (defattribute string-attribute (base-attribute)
   ()
   (:in-layer editor)
   (:default-properties
@@ -262,7 +284,7 @@
 
     (<:div
      :class "lol-image-thumbnails"
-     (<:as-html "imagie")))
+     (<:as-html "imagie"))) |#
 
 
 

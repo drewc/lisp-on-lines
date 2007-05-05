@@ -1,21 +1,19 @@
 (in-package :lisp-on-lines)
 
+(defun persistentp (object)
+  (slot-value object 'clsql-sys::view-database))
+
 (define-layered-class description ()
   ((description-type
     :initarg :type
-    :accessor description.type
+    :accessor description-type
     :initform 'viewer
     :special t)
    (description-layers
     :initarg :layers
-    :accessor description.layers
+    :accessor description-layers
     :initform nil
     :special t)
-   (description-properties
-    :accessor description.properties
-    :initform nil
-    :special t
-    :documentation "TODO: not used much anymore, and shouldn't be relied on")
    (described-object
     :layered-accessor object
     :initform nil
@@ -30,6 +28,11 @@
     :initarg :attributes
     :initform nil
     :special t)
+   (description-properties
+    :accessor description-properties
+    :initarg :properties
+    :initform '()
+    :special t)
    (description-default-properties
     :accessor default-properties
     :initarg :default-properties
@@ -39,8 +42,7 @@
 (defmethod attributes :around ((description description))
   "Add any default properties to the attributes"
   
-  (let ((default-properties (default-properties description)))
-    (if (and (listp default-properties)
+  (let ((default-properties (default-properties description)))    (if (and (listp default-properties)
 	     (not (null default-properties)))
 	(let ((a (mapcar #'(lambda (att)
 		    (append (ensure-list att) default-properties))
@@ -72,16 +74,37 @@ Attributes are the metadata used to display, validate, and otherwise manipulate 
 
 (defun find-or-create-occurence (name)
   "Returns the occurence associated with this name."
-  (let ((occurence (gethash name *occurence-map*)))
-    (if occurence
-	occurence
-	(let ((new-occurence (make-instance 'standard-occurence :name name)))
-	  (setf (gethash name *occurence-map*) new-occurence)
-	  new-occurence))))
+  (or (get-occurence name)
+      (values (setf (get-occurence name) (make-instance 'standard-occurence :name name))
+	      t)))
+
+(defun get-occurence (name)
+  (gethash name *occurence-map*))
+
+(defun (setf get-occurence) (occurence name)
+    (setf (gethash name *occurence-map*) occurence))
 
 (defun clear-occurence (occurence)
   "removes all attributes from the occurence"
   (setf (attribute-map occurence) (make-hash-table)))
+
+(defmethod make-attribute-using-slot-definition (slotd)
+  (make-attribute
+   :name (closer-mop:slot-definition-name slotd)
+   :type-spec (closer-mop:slot-definition-type slotd)
+   :type (first (remove-if (lambda (item)
+			     (or
+			      (eql item 'or)
+			      (eql item 'null)
+			      (eql item nil)))
+			   (ensure-list (closer-mop:slot-definition-type slotd))))))
+
+(defmethod initialize-occurence-for-instance (occurence instance)
+  (let ((slots (closer-mop:class-slots (class-of instance))))
+    (dolist (s slots)
+      (let ((att (make-attribute-using-slot-definition s)))
+	(setf (find-attribute occurence (attribute-name att)) att)))
+    occurence))
 
 (defgeneric find-occurence (name)
   (:method (thing)
@@ -89,12 +112,24 @@ Attributes are the metadata used to display, validate, and otherwise manipulate 
   (:method ((name symbol))
     (find-or-create-occurence name))
   (:method ((instance standard-object))
-    (find-or-create-occurence (class-name (class-of instance)))))
+    (multiple-value-bind (occ new?)
+	(find-or-create-occurence (class-name-of instance))
+      (if new?
+	  (initialize-occurence-for-instance occ instance)
+	  occ))))
+
+(defun list-attributes (occurence)
+  (let (res)
+    (maphash (lambda (k v)
+	       (declare (ignore v))
+	       (push k res))
+	     (attribute-map occurence))
+    res))
 
 
 (define-layered-class
     attribute (description)
-    ((attribute-name :layered-accessor attribute.name
+    ((attribute-name :layered-accessor attribute-name
 	   :initarg :name
 	   :initform (gensym "ATTRIBUTE-")
 	   :special t)
@@ -113,11 +148,12 @@ Attributes are the metadata used to display, validate, and otherwise manipulate 
     ((setter :accessor setter :initarg :setter :special t :initform nil)
      (getter :accessor getter :initarg :getter :special t :initform nil)
      (value :accessor value :initarg :value :special t)
-     (slot-name :accessor slot-name :initarg :slot-name :special t :initform nil))
+     (slot-name :accessor slot-name :initarg :slot-name :special t :initform nil)
+     (typespec :accessor type-spec :initarg :type-spec :initform nil))
     (:documentation "Attributes are used to display a part of a thing, such as a slot of an object, a text label, the car of a list, etc."))
 
 (define-layered-method label :around ((attribute standard-attribute))
- (or (call-next-method) (attribute.name attribute)))
+ (or (call-next-method) (attribute-name attribute)))
 
 (defmacro defattribute (name supers slots &rest args)
   (let* (
@@ -229,10 +265,10 @@ ATTRIBUTE-SPEC: a list of (type name &rest initargs)"
   (find-attribute (occurence attribute-with-occurence) attribute-name))
 
 (defmethod set-attribute-properties ((occurence-name t) attribute properties)
-  (setf (description.properties attribute) (plist-nunion
+  (setf (description-properties attribute) (plist-nunion
 					    properties
-					    (description.properties attribute)))
-  (loop for (initarg value) on (description.properties attribute) 
+					    (description-properties attribute)))
+  (loop for (initarg value) on (description-properties attribute) 
 	      by #'cddr
 	      with map = (initargs.slot-names attribute)
 	      do (let ((s-n (assoc-if #'(lambda (x) (member initarg x)) map)))
@@ -250,14 +286,14 @@ ATTRIBUTE-SPEC: a list of (type name &rest initargs)"
 otherwise, (setf find-attribute)"
   (let ((att (find-attribute occurence-name attribute-name)))
     (if (and att inherit (or (eql (car attribute-spec)
-			      (description.type att))
+			      (description-type att))
 			     (eq (car attribute-spec) t)))
 	(set-attribute-properties occurence-name att (cdr attribute-spec))
 	(setf (find-attribute occurence-name attribute-name)
 	      (cons  (car attribute-spec)
 		     (plist-nunion
 		      (cdr attribute-spec) 
-		      (when att (description.properties att))))))))
+		      (when att (description-properties att))))))))
 
 (defmethod perform-define-attributes ((occurence-name t) attributes)
   (loop for attribute in attributes
@@ -280,8 +316,8 @@ otherwise, (setf find-attribute)"
 ;;"Unused???"
 (defmethod setter (attribute)
   (warn "Setting ~A in ~A" attribute *context*)
-  (let ((setter (getf (description.properties attribute) :setter))
-	(slot-name (getf (description.properties attribute) :slot-name)))
+  (let ((setter (getf (description-properties attribute) :setter))
+	(slot-name (getf (description-properties attribute) :slot-name)))
     (cond (setter
 	   setter)
 	  (slot-name
@@ -310,13 +346,13 @@ we return slot-value-or nil either boundp or not."
 		   slot-value-or-nil (slot-value
 				      instance
 				      (slot-name attribute))))))
-	((and (slot-exists-p instance (attribute.name attribute)))
+	((and (slot-exists-p instance (attribute-name attribute)))
 	 (setf existsp t)
-	 (when (slot-boundp instance (attribute.name attribute))
+	 (when (slot-boundp instance (attribute-name attribute))
 	   (setf boundp t
 		 slot-value-or-nil (slot-value
 				    instance
-				    (attribute.name attribute))))))
+				    (attribute-name attribute))))))
     (VALUES slot-value-or-nil existsp boundp)))
   
 (define-layered-method attribute-value (instance (attribute standard-attribute))
@@ -339,8 +375,8 @@ we return slot-value-or nil either boundp or not."
 	   (funcall setter value instance))
 	  ((and (slot-boundp attribute 'slot-name) slot-name)
 	   (setf (slot-value instance slot-name) value))
-	  ((and (slot-exists-p instance (attribute.name attribute)))
-	   (setf (slot-value instance (attribute.name attribute)) value))
+	  ((and (slot-exists-p instance (attribute-name attribute)))
+	   (setf (slot-value instance (attribute-name attribute)) value))
 	  (t
 	   (error "Cannot set ~A in ~A" attribute instance)))))
 
@@ -368,9 +404,9 @@ we return slot-value-or nil either boundp or not."
   (foreign-key has-a))
 
 (defun attribute-to-definition (attribute)
-  (nconc (list (attribute.name attribute)
-	       (description.type attribute))
-	 (description.properties attribute)))
+  (nconc (list (attribute-name attribute)
+	       (description-type attribute))
+	 (description-properties attribute)))
 
 (defun find-default-presentation-attribute-definitions ()
   nil)
@@ -381,9 +417,9 @@ we return slot-value-or nil either boundp or not."
 	 (real-default (find-attribute 'default type)))
     (cond
       (possible-default
-	(description.type possible-default))
+	(description-type possible-default))
        (real-default
-	(description.type real-default))
+	(description-type real-default))
        (t type))))
 
 (defun gen-presentation-slots (instance)

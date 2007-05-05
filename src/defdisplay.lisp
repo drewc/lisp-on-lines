@@ -22,10 +22,10 @@ The function (which is usually display-using-description) will be called with th
     (let* ((description (find-occurence object)))
 
       (if description
-	  (dletf (((description.type description) type)
+	  (dletf (((description-type description) type)
 		  ((attributes description) (or
 					     (attributes description)
-					     (list-slots object))))
+					     (list-attributes description))))
 	    ;; apply the default line to the description
 	    (funcall-with-description
 	     description
@@ -43,9 +43,7 @@ The function (which is usually display-using-description) will be called with th
    "Displays OBJECT in COMPONENT."))
 
 (define-layered-method display ((component t) (object t)
-				&rest properties
-				&key type (line #'line-in)
-				&allow-other-keys)
+				&rest properties)
   " The default display dispatch method
 
   DISPLAY takes two required arguments, 
@@ -56,25 +54,8 @@ The function (which is usually display-using-description) will be called with th
   that is to say the parameters that come together to create the output.
 
 The default display calls out via FUNCALL-WITH-LAYERS to tche DISPLAY-USING-DESCRIPTION method."
-
-  (let* ((description (find-occurence object)))
-
-    (if description
-	(dletf (((description.type description) type)
-		((attributes description) (or
-					   (attributes description)
-					   (list-slots object))))
-	  ;; apply the default line to the description
-	  (funcall-with-description
-	   description
-	   (funcall line object)
-	   ;; apply the passed in arguments and call display-using-description
-	   #'(lambda ()		 
-	       (funcall-with-description
-		description
-		properties
-		#'display-using-description description object component))))
-	(error "no description for ~A" object))))
+  (funcall (apply 'make-display-function component object properties)
+	   'display-using-description))
 
 ;;;;; Macros
 
@@ -82,16 +63,16 @@ The default display calls out via FUNCALL-WITH-LAYERS to tche DISPLAY-USING-DESC
 (defun funcall-with-description (description properties function &rest args)
   
   (if description
-      (dletf* (((description.type description) (or
+      (dletf* (((description-type description) (or
 						(getf properties :type)
-						(description.type description)))
+						(description-type description)))
 	    
-	       ((description.layers description) (append 
-							 (description.layers description)
+	       ((description-layers description) (append 
+							 (description-layers description)
 							 (getf properties :layers)))
-	       ((description.properties description) (append (description.properties description) properties)))
+	       ((description-properties description) (append (description-properties description) properties)))
 	(funcall-with-layers 
-	 (description.layers description)
+	 (description-layers description)
 	 #'(lambda ()
 	     (contextl::funcall-with-special-initargs
 	      (list (cons description properties))
@@ -137,7 +118,8 @@ The default display calls out via FUNCALL-WITH-LAYERS to tche DISPLAY-USING-DESC
     (declare (ignorable self))
     (flet ((display* (thing &rest args)
 	     (apply #'display ,component thing args))
-	   (display-attribute (attribute obj &optional props)
+	   (display-attribute (attribute obj &rest
+					 props)
 	     (if props
 		 (funcall-with-description
 		  attribute props
@@ -185,7 +167,7 @@ The default display calls out via FUNCALL-WITH-LAYERS to tche DISPLAY-USING-DESC
 		      component)
 		     (t
 		      (setf c component)
-		      `(,c component))))
+		      `(,c t))))
 		  (with-component (,c)  
 			 ,@(cdr tail)))))))))
 

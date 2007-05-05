@@ -25,7 +25,7 @@
 
 (defvar *link-wrapped-p* nil)
 
-(define-layered-class description
+#+nil(define-layered-class description
   :in-layer wrap-link ()
   ((link :initarg :link-action
 	 :initarg :action
@@ -59,7 +59,7 @@
 
 (defvar *in-form-p* nil)
 
-(define-layered-class description
+#+nil(define-layered-class description
   :in-layer wrap-form ()
   ((form-buttons :initarg :form-buttons :initform nil :special t :accessor form-buttons)
    (form-type :initarg :form-type :initform '<ucw:simple-form :special t :accessor form-type)))
@@ -112,7 +112,7 @@
 
 (deflayer wrap-div)
 
-(define-layered-class description
+#+nil(define-layered-class description
   :in-layer wrap-div ()
   ((div-attributes :accessor div-attributes :initarg :div :special t :initform nil)))
 

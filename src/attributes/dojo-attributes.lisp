@@ -2,7 +2,7 @@
 
 (deflayer dojo)
 
-(define-layered-class
+#+nil(define-layered-class
     description :in-layer dojo ()
   ((dojo-type :accessor dojo-type :initarg :dojo-type :initform nil :special t)))
 

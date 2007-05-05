@@ -56,7 +56,7 @@ Generates a form that, when evaluated, initialises the given table as an lol obj
 This involves creating a meta-model, a clsql view-class, and the setting up the default attributes for a mewa presentation"
 
     `(progn 
-       (def-view-class-from-table ,table)
+       (rofl::gen-view-class ,table :generate-joins :all)
        (set-default-attributes (quote ,(meta-model::sql->sym table))))))
     
 (defmacro define-view-for-table (&rest tables)

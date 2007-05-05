@@ -4,6 +4,22 @@
 (deflayer viewer)
 (deflayer editor)
 
+;;;; Attributes 
+(defdisplay
+    :in-layer editor
+    ((attribute standard-attribute) object)
+    (call-next-method))
+
+(defdisplay
+  ((attribute standard-attribute) object component)
+ (<:as-html (attribute-value object attribute)))
+
+(define-layered-method display-using-description
+  ((attribute standard-attribute) object component)
+  (with-component (component)
+    )
+  (<:as-html (attribute-value object attribute)))
+
 (define-layered-method label (anything)
   nil)
 
@@ -21,11 +37,23 @@ This allows us to dispatch to a subclasses editor.
 (deflayer as-string)
 
 (defdisplay
-  :in-layer as-string (d o)
-  (with-inactive-layers (editor viewer one-line as-table show-attribute-labels)
+  :in-layer as-string (d o (self t))
+  (with-output-to-string (yaclml::*yaclml-stream*)
     (do-attributes (a d)
       (display-attribute a o)
-      (<:as-is " "))))
+      (<:as-html " "))
+    #+nil (with-inactive-layers (editor viewer one-line as-table show-attribute-labels)
+)))
+
+
+(defdisplay
+  :in-layer as-string (d o)
+  (with-output-to-string (yaclml::*yaclml-stream*)
+    (do-attributes (a d)
+      (display-attribute a o)
+      (<:as-html " "))
+    #+nil (with-inactive-layers (editor viewer one-line as-table show-attribute-labels)
+)))
 
 (defmethod list-slots (thing)
   (list 'identity))
@@ -49,7 +77,6 @@ This allows us to dispatch to a subclasses editor.
   "The default display for CLOS objects"
   (print (class-name (class-of object)))
   (dolist* (slot-name (list-slots object))
-  
     (let ((boundp (slot-boundp object slot-name)))
       (format t "~A~A : ~A" (strcat slot-name)
 	      (if boundp
@@ -105,7 +132,7 @@ This allows us to dispatch to a subclasses editor.
 
 ;;;; List Displays
 
-(deflayer list-display-layer)
+#| (deflayer list-display-layer)
 
 (define-layered-class description
   :in-layer list-display-layer ()
@@ -136,20 +163,9 @@ This allows us to dispatch to a subclasses editor.
 	   (dolist* (obj list)
 	     (<:tr 
 	      (do-attributes (a desc)
-		(<:td (display-attribute a obj)))))))))))
+		(<:td (display-attribute a obj))))))))))) |#
 
-;;;; Attributes 
-(defdisplay
-    :in-layer editor
-    ((attribute standard-attribute) object)
-    (call-next-method))
 
-(define-layered-method display-using-description
-  ((attribute standard-attribute) object component)
-  (with-component (component)
-    (<ucw:a :action (call 'info-message :message (strcat (symbol-package (description.type attribute))":/::" (description.type attribute)))
-	    (<:as-html "*" )))
-  (<:as-html (attribute-value object attribute)))
 
 
 

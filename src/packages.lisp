@@ -7,6 +7,10 @@
 	:clsql
 	:contextl)
   (:nicknames :lol :mewa)
+
+  (:shadowing-import-from
+   :ucw
+   :parent)
   
   (:shadowing-import-from
    :iterate

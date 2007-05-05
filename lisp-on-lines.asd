@@ -12,7 +12,8 @@
   :components ((:static-file "lisp-on-lines.asd")
 	       (:module :patches			  
 			:components ((:file "yaclml")
-				     (:file "ucw")))
+				     (:file "ucw")
+				     (:file "clsql")))
 	       (:module :src
 			:components ((:file "packages")
 				     (:file "special-initargs")
@@ -38,8 +39,7 @@
 					       (:file "standard-validation")
 					       (:file "email-address"))
 					      :serial t)
-				     (:module :components
-					      :components ((:file "crud"))))
+				     )
 			:serial t))
   :serial t
   :depends-on (:arnesi :ucw :meta-model :split-sequence :contextl :cl-ppcre :cl-fad))
