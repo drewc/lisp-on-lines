@@ -31,7 +31,7 @@
 	 :initarg :action
 	 :initform nil :special t :accessor link-action)))
 
-(defaction call-action-with-component-and-object ((self component) action-id object)
+(defmethod/cc call-action-with-component-and-object ((self component) action-id object)
   (funcall (ucw::find-action (ucw::context.current-frame *context*) action-id)
 	   self
 	   object))

@@ -1,14 +1,14 @@
 (in-package :lisp-on-lines)
 
-(defaction read-instance ((self component) instance)
+(defmethod/cc read-instance ((self component) instance)
   "View an existing instance"
   (call 'crud-viewer :instance instance))
 
-(defaction update-instance ((self component) instance)
+(defmethod/cc update-instance ((self component) instance)
   "Edit an instance, possibly a newly created one"
   (call 'crud-editor :instance instance))
 
-(defaction create-instance ((self component) class &rest initargs)
+(defmethod/cc create-instance ((self component) class &rest initargs)
   "Create a new instance and edit it."
   (update-instance self (apply #'make-instance class initargs)))
 
@@ -25,7 +25,7 @@
       (display (make-instance 'component) instance
 	       :layers '(+ as-string)))))
 
-(defaction delete-instance ((self component) instance)
+(defmethod/cc delete-instance ((self component) instance)
   (when  (call 'option-dialog
 	       :message (format nil "Really Delete ~A" (display-as-string instance))
 	       :options '((t "Yes, really delete it,")
@@ -208,7 +208,7 @@ note the omitted COMPONENT argument. sugar is all."
 (defcomponent crud-editor (crud validation-mixin)
   ())
 
-(defaction ensure-instance ((self crud-editor))
+(defmethod/cc ensure-instance ((self crud-editor))
   "This one does a little magic, see SYNC-INSTANCE"
   (meta-model::sync-instance (instance self)))
 
@@ -288,7 +288,7 @@ note the omitted COMPONENT argument. sugar is all."
 	  :action (create-instance object (db-class object))
 	  (<:as-html "(Create New " (db-class object) ")"))))
 
-(defaction call-crud-summary ((self component) class)
+(defmethod/cc call-crud-summary ((self component) class)
   (call 'crud-summary :class class))
 
 

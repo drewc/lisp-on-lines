@@ -50,7 +50,7 @@
 		      base-classes)))
 
 
-(defaction do-search ((self simple-search))
+(defmethod/cc do-search ((self simple-search))
   (let* ((target (or (slot-value self 'ucw::parent) self))
 	 (result (call-component 
 		  target 
@@ -86,7 +86,7 @@
 		 :type :listing 
 		 :initargs `(:instances ,r)))))))
 
-(defaction ok ((self simple-search-results) &optional arg)
+(defmethod/cc ok ((self simple-search-results) &optional arg)
   (declare (ignore arg))
   (answer nil))
 
@@ -125,7 +125,7 @@
   (make-instance 'mewa::mewa-presentation-search
 		     :search-presentation (make-presentation instance :type :search-model)
 		     :list-presentation (make-presentation instance :type :listing
-(defaction select-search-table ((self advanced-search))
+(defmethod/cc select-search-table ((self advanced-search))
   (let* ((i (make-instance (search-table self)))
 	 (p (make-search-presentation i)))
     (embed-component self p)

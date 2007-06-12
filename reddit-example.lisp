@@ -43,7 +43,7 @@
 
 (defvar *links* (list))
 
-(defaction add-link ((self component))
+(defmethod/cc add-link ((self component))
   (let ((l (call-display (make-instance 'link)
 		:type 'editor)))
     (when l (push l *links*))))

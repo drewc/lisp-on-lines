@@ -78,7 +78,7 @@ but here's what i use."
 	  input-id  "session"  
 	  (ucw::session.id (ucw::context.session ucw::*context*))))
 
-(defaction on-submit ((l auto-complete))
+(defmethod/cc on-submit ((l auto-complete))
   ())
 
 (defmethod js-on-select ((l auto-complete))
@@ -184,7 +184,7 @@ but here's what i use."
 	    (<ucw:render-component 
 	     :component (make-presentation val :type :one-line))))))
 	  
-(defaction revert-foreign-slot ((slot ajax-foreign-key-slot-presentation))
+(defmethod/cc revert-foreign-slot ((slot ajax-foreign-key-slot-presentation))
   (setf (lol::value (live-search slot)) nil)
   (when (original-value slot)
   (mewa::sync-foreign-instance slot (original-value slot))))

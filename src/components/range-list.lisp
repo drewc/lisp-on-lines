@@ -97,12 +97,12 @@ MAKE-RANGE-LIST-GENERATOR INSTANCE :chunk-size WINDOW-SIZE GENERATOR-ARGS"))
     (setf (range-list.offset self)
           (funcall (range-list.generator self) :offset))))
 
-(defaction scroll ((self range-list) op)
+(defmethod/cc scroll ((self range-list) op)
     (funcall (range-list.generator self) :offset (range-list.offset self))
     (setf (mewa::instances self)
           (range-list.fetch-items self op)))
 
-(defaction scroll-to-page ((self range-list) window-number)
+(defmethod/cc scroll-to-page ((self range-list) window-number)
   (setf (range-list.offset self) window-number)
   (scroll self :current))
 
