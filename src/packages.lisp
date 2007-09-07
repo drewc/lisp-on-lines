@@ -1,22 +1,22 @@
 (defpackage :lisp-on-lines
   (:use :arnesi
-	:iterate
-	:meta-model
+	;:iterate
+	;:meta-model
 	:common-lisp
-	:it.bese.ucw
-	:clsql
+	;:it.bese.ucw
+	;:clsql
 	:contextl)
   (:nicknames :lol :mewa)
 
-  (:shadowing-import-from
+  #+nil(:shadowing-import-from
    :ucw
    :parent)
   
-  (:shadowing-import-from
+  #+nil(:shadowing-import-from
    :iterate
    :with)
 
-  (:shadowing-import-from
+#+nil  (:shadowing-import-from
    :clsql
    :time-difference
    :make-time
@@ -28,7 +28,22 @@
    :time+
    :date-element)
   
-  (:export 
+  (:export
+
+   #:find-description
+   #:ensure-description
+   #:define-description
+
+   #:define-display
+   #:display
+   #:*display*
+   #:*object*
+   
+   #:find-attribute
+   #:attribute-label
+
+
+
    ;;;; CLSQL meta-model/default attributes definers
    ;;;; TODO: should be moved to meta-model,
    ;;;; with lol specific function implemented like the
@@ -86,3 +101,6 @@
    #:crud-summary
    #:crud-database
    #:instance))
+
+(cl:defpackage #:lol-test
+  (:use :cl :lisp-on-lines :stefil :contextl))

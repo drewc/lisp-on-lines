@@ -1,8 +1,10 @@
 (in-package :lisp-on-lines)
 
+(deflayer lisp-on-lines ())
+
 ;;;; The Standard Layers
-(deflayer viewer)
-(deflayer editor)
+(deflayer viewer (lisp-on-lines))
+(deflayer editor (lisp-on-lines))
 
 ;;;; Attributes 
 (defdisplay

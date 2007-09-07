@@ -6,26 +6,21 @@
    "Render the object in component, 
     using DESCRIPTION, which is an occurence, an attribute, or something else entirely."))
 
-(define-layered-method
-    display-using-description (d o c)
-    (<:as-html "default :" o))
-
 (defun make-display-function (component object
 			      &rest properties
-			      &key type (line #'line-in)
+			      &key  (line #'line-in)
 			      &allow-other-keys)
   "returns a function that expects a 3 argument function as its argument
 
-The function (which is usually display-using-description) will be called with the proper environment for display all set up nice n pretty like."
+The function argument (which is usually display-using-description) will be called with the proper environment for display all set up nice n pretty like."
 
   (lambda (function)
     (let* ((description (find-occurence object)))
-
       (if description
-	  (dletf (((description-type description) type)
-		  ((attributes description) (or
-					     (attributes description)
-					     (list-attributes description))))
+	  (dletf (((attributes description) 
+		   (or
+		    (attributes description)
+		    (list-attributes description))))
 	    ;; apply the default line to the description
 	    (funcall-with-description
 	     description
@@ -59,25 +54,36 @@ The default display calls out via FUNCALL-WITH-LAYERS to tche DISPLAY-USING-DESC
 
 ;;;;; Macros
 
+(defun funcall-with-layers (layers thunk)
+  (let ((context (current-layer-context)))
+    (loop :for (op layer) 
+       :on layers :by #'cddr
+       :do (setf context 
+		 (case op
+		   (+ (adjoin-layer layer context))
+		   (- (remove-layer layer context)))))
+    (funcall-with-layer-context context thunk)))
+		  
 
-(defun funcall-with-description (description properties function &rest args)
-  
+(defun funcall-with-description (description properties function &rest args)  
   (if description
-      (dletf* (((description-type description) (or
-						(getf properties :type)
-						(description-type description)))
+      (dletf* (((description-type description) 
+		(or
+		 (getf properties :type)
+		 (description-type description)))
 	    
-	       ((description-layers description) (append 
-							 (description-layers description)
-							 (getf properties :layers)))
+	       ((description-layers description) 
+		(append 
+		 (description-layers description)
+		 (getf properties :layers)))
 	       ((description-properties description) (append (description-properties description) properties)))
 	(funcall-with-layers 
 	 (description-layers description)
-	 #'(lambda ()
-	     (contextl::funcall-with-special-initargs
-	      (list (cons description properties))
-	      #'(lambda ()
-		  (apply function args))))))
+	 (lambda ()
+	   (contextl::funcall-with-special-initargs
+	    (list (cons description properties))
+	    #'(lambda ()
+		(apply function args))))))
       (apply function args)))
 
 (defmacro with-description ((description &rest properties) &body body)
@@ -128,47 +134,6 @@ The default display calls out via FUNCALL-WITH-LAYERS to tche DISPLAY-USING-DESC
       (declare (ignorable #'display* #'display-attribute))
       ,@body)))
 
-(defmacro defdisplay (&body body)
-  (loop with in-layerp = (eq (car body) :in-layer)
-	with layer = (if in-layerp (cadr body) 't)
-	for tail on (if in-layerp (cddr body) body)
-	until (listp (car tail))
-	collect (car tail) into qualifiers
-	finally
-	(when (member :in-layer qualifiers)
-	  (error "Incorrect occurrence of :in-layer in defdisplay. Must occur before qualifiers."))
-	(return
-	  (destructuring-bind (description &optional object component) (car tail) 
-	    (with-unique-names (d c)
-	      (let (standard-description-p)
-		`(define-layered-method
-		  display-using-description
-		  :in-layer ,layer
-		  ,@qualifiers
 
-		  ,@(unless object
-			    (setf object description)
-			    (setf description d)
-			    nil)
-		  (,(cond
-		     ((listp description)
-		      (setf d (car description))
-		      description)
-		     (t
-		      (setf d description)
-		      (setf standard-description-p t)
-		      `(,d description)))
-		   ,object
-		   ,(cond
-		     ((null component)
-		      `(,c component))
-		     ((listp component)
-		      (setf c (car component))
-		      component)
-		     (t
-		      (setf c component)
-		      `(,c t))))
-		  (with-component (,c)  
-			 ,@(cdr tail)))))))))
 
 
