@@ -42,49 +42,22 @@ OTHER DEALINGS IN THE SOFTWARE."
 				     (:file "utilities")
 				     (:file "display")
 				     
-				     (:file "attributes")
+				     (:file "attribute")
 
 				     (:file "description-class")
 				     (:file "description")
 				     
 
 				     (:file "description-test")
-				     (:file "attribute-test")
-#|				     (:file "mewa")
-				     (:file "lisp-on-lines")  
-				     (:file "defdisplay")
-				     (:file "standard-display")
-				     (:file "standard-occurence")
-				     (:file "standard-wrappers")
-				     (:file "lines")
-				     (:file "defdescription")
-				     (:module :attributes
-					      :components (
-							   (:file "standard-attributes")
-							   (:file "numbers")
-							   (:file "relational-attributes")
-							   (:file "dojo-attributes"))
-					      :serial t)
-				     (:module :displays
-					      :components ((:file "inspector"))
-					      
-							   :serial t)
-				     (:module :validation
-					      :components
-					      ((:file "validation")
-					       (:file "standard-validation")
-					       (:file "email-address"))
-					      :serial t)|#
-				     )
+				     (:file "attribute-test"))
 			:serial t))
   :serial t
-  :depends-on (:contextl
-	       :stefil
-	       :arnesi ;:ucw :stefil :meta-model :split-sequence  :cl-ppcre :cl-fad
-	       ))
+  :depends-on (:contextl))
 
-(defsystem :lisp-on-lines.example
-    :components (
-		 (:file "reddit-example"))
+(defsystem :lisp-on-lines.test
+  :components ((:module :src
+			:components ((:file "description-test")
+				     (:file "attribute-test"))
+			:serial t))
 
-    :depends-on (:lisp-on-lines))
+  :depends-on (:lisp-on-lines :stefil))
