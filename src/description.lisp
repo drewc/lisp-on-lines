@@ -2,17 +2,6 @@
 
 (define-description description ())
 
-(defgeneric find-description-class (name &optional errorp)	   
-  (:method ((name (eql t)) &optional errorp)
-    (declare (ignore errorp))
-    (find-class 'description t))
-  (:method ((name symbol) &optional errorp)
-    (or (find-class (defining-description name) errorp)
-	(find-description-class t)))
-  (:method ((description description) &optional errorp)
-    (declare (ignore errorp))
-    (class-of description)))
-
 (defun find-description (name)
    (slot-value (find-description-class name) 'instance))
 
@@ -35,6 +24,7 @@
 	     (with-output-to-string (*display*)
 	       (display-attribute attribute)))
 	   (attributes description))))
+
 
 (define-layered-method description-of (object)
   (find-description 't))			      

@@ -53,8 +53,6 @@
 (define-layered-method attribute-value (object attribute)
  (funcall (attribute-function attribute) object))
 
-
-
 (defmethod shared-initialize :around ((attribute standard-attribute) slots &rest initargs)
   (declare (ignore initargs))
     (setf (attribute-function attribute) 
