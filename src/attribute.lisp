@@ -10,11 +10,9 @@
 
 (defmethod eval-attribute-initarg (attribute (initarg (eql :function)))
   t)
-
 (define-layered-function attribute-value (object attribute))
 
-(define-layered-method attribute-value (object attribute)
- (funcall (attribute-function attribute) object))
+
 	       
 (deflayer LISP-ON-LINES)
 (ensure-active-layer 'lisp-on-lines)
@@ -30,7 +28,8 @@
   (initargs))
 
 (defmethod shared-initialize :around ((instance attribute-special-layered-direct-slot-definition) slots &rest initargs )
-  (setf (slot-value instance 'initargs) (apply #'arnesi:remove-keywords initargs *standard-direct-slot-initarg-symbols*))
+  (setf (slot-value instance 'initargs) 
+	(apply #'arnesi:remove-keywords initargs *standard-direct-slot-initarg-symbols*))
   (call-next-method))
 
 (define-layered-class standard-attribute 
@@ -50,6 +49,11 @@
    (value 
     :initarg :value
     :layered t)))
+
+(define-layered-method attribute-value (object attribute)
+ (funcall (attribute-function attribute) object))
+
+
 
 (defmethod shared-initialize :around ((attribute standard-attribute) slots &rest initargs)
   (declare (ignore initargs))
@@ -74,7 +78,7 @@
   ((attribute standard-attribute) display object &rest args)
  (declare (ignore args))
  (format display "~@[~A ~]~A" (attribute-label attribute) 
-	 (display display (attribute-value object attribute))))
+	 (attribute-value object attribute)))
 
 
 

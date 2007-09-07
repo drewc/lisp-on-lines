@@ -40,24 +40,24 @@ OTHER DEALINGS IN THE SOFTWARE."
 	       (:module :src
 			:components ((:file "packages")
 				     (:file "utilities")
+				     
 				     (:file "display")
 				     
 				     (:file "attribute")
 
 				     (:file "description-class")
-				     (:file "description")
 				     
-
-				     (:file "description-test")
-				     (:file "attribute-test"))
+				     (:file "description"))
 			:serial t))
   :serial t
-  :depends-on (:contextl))
+  :depends-on (:contextl :arnesi))
 
 (defsystem :lisp-on-lines.test
   :components ((:module :src
-			:components ((:file "description-test")
-				     (:file "attribute-test"))
+			:components ((:file "packages-test")
+				     (:file "description-test")
+				     (:file "attribute-test")
+				     (:file "display-test"))
 			:serial t))
 
   :depends-on (:lisp-on-lines :stefil))

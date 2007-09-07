@@ -13,9 +13,9 @@
 
   (let ((before (display-using-description 
 		 (find-description 'attribute-test-2) 
-		 nil *object*)))
+		 nil :foo)))
     (with-active-layers (test-display)
       (is (equalp "BRILLANT!" (display-using-description 
 			       (find-description 'attribute-test-2) 
-			       nil *object*))))))
+			       nil :foo))))))
 		  
