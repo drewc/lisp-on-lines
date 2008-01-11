@@ -2,20 +2,19 @@
 
 (in-suite lisp-on-lines)
 
-(deftest test-define-display ()
-  (test-attribute-property-inheriting)
+(deftest (test-define-display :compile-before-run t) ()
+ 
+  (define-description test-display ())
 
-  (deflayer test-display)
+  (define-display ((description test-display))
+   t "BRILLANT!")
+  
+  (is (equalp "BRILLANT!" (display-using-description 
+			   (find-description 'test-display) 
+			   nil :foo))))
 
-  (define-display 
-    :in-layer test-display ((description attribute-test-2))
-    (format *display* "BRILLANT!"))
+(deftest test-symbol-display ()
+  (is (stringp (display nil nil))))
 
-  (let ((before (display-using-description 
-		 (find-description 'attribute-test-2) 
-		 nil :foo)))
-    (with-active-layers (test-display)
-      (is (equalp "BRILLANT!" (display-using-description 
-			       (find-description 'attribute-test-2) 
-			       nil :foo))))))
+
 		  

@@ -1,122 +1,164 @@
 (in-package :lisp-on-lines)
 
-;;; * The Description Meta-Meta-Super class.
+;;;; * DESCRIPTIONS
+;;;; A description is an object which is used 
+;;;; to describe another object.
 
-(defclass description-special-layered-access-class 
-    (contextl::special-layered-access-class)
- ((original-name :initarg original-name)
-  (description-layer :initarg description-layer)
-  (instance)))
-	   
-(defmethod closer-mop:direct-slot-definition-class 
-    ((class description-special-layered-access-class) 
-     &key &allow-other-keys)
-  (find-class 'attribute-special-layered-direct-slot-definition))
+;;; HACK:
+;;; Since i'm not using deflayer, ensure-layer etc, 
+;;; There are a few places where contextl gets confused 
+;;; trying to locate my description layers.
 
-(defmethod closer-mop:effective-slot-definition-class 
-    ((class description-special-layered-access-class) 
-     &key name &allow-other-keys)
-    (declare (ignore name))
-  (find-class 'standard-attribute))
+;;; TODO: investigate switching to deflayer!
 
-(defmethod closer-mop:compute-effective-slot-definition :around
-    ((class description-special-layered-access-class) name direct-slot-definitions)
+(defun contextl::prepare-layer (layer)
+  (if (symbolp layer)
+      (if (eq (symbol-package layer)
+	  (find-package :description-definers))
+	  layer
+	  (contextl::defining-layer layer))
+      
+      layer))
+
+(defmethod find-layer-class :around ((layer symbol) &optional errorp environment)
+  (if (eq (symbol-package layer)
+	  (find-package :description-definers))
+      (find-class layer)
+      (call-next-method)))
+
+;;; #+HACK
+;;; I'm having some 'issues' with 
+;;; compiled code and my initialization.
+;;; So this hack initializes the world.
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defparameter *defined-descriptions* nil))
+
+(defclass description-access-class (standard-layer-class contextl::special-layered-access-class )
+  ((defined-in-descriptions :initarg :in-description)
+   (mixin-class-p :initarg :mixinp)))
+
+(defmethod direct-slot-definition-class
+           ((class description-access-class) &key &allow-other-keys)
+  (find-class 'direct-attribute-definition-class))
+
+(defmethod effective-slot-definition-class
+           ((class description-access-class) &key &allow-other-keys)
+  (find-class 'effective-attribute-definition-class))
+
+(defmethod compute-effective-slot-definition
+           ((class description-access-class) name direct-slot-definitions)
   (declare (ignore name))
-  (let ((slotd (call-next-method)))
-    (setf (slot-value slotd 'direct-slots) direct-slot-definitions)
+  (let ((attribute (call-next-method)))
+    (setf (attribute-direct-attributes attribute) direct-slot-definitions)
+    (setf (attribute-object attribute) 
+	  (make-instance 'standard-attribute 
+			 :name name 
+			 'effective-attribute attribute
+			 'description-class class))
+    attribute))
     
-    (apply #'shared-initialize slotd nil (slot-value 
-					  (find t direct-slot-definitions 
-						:test #'eq 
-						:key #'slot-definition-layer )
-					  'initargs))
 
-    slotd))
-       					   
-;;; * The Description Meta-Meta class.
-(defclass description-class (description-special-layered-access-class layered-class) 
+(defclass standard-description-class (description-access-class layered-class)
   ()
-  (:default-initargs :defining-metaclass 'description-special-layered-access-class))
+  (:default-initargs :defining-metaclass 'description-access-class))
+
+(defmethod validate-superclass
+           ((class standard-description-class)
+            (superclass standard-class))
+  t)
+
+(defclass standard-description-object (standard-layer-object) ())
+
+(defun description-class-name  (description-class)
+    (read-from-string (symbol-name (class-name description-class))))
 
 (defun initialize-description-class (class)
-  (let ((description (make-instance class)))
-    (setf (slot-value class 'instance) description)
-    (dolist (slotd (closer-mop:class-slots class))
-      (setf (slot-value slotd 'description) description)
-      (dolist (slot (slot-value slotd 'direct-slots))
-	(setf (slot-value slot 'initargs) 
-	      (loop 
-		 :for (initarg value) 
-		 :on (slot-value slot 'initargs)
-		 :by #'cddr
-		 :nconc (list initarg
-			      (if (eval-attribute-initarg slotd initarg)
-				  (eval value)
-				  value))))
-	(ensure-layered-method  
-	 'special-slot-values
-	 `(lambda (description attribute)
-	    (list ,@(loop 
-		 :for (initarg value) 
-		 :on (slot-value slot 'initargs)
-		 :by #'cddr
-		 :nconc (list (list 'quote (or (find-slot-name-from-initarg 
-				   (class-of slotd) initarg) initarg))
-			      
-				  value))))
-	 :in-layer (slot-definition-layer slot) 
-	 :qualifiers '(append)
-	 :specializers (list class (closer-mop:intern-eql-specializer (closer-mop:slot-definition-name slotd))))))))
 
-(defmethod closer-mop:finalize-inheritance :after ((class description-class))
-  (initialize-description-class class))
+  ;;; HACK: initialization does not happen properly 
+  ;;; when compiling and loading or something like that.
+  ;;; Obviously i'm not sure why.
+  ;;; So we're going to explicitly initialize things.
+  ;;; For now. --drewc
 
-(define-layered-class description ()
-  ((identity :function #'identity))
-  (:metaclass description-class)
-  (description-layer t))
+  (pushnew class *defined-descriptions*)
+  
+  ;;; ENDHACK.
 
-(eval-when (:load-toplevel :execute)
- (closer-mop:finalize-inheritance (find-class 'description)))
+  (let* ((description (find-layer class)) 
+	 (attribute-objects (mapcar #'attribute-object (class-slots (class-of description))))
+	 (defining-classes (partial-class-defining-classes (class-of description))))
+    
 
-;;; The layer itself. 
-#+nil(deflayer description ()
-  ()
-  (:metaclass description))
+        
+    (loop 
+       :for (layer class) 
+       :on  defining-classes :by #'cddr 
+       :do (funcall-with-layer-context 
+	    (adjoin-layer (find-layer layer) (current-layer-context))
+	   (lambda ()
+	     (loop :for direct-slot :in (class-direct-slots class) 
+		:do (let ((attribute 
+			   (find (slot-definition-name direct-slot) 
+				 attribute-objects 
+				 :key #'attribute-name)))
+		      (apply #'reinitialize-instance attribute 
+			     (direct-attribute-properties direct-slot))
+		      (apply #'change-class attribute (attribute-class attribute) (direct-attribute-properties direct-slot))
 
-#+nil (defmethod print-object ((object description) stream)
-  (call-next-method))
+		      (setf (slot-value description (attribute-name attribute))
+			    attribute))))))))
 
-(defgeneric find-description-class (name &optional errorp)	   
-  ;; !-- Sometimes it gets inited, sometimes it don't.
-  (:method :around (name &optional errorp)
-	   (let ((class (call-next-method)))
-	     (unless (slot-boundp class 'instance)
-	       (initialize-description-class class)) 
-	     class))
-  (:method ((name (eql t)) &optional errorp)
-    (declare (ignore errorp))
-    (find-class 'description t))
-  (:method ((name symbol) &optional errorp)
-    (or (find-class (defining-description name) errorp)
-	(find-description-class t)))
-  (:method ((description description) &optional errorp)
-    (declare (ignore errorp))
-    (class-of description)))
+;;;; HACK: run this at startup till we figure things out.
+(defun initialize-descriptions () 
+  (map nil #'initialize-description-class 
+       (setf *defined-descriptions* 
+	     (remove-duplicates *defined-descriptions*))))
 
-;;; A handy macro.
-(defmacro define-description (name &optional superdescriptions &body options)
-  (let ((description-name (defining-description name)))
-     
-    (destructuring-bind (&optional slots &rest options) options
-      `(prog1
-	   (defclass ,description-name ,(append (mapcar #'defining-description superdescriptions) '(description))
-	     ,(if slots slots '())
-	     ,@options
-	     ,@(unless (assoc :metaclass options)
-		       '((:metaclass description-class)))
-	     (original-name . ,name))
-	 (initialize-description-class (find-description-class ',description-name))))))
+(defmethod initialize-instance :around ((class standard-description-class) &rest initargs &key (direct-superclasses '()))
+  (declare (dynamic-extent initargs))
+  (prog1
+      (if (loop for direct-superclass in direct-superclasses
+		thereis (ignore-errors (subtypep direct-superclass 'standard-description-object)))
+	(call-next-method)
+	(apply #'call-next-method
+	       class
+	       :direct-superclasses
+	       (append direct-superclasses
+		       (list (find-class 'standard-description-object)))
+	       initargs))
+    (initialize-description-class class)))
+
+
+(defmethod reinitialize-instance :around ((class standard-description-class) &rest initargs &key (direct-superclasses '() direct-superclasses-p))
+  (declare (dynamic-extent initargs))
+;  (warn "CLASS ~A ARGS ~A:" class initargs)
+  (prog1
+      (if (or (not direct-superclasses-p)
+		(loop for direct-superclass in direct-superclasses
+		      thereis (ignore-errors (subtypep direct-superclass 'standard-description-object))))
+	  (call-next-method)
+	  (apply #'call-next-method
+		 class
+		 :direct-superclasses
+		 (append direct-superclasses
+			 (list (find-class 'standard-description-object)))
+		 initargs))
+    (initialize-description-class class)))
+		      
+		      
+(defmethod print-object ((object standard-description-object) stream)
+  (print-unreadable-object (object stream :type nil :identity t)
+    (format stream "DESCRIPTION ~A" (ignore-errors (description-print-name object)))))
+
+(defmethod print-object ((object standard-description-class) stream)
+  (print-unreadable-object (object stream :type t :identity t)
+    (princ  (ignore-errors (description-print-name (find-layer object))) stream)))
+
+(defun find-description (name)
+  (find-layer (find-class (defining-description name))))
+
+
+
 
 
 

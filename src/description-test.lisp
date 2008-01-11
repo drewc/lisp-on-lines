@@ -40,12 +40,6 @@
     (with-active-layers (test-description-layer)
       (is (equal "BRILLANT-IN-LAYER" (slot-value att 'lol::label))))))
 
-(deftest test-special-slot-values ()
-  (test-simple-attributes)
-  (is (equalp '(lol::label "BRILLANT!") 
-		(lol::special-slot-values 
-		 (find-description 'test-description) 'test-attribute))))
-
 (defparameter *atomic-type-specifiers* 
   '(arithmetic-error                  function            simple-condition           
     array                             generic-function    simple-error               

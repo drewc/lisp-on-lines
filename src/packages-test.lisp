@@ -1,3 +1,3 @@
 
 (cl:defpackage #:lol-test
-    (:use #:cl #:lisp-on-lines #:stefil #:contextl))
+    (:use #:cl #:lisp-on-lines #:lisp-on-lines-ucw #:stefil #:contextl))

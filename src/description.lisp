@@ -1,57 +1,72 @@
 (in-package :lisp-on-lines)
 
-(define-description description ())
+(define-layered-function description-of (thing)
+  (:method (thing)
+    (find-description 't)))
 
-(defun find-description (name)
-   (slot-value (find-description-class name) 'instance))
+(defun description-print-name (description)
+  (description-class-name (class-of description)))
 
-(defun description-attributes (description)
-  (closer-mop:class-slots (find-description-class description)))
-
-(define-layered-function attributes (description))
-
-(define-layered-method attributes (description)
- (description-attributes description))
-		       
-;;;!-- TODO: This is a prime candidate for optimization
 (defun find-attribute (description attribute-name)
-  (find attribute-name (description-attributes description) :key #'attribute-name))
+  (slot-value description attribute-name))
 
-(define-display ((description description))
-  (format *display* "~{~A~%~}" 
-	  (mapcar 
-	   (lambda (attribute)
-	     (with-output-to-string (*display*)
-	       (display-attribute attribute)))
-	   (attributes description))))
+#+nil(mapcar (lambda (slotd)  
+	    (slot-value-using-class (class-of description) description slotd))
+	    (class-slots (class-of description)))
+(defun description-attributes (description)
+  (mapcar #'attribute-object (class-slots (class-of description))))
+
+(define-layered-function attributes (description)
+  (:method (description)
+    (remove-if-not 
+     (lambda (attribute)
+       (and (eq (class-of description)
+		(print (slot-value attribute 'description-class)))
+	    (some #'layer-active-p 
+	     (mapcar #'find-layer 
+		     (slot-definition-layers 
+		      (attribute-effective-attribute-definition attribute))))))
+     (description-attributes description))))
+
+  
+;;; A handy macro.
+(defmacro define-description (name &optional superdescriptions &body options)
+  (let ((description-name (defining-description name)))     
+    (destructuring-bind (&optional slots &rest options) options
+      (let ((description-layers (cdr (assoc :in-description options))))
+	(if description-layers
+	    `(eval-when (:compile-toplevel :load-toplevel :execute)
+	       ,@(loop 
+		    :for layer 
+		    :in description-layers
+		    :collect `(define-description 
+				  ,name ,superdescriptions ,slots
+				  ,@(acons 
+				    :in-layer (defining-description layer)
+				    (remove :in-description options :key #'car)))))
+	    `(eval-when (:compile-toplevel :load-toplevel :execute)
+					;  `(progn
+	       (defclass ,description-name 
+		   ,(append (mapcar #'defining-description 
+				    superdescriptions) 
+			    (unless (or (eq t name)    
+					(assoc :mixinp options))
+			      (list (defining-description t))))
+		 ,(if slots slots '())
+		 ,@options
+		 ,@(unless (assoc :metaclass options)
+			   '((:metaclass standard-description-class))))
+;	       (initialize-description)
+	       (find-description ',name)))))))
 
 
-(define-layered-method description-of (object)
-  (find-description 't))			      
 
-(define-layered-method description-of ((symbol symbol))
-  (find-description 'symbol))
 
-(define-description symbol ()
-  ((identity :label "Symbol:")
-   (name 
-    :function #'symbol-name
-    :label "Name:")
-   (value 
-    :label "Value:" 
-    :function 
-    (lambda (symbol)
-      (if (boundp symbol)
-	  (symbol-value symbol)
-	  "<UNBOUND>")))
-   (package :function #'symbol-package
-	    :label "Package:")
-   (function :label "Function:"
-    :function     	     
-    (lambda (symbol)
-     (if (fboundp symbol)
-	 (symbol-function symbol)
-	 "<UNBOUND>")))))
+
+
+
+			      
+
 
 
 		      

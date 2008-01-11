@@ -14,6 +14,10 @@
      (or (get symbol package)
          (setf (get symbol package) (gensym))))))
 
+(defmacro with-active-descriptions (descriptions &body body)
+       `(with-active-layers ,(mapcar #'defining-description descriptions)
+	  
+	 ,@body))
 #|
 Descriptoons are represented as ContextL classes and layers. To avoid nameclashes with other classes or layers, the name of a description is actually mappend to an internal unambiguous name which is used instead of the regular name.
 |#
@@ -23,26 +27,27 @@ Descriptoons are represented as ContextL classes and layers. To avoid nameclashe
   (make-enclosing-package "DESCRIPTION-DEFINERS"))
 
 (defun defining-description (name)
-  "Takes the name of a layer and returns its internal name."
+  "Takes the name of a description and returns its internal name."
   (case name
-    ((t) 't)
     ((nil) (error "NIL is not a valid description name."))
     (otherwise (enclose-symbol name *description-definers*))))
 
-
-(defmethod initargs.slot-names (class)
-  "Returns ALIST of (initargs) . slot-name."
-  (nreverse (mapcar #'(lambda (slot)
+(defmethod initargs.slots (class)
+  "Returns ALIST of (initargs) . slot."
+  (mapcar #'(lambda (slot)
 	      (cons (closer-mop:slot-definition-initargs slot)
-		    (closer-mop:slot-definition-name slot)))
-	  (closer-mop:class-slots class))))
+		    slot))
+		    (closer-mop:class-slots class)))
 
-(defun find-slot-name-from-initarg (class initarg)
+(defun find-slot-using-initarg (class initarg)
   (cdr (assoc-if #'(lambda (x) (member initarg x))
-				   (initargs.slot-names class))))
+				   (initargs.slots class))))
+  
   
 
 ;;;!-- TODO: this has been so mangled that, while working, it's ooogly! 
+;;;!-- do we still use this?
+
 (defun initargs-plist->special-slot-bindings (class initargs-plist)
   "returns a list of (slot-name value) Given a plist of initargs such as one would pass to :DEFAULT-INITARGS."
   (let ((initargs.slot-names-alist (initargs.slot-names class)))
@@ -51,6 +56,10 @@ Descriptoons are represented as ContextL classes and layers. To avoid nameclashe
 		    ))
 		  (when slot-name ;ignore invalid initargs. (good idea/bad idea?)
 		    (list slot-name value))))))
+
+(defun dprint (format-string &rest args)
+  (apply #'format t (concatenate 'string format-string "~%") args))
+
 
 
 

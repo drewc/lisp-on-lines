@@ -1,7 +1,10 @@
 (in-package :lisp-on-lines)
 
-(defvar *object*)
+(defvar *description*)
 (defvar *display*)
+(defvar *object*)
+
+(deflayer display-layer)
 
 (define-layered-function display-using-description (description display object &rest args)
   (:documentation
@@ -12,33 +15,39 @@
 
 (define-layered-method display-using-description 
   :around (description display object &rest args)
-  (let ((*display* display)
+  (declare (ignorable args))
+  (let ((*description* description)
+	(*display* display)
 	(*object*  object))
+      
     (call-next-method)))
+
+
 
 (define-layered-method display-using-description (description display object &rest args)
  (error "No DISPLAY-USING-DESCRIPTION methods are specified for: ~%  DESCRIPTION: ~A ~%  DISPLAY: ~A ~%  OBJECT: ~A ~%  ARGS: ~S
 
 OMGWTF! If you didn't do this, it's a bug!" description display object args))
 
-(defun display-attribute (attribute)
-  (display-using-description attribute *display* *object*))
+
 
 (defmacro define-display (&body body)
-  (loop with in-layerp = (eq (car body) :in-layer)
-	with layer = (if in-layerp (cadr body) 't)
-	for tail on (if in-layerp (cddr body) body)
+  (loop with in-descriptionp = (eq (car body) :in-description)
+	with description = (if in-descriptionp (cadr body) 't)
+	for tail on (if in-descriptionp (cddr body) body)
 	until (listp (car tail))
 	collect (car tail) into qualifiers
 	finally
-	(when (member :in-layer qualifiers)
-	  (error "Incorrect occurrence of :in-layer in defdisplay. Must occur before qualifiers."))
+	(when (member :in-description qualifiers)
+	  (error "Incorrect occurrence of :in-description in defdisplay. Must occur before qualifiers."))
 	(return
 	  (destructuring-bind (description-spec &optional  (display-spec (gensym)) (object-spec (gensym))) 
 	      (car tail) 
 		`(define-layered-method
 		  display-using-description
-		   :in-layer ,layer
+		   :in-layer ,(if (eq t description) 
+				  t
+				  (defining-description description))
 		   ,@qualifiers
 		   (,(if (listp description-spec)
 		        (list (first description-spec)

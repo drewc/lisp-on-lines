@@ -1,0 +1,161 @@
+(in-package :lol-test)
+
+(defclass lol-test-server (standard-server)
+  ())
+
+(defclass lol-test-application (standard-application)
+  ()
+  (:default-initargs
+    :url-prefix "/lisp-on-lines.test/"
+;    :www-roots (list (cons "static/" (project-relative-pathname #P"wwwroot/")))
+))
+
+(defparameter *lol-test-ucw-application* (make-instance 'lol-test-application))
+
+(defun make-backend ()
+  (ucw::make-backend
+   :httpd
+   :host "localhost"
+   :port 9090))
+
+(defun make-server ()
+  (make-instance
+   'lol-test-server
+   :backend (make-backend)))
+
+(defparameter *lol-test-ucw-server* (make-server))
+
+(register-application *lol-test-ucw-server* *lol-test-ucw-application*)
+
+(defentry-point "index.ucw" (:application *lol-test-ucw-application*) ()
+  (call 'lol-test-window))
+
+(defun startup-lol-ucw-test ()
+  (startup-server *lol-test-ucw-server*))
+
+(defun shutdown-lol-ucw-test ()
+ (shutdown-server *lol-test-ucw-server*))
+
+(defcomponent lol-test-window (standard-window-component)
+  ()
+  (:default-initargs 
+      :body (make-instance 'lol-test-suite-component)))
+
+(define-symbol-macro $window (lol-ucw:context.window-component *context*))
+
+(define-symbol-macro $body (window-body $window))
+
+(defcomponent lol-test-suite-component ()
+  ((test :component lol-test-simple-action :accessor test)
+   (component :component lol-test-render :accessor component)))
+
+(define-symbol-macro $test (test $body))
+
+(define-symbol-macro $component (component $body))
+
+(defmethod render ((self lol-test-suite-component))
+  (<:H1 "Lisp On Lines Web test suite")
+     (render (slot-value self 'test))
+  (<:div 
+   :style "border:1px solid black;"
+   (render (slot-value self 'component))))
+
+(defcomponent lol-test-render ()
+  ((message :initform "test" :accessor message :initarg :message)))
+
+(defmethod render ((self lol-test-render))
+  (<:h3 :id "test-render" 
+	(<:as-html (format nil "Hello ~A." (message self)))))
+
+(defcomponent lol-test-simple-action ()
+  ())
+
+(defmethod render ((self lol-test-simple-action))
+  (<:ul
+   (<:li (<lol:a 
+	  :function 
+	  (lambda ()
+	    (setf (message $component) 
+		  (format nil "~A : ~A" (message $component) "FUNCTION")))
+	  "Test <:A :FUNCTION type actions"))
+   (<:li 
+    (<lol:a 
+     :action (setf (message $component) 
+		   (format nil "~A : ~A" (message $component) "ACTION"))
+     "Test <:A :ACTION type actions"))
+   (<:li 
+    (<lol:a 
+     :action* (make-action 
+	       (lambda ()
+		 (setf (message $component) 
+		       (format nil "~A : ~A" (message $component) "ACTION*"))))
+     "Test <:A :ACTION* type actions"))
+   (<:li 
+    (<lol:a 
+     :action (call-component $component (make-instance 'lol-test-answer))
+     "Test CALL/ANSWER"))
+   (<:li 
+    (<lol:a 
+     :action (call-component $component (make-instance 'lol-test-simple-form))
+     "Test Simple Form"))
+   (<:li 
+    (<lol:a 
+     :action (call-component $component (make-instance 'lol-test-multi-submit-form))
+     "Test Multi Form"))
+   (<:li 
+    (<lol:a 
+     :action (call-component $component (make-instance 'lol-test-input))
+     "Test Form input"))))
+
+(defcomponent lol-test-answer (lol-test-render) ()
+  (:default-initargs :message "CALL was ok. Go Back will answer"))
+
+(defmethod render :wrapping ((self lol-test-answer))
+  (call-next-method)
+  (<lol:a :action (answer-component self nil) "Go Back."))
+
+(defcomponent lol-test-simple-form (lol-test-render) ()
+  (:default-initargs :message "Testing Simple Form:"))
+
+(defmethod render :wrapping ((self lol-test-simple-form))
+  (call-next-method)
+  (<lol:form 
+   :action (setf (message self) "Form Submitted")
+   (<:submit))
+  (<lol:a :action (answer-component self nil) "Go Back."))
+
+(defcomponent lol-test-multi-submit-form (lol-test-render) ()
+  (:default-initargs :message "Testing Simple Form:"))
+
+(defmethod render :wrapping ((self lol-test-multi-submit-form))
+  (call-next-method)
+  (<lol:form 
+   :action (setf (message self) "Form Submitted")
+   (<:submit)
+   (<lol:submit :action (setf (message self) "Submit 2" )
+		:value "2")
+   (<lol:submit :action (setf (message self) "Submit 3")
+		3))
+  (<lol:a :action (answer-component self nil) "Go Back."))
+
+(defcomponent lol-test-input (lol-test-render) 
+ ()	      
+  (:default-initargs :message "Testing INPUTS"))
+
+(defmethod render :wrapping ((self lol-test-input))
+  (call-next-method)
+  (<lol:form 
+   :function (constantly t)
+   (<lol:input :type "text" :accessor (message self))
+   
+   (<:submit)
+  )
+  (<lol:a :action (answer-component self nil) "Go Back."))
+
+
+
+
+	    	      
+
+
+

@@ -1,14 +1,17 @@
 (defpackage #:lisp-on-lines
   (:use 
    :common-lisp
-   #:contextl)
+   #:contextl
+   #:closer-mop
+   #:alexandria)
   (:nicknames #:lol)
   (:export
    
 ;; Descriptions
    #:find-description
    #:define-description
-   
+   #:with-active-descriptions
+
    ;; Displays
    #:define-display
    #:display
@@ -18,6 +21,8 @@
    
    ;; Attributes
    #:find-attribute
+   #:attribute
+   #:attributes
    #:attribute-label
    #:attribute-function
    #:attribute-value))
