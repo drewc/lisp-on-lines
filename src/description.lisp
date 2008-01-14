@@ -56,7 +56,7 @@
 		 ,@options
 		 ,@(unless (assoc :metaclass options)
 			   '((:metaclass standard-description-class))))
-;	       (initialize-description)
+	       (initialize-descriptions)
 	       (find-description ',name)))))))
 
 

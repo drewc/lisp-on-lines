@@ -11,7 +11,8 @@
 (define-layered-class effective-attribute-definition-class (special-layered-effective-slot-definition) 
   ((direct-attributes :accessor attribute-direct-attributes)
    (attribute-object :accessor attribute-object
-		     :documentation "")))
+		     :documentation "")
+   (attribute-object-initargs :accessor attribute-object-initargs)))
 
 
 (define-layered-function attribute-value (object attribute))
@@ -39,7 +40,9 @@
    (description-name)
    (description-class :initarg description-class)
    (initfunctions :initform nil)
-   (attribute-class :accessor attribute-class :initarg :attribute-class :initform 'standard-attribute)
+   (attribute-class :accessor attribute-class 
+		    :initarg :attribute-class 
+		    :initform 'standard-attribute)
    (name :layered-accessor attribute-name 
 	  :initarg :name)
    (label :layered-accessor attribute-label 

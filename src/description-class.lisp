@@ -50,11 +50,12 @@
   (declare (ignore name))
   (let ((attribute (call-next-method)))
     (setf (attribute-direct-attributes attribute) direct-slot-definitions)
-    (setf (attribute-object attribute) 
-	  (make-instance 'standard-attribute 
-			 :name name 
-			 'effective-attribute attribute
-			 'description-class class))
+    (setf (attribute-object-initargs attribute)  
+	  ;; This plist will be used to init the attribute object
+          ;; Once the description itself is properly initiated.
+	  (list :name name 
+		'effective-attribute attribute
+		'description-class class))
     attribute))
     
 
@@ -74,39 +75,44 @@
 
 (defun initialize-description-class (class)
 
-  ;;; HACK: initialization does not happen properly 
-  ;;; when compiling and loading or something like that.
-  ;;; Obviously i'm not sure why.
-  ;;; So we're going to explicitly initialize things.
-  ;;; For now. --drewc
+;;; HACK: initialization does not happen properly 
+;;; when compiling and loading or something like that.
+;;; Obviously i'm not sure why.
+;;; So we're going to explicitly initialize things.
+;;; For now. --drewc
 
   (pushnew class *defined-descriptions*)
   
-  ;;; ENDHACK.
+;;; ENDHACK.
 
   (let* ((description (find-layer class)) 
-	 (attribute-objects (mapcar #'attribute-object (class-slots (class-of description))))
+	 (attribute-objects 
+	  (mapcar 
+	   (lambda (slot)
+	     (setf (attribute-object slot)
+		   (apply #'make-instance 
+			  'standard-attribute
+			  (attribute-object-initargs slot))))
+	   (class-slots (class-of description))))
 	 (defining-classes (partial-class-defining-classes (class-of description))))
-    
 
-        
     (loop 
        :for (layer class) 
        :on  defining-classes :by #'cddr 
        :do (funcall-with-layer-context 
 	    (adjoin-layer (find-layer layer) (current-layer-context))
-	   (lambda ()
-	     (loop :for direct-slot :in (class-direct-slots class) 
-		:do (let ((attribute 
-			   (find (slot-definition-name direct-slot) 
-				 attribute-objects 
-				 :key #'attribute-name)))
-		      (apply #'reinitialize-instance attribute 
-			     (direct-attribute-properties direct-slot))
-		      (apply #'change-class attribute (attribute-class attribute) (direct-attribute-properties direct-slot))
+	    (lambda ()
+	      (loop :for direct-slot :in (class-direct-slots class) 
+		 :do (let ((attribute 
+			    (find (slot-definition-name direct-slot) 
+				  attribute-objects 
+				  :key #'attribute-name)))
+		       (apply #'reinitialize-instance attribute 
+			      (direct-attribute-properties direct-slot))
+		       (apply #'change-class attribute (attribute-class attribute) (direct-attribute-properties direct-slot))
 
-		      (setf (slot-value description (attribute-name attribute))
-			    attribute))))))))
+		       (setf (slot-value description (attribute-name attribute))
+			     attribute))))))))
 
 ;;;; HACK: run this at startup till we figure things out.
 (defun initialize-descriptions () 
