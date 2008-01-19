@@ -6,7 +6,7 @@
 		     :documentation "This is an plist to hold the values of the attribute's properties as described by this direct attrbiute definition.")))
 
 (defmethod initialize-instance :after ((attribute direct-attribute-definition-class) &rest initargs)
-  (setf (direct-attribute-properties attribute) initargs))
+  (setf (direct-attribute-properties attribute)  initargs))
 
 (define-layered-class effective-attribute-definition-class (special-layered-effective-slot-definition) 
   ((direct-attributes :accessor attribute-direct-attributes)
@@ -50,7 +50,7 @@
 	  :initarg :label
 	  :initform nil
 	  :layered t
-	  ;:special t
+	  :special t
 	  )
    (function 
     :initarg :function 
@@ -59,8 +59,6 @@
    (value :layered-accessor %attribute-value 
 	  :initarg :value
 	  :layered t)))
-
-
 
 (defmethod print-object ((object standard-attribute) stream)
   (print-unreadable-object (object stream :type nil :identity t)
@@ -94,66 +92,57 @@
 
      :lambda-list '(description))))
 
+
 (define-layered-method (setf slot-value-using-layer)
   :in-layer (context t)
+  :around
   (new-value class (attribute standard-attribute) property writer)
 
-  (when (or *bypass-property-layered-function*)
+  (when (or *bypass-property-layered-function* )
+    
     (return-from slot-value-using-layer (call-next-method)))
 
-  
-  ;;FIXME: this is wrong for so many reasons.
   (let ((layer
+	 ;;FIXME: this is wrong for so many reasons
 	 (find-layer (first (remove nil (closer-mop::class-precedence-list (class-of context))
-		     :key #'class-name)))))
+				    :key #'class-name))))
+	(boundp (slot-boundp-using-class class attribute property))
+	(val (real-slot-value-using-class class attribute property)))
+     
+    (when (special-symbol-p val)
+      (return-from slot-value-using-layer (call-next-method)))
 
-    
-    (flet ((do-set-slot()
+    (when (not boundp)
+      ;; * This slot has never been set before.
+      ;; create a method on property-layered-function
+      ;; so subclasses can see this new property.
+      (ensure-layered-method 
+       (layered-function-definer 'property-layered-function)
+       `(lambda (description attribute property)
+	  (declare (ignore description attribute property))
+	  ,val)
+       :in-layer layer
+       :specializers  
+       (list (class-of  
+	      (attribute-description attribute))
+	     (closer-mop:intern-eql-specializer 
+	      (attribute-name attribute))
+	     (closer-mop:intern-eql-specializer 
+	      (closer-mop:slot-definition-name property)))))
 
-	     (let ((fn 
-	      (let ((*bypass-property-layered-function* t))
-		(if (slot-boundp-using-class class attribute property)
-		    (slot-value-using-class class attribute property)
-		    (setf (slot-value-using-class class attribute property)
-			  (property-layered-function 
-			   (attribute-description attribute)
-			   (attribute-name attribute)
-			   (closer-mop:slot-definition-name property)))))))
-	 ;(dprint "We are setting the fn ~A " fn)
-	 (when (not (generic-function-methods fn))
-	  ; (dprint "... there are no methods on it ever")
-	   ;; * This slot has never been set before.
-	   ;; create a method on property-layered-function
-	   ;; so subclasses can see this new property.
-	   (ensure-layered-method 
-	    (layered-function-definer 'property-layered-function)
-	    `(lambda (description attribute property)
-	       (declare (ignore description attribute property))
-	       ,fn)
-	    :in-layer layer
-	    :specializers  
-	    (list (class-of  
-		   (attribute-description attribute))
-		  (closer-mop:intern-eql-specializer 
-		   (attribute-name attribute))
-		  (closer-mop:intern-eql-specializer 
-		   (closer-mop:slot-definition-name property)))))
-	     
-	   
-	 ;; finally, specialize this property to this description.
-	 (ensure-layered-method 
-	  fn
-	  `(lambda (description)
-	     (funcall ,(lambda()
-			new-value)))
-	  :in-layer layer 
-	  :specializers (list (class-of (attribute-description attribute)
-				       ))))))
-      
-      (if (slot-boundp attribute 'description-class)
-	  (do-set-slot)
-	  (error "serrint wif no desc WTF!")))))
+    ;; specialize this property to this description.
 
+    (ensure-layered-method 
+     val
+     `(lambda (description)
+	(funcall ,(lambda()
+			 new-value)))
+     :in-layer layer 
+     :specializers (list (class-of (attribute-description attribute))))
+
+    ;;	and return the set value as is custom
+    (slot-value-using-class class attribute property)))
+	 
 
 (define-layered-method slot-value-using-layer 
   :in-layer (layer t)
@@ -167,8 +156,8 @@
 
   (unless (slot-boundp-using-class class attribute property)
     (slot-unbound class attribute (slot-definition-name property)))
-
-  (let ((val (call-next-method)))
+  
+  (let ((val (print (call-next-method))))
     
   (if (and 
        ;; Not special access 
@@ -201,17 +190,14 @@
 			(attribute-name attribute)
 			(closer-mop:slot-definition-name property))))))
 
-    (if (symbolp fn)
-	;;special symbol access in process
-	T
 	(if (generic-function-methods fn)
 	    T
-	    NIL))))
+	    NIL)))
     
 (define-layered-method slot-boundp-using-layer  
   :in-layer (layer t)
   :around (class (attribute standard-attribute) property reader)
-  (if *bypass-property-layered-function*
+  (if (or *bypass-property-layered-function* *symbol-access*)
       (call-next-method)
       (slot-boundp-using-property-layered-function class attribute property)))
         
