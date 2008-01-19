@@ -10,8 +10,9 @@
   (:documentation
    "Displays OBJECT via description using/in/with/on display"))
 
-(defun display (display object &rest args)
-  (display-using-description (description-of object) display object args))
+(defun display (display object &rest args &key attributes )
+  (let ((*display-attributes* attributes))
+    (display-using-description (description-of object) display object args)))
 
 (define-layered-method display-using-description 
   :around (description display object &rest args)
@@ -19,8 +20,10 @@
   (let ((*description* description)
 	(*display* display)
 	(*object*  object))
-      
     (call-next-method)))
+
+(defun display/d (&rest args)
+  (apply #'display-using-description args))
 
 
 

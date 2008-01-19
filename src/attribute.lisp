@@ -42,7 +42,8 @@
    (initfunctions :initform nil)
    (attribute-class :accessor attribute-class 
 		    :initarg :attribute-class 
-		    :initform 'standard-attribute)
+		    :initform 'standard-attribute
+		    :layered t)
    (name :layered-accessor attribute-name 
 	  :initarg :name)
    (label :layered-accessor attribute-label 
@@ -65,6 +66,21 @@
   (print-unreadable-object (object stream :type nil :identity t)
     (format stream "ATTRIBUTE ~A" (or (ignore-errors (attribute-name object)) "+unnamed-attribute+"))))
 
+(defgeneric eval-property-initarg (att initarg)
+  (:method ((attribute standard-attribute) initarg)
+  nil)
+  (:method ((attribute standard-attribute) (initarg (eql :function)))
+    t))
+
+(defun prepare-initargs (att args)
+  (loop 
+     :for (key arg) 
+     :on args :by #'cddr 
+     :nconc (list key 
+		  (if (eval-property-initarg att key)
+		      (eval arg)
+		      arg))))
+
 (defvar *bypass-property-layered-function* nil)
 
 (define-layered-function property-layered-function (description attribute-name property-name)
@@ -82,8 +98,7 @@
   :in-layer (context t)
   (new-value class (attribute standard-attribute) property writer)
 
-  (when (or *bypass-property-layered-function*
-	    (not (slot-definition-layeredp property)))
+  (when (or *bypass-property-layered-function*)
     (return-from slot-value-using-layer (call-next-method)))
 
   
@@ -129,15 +144,15 @@
 	 (ensure-layered-method 
 	  fn
 	  `(lambda (description)
-	     ,new-value)
+	     (funcall ,(lambda()
+			new-value)))
 	  :in-layer layer 
 	  :specializers (list (class-of (attribute-description attribute)
 				       ))))))
       
       (if (slot-boundp attribute 'description-class)
 	  (do-set-slot)
-	  (push (lambda () (do-set-slot)) 
-		(slot-value attribute 'initfunctions))))))
+	  (error "serrint wif no desc WTF!")))))
 
 
 (define-layered-method slot-value-using-layer 
@@ -153,13 +168,17 @@
   (unless (slot-boundp-using-class class attribute property)
     (slot-unbound class attribute (slot-definition-name property)))
 
+  (let ((val (call-next-method)))
+    
   (if (and 
+       ;; Not special access 
+       (not (symbolp val))
        (contextl::slot-definition-layeredp property)
        (not *bypass-property-layered-function*))
-      (let ((fn (call-next-method)))
+      (let ((fn val))
 	;(dprint "... using fn ~A to get value" fn)
       (funcall fn layer  (attribute-description attribute)))
-      (call-next-method)))
+      val)))
 
 (defmacro define-bypass-function (name function-name)
   `(defun ,name (&rest args)
@@ -171,7 +190,7 @@
 (define-bypass-function (setf real-slot-value-using-class) (setf slot-value-using-class))
   
 (defun slot-boundp-using-property-layered-function (class attribute property)
-  (dprint "plf boundp:")
+  ;(dprint "plf boundp:")
   (let* ((really-bound-p 
 	  (real-slot-boundp-using-class class attribute property))
 	 (fn (if really-bound-p 
@@ -181,11 +200,13 @@
 			(attribute-description attribute)
 			(attribute-name attribute)
 			(closer-mop:slot-definition-name property))))))
-    (dprint "Slot was bound? ~A" really-bound-p)
-    ;; If the slot is unbound, we search for its layered-function
-      (if (generic-function-methods fn)
-	  T
-	  NIL)))
+
+    (if (symbolp fn)
+	;;special symbol access in process
+	T
+	(if (generic-function-methods fn)
+	    T
+	    NIL))))
     
 (define-layered-method slot-boundp-using-layer  
   :in-layer (layer t)

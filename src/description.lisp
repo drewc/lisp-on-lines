@@ -10,18 +10,24 @@
 (defun find-attribute (description attribute-name)
   (slot-value description attribute-name))
 
-#+nil(mapcar (lambda (slotd)  
-	    (slot-value-using-class (class-of description) description slotd))
-	    (class-slots (class-of description)))
+
 (defun description-attributes (description)
-  (mapcar #'attribute-object (class-slots (class-of description))))
+  (mapcar (curry
+	   #'slot-value-using-class 
+	   (class-of 'description)
+	   description) 
+	  (class-slots (class-of description))))
+
+(defvar *display-attributes* nil)
+(defun attribute-active-p (attribute)
+  (or (null *display-attributes*)
+      (find (attribute-name attribute) *display-attributes*)))
 
 (define-layered-function attributes (description)
   (:method (description)
     (remove-if-not 
      (lambda (attribute)
-       (and (eq (class-of description)
-		(print (slot-value attribute 'description-class)))
+       (and (attribute-active-p attribute)
 	    (some #'layer-active-p 
 	     (mapcar #'find-layer 
 		     (slot-definition-layers 
@@ -35,7 +41,7 @@
     (destructuring-bind (&optional slots &rest options) options
       (let ((description-layers (cdr (assoc :in-description options))))
 	(if description-layers
-	    `(eval-when (:compile-toplevel :load-toplevel :execute)
+	    `(progn ;eval-when (:compile-toplevel :load-toplevel :execute)
 	       ,@(loop 
 		    :for layer 
 		    :in description-layers
@@ -44,7 +50,7 @@
 				  ,@(acons 
 				    :in-layer (defining-description layer)
 				    (remove :in-description options :key #'car)))))
-	    `(eval-when (:compile-toplevel :load-toplevel :execute)
+	    `(progn ;eval-when (:compile-toplevel :load-toplevel :execute)
 					;  `(progn
 	       (defclass ,description-name 
 		   ,(append (mapcar #'defining-description 

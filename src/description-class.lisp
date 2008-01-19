@@ -33,7 +33,7 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defparameter *defined-descriptions* nil))
 
-(defclass description-access-class (standard-layer-class contextl::special-layered-access-class )
+(define-layered-class description-access-class (standard-layer-class contextl::special-layered-access-class )
   ((defined-in-descriptions :initarg :in-description)
    (mixin-class-p :initarg :mixinp)))
 
@@ -107,14 +107,16 @@
 			    (find (slot-definition-name direct-slot) 
 				  attribute-objects 
 				  :key #'attribute-name)))
-		       (dprint "Re-initing")
-		       (apply #'reinitialize-instance attribute 
-			      (print (direct-attribute-properties direct-slot)))
-		       (when (not (eq (find-class (attribute-class attribute))
-				  (class-of attribute)))
+		       (let ((initargs 
+			      (prepare-initargs attribute (direct-attribute-properties direct-slot))))
+			 
+			 (apply #'reinitialize-instance attribute 
+				initargs )
+			 (when (not (eq (find-class (attribute-class attribute))
+					(class-of attribute)))
 			   
 			   (apply #'change-class attribute  (attribute-class attribute) 
-				  (direct-attribute-properties direct-slot)))
+				  initargs)))
 		       
 
 		       (setf (slot-value description (attribute-name attribute))
