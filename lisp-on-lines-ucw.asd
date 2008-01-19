@@ -12,7 +12,8 @@
 			((:module :ucw
 				  :components ((:file "packages")
 					       (:file "standard-components")
-					       (:file "lol-tags"))
+					       (:file "lol-tags")
+					       (:file "html-description"))
 			
 				  :serial t))))
   :serial t

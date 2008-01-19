@@ -48,15 +48,18 @@
 		    (attribute-value nil (find-attribute d 'attribute-2))))
 	(is (equalp "VALUE2" (attribute-value nil (find-attribute d 'attribute-1))))))))
 
-(deftest test-attribute-with-different-class ()
+(deftest (test-attribute-with-different-class :compile-before-run t) ()
   (eval '(progn 
 ;;;; We cannot ever redefine this class ic think... 
 ;;; as attributes are also slot meta-objects.
-	  (unless (find-class 'test-attribute-class nil) 
-	    (define-layered-class
-		test-attribute-class (lol::standard-attribute)
-		((some-slot :initarg :some-slot :layered-accessor some-slot))))
 
+
+	  (define-layered-class
+		test-attribute-class (lol::standard-attribute)
+		((some-slot :initarg :some-slot 
+			    :layered t 
+			    :layered-accessor some-slot)))
+	  
 	  (define-description test-attribute-with-different-class-description ()
 	    ((attribute-with-different-class :attribute-class test-attribute-class :some-slot "BRILLANT!")))))
 

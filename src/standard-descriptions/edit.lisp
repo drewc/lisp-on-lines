@@ -54,7 +54,7 @@
   ((attribute standard-attribute) display object &rest args)
   
   (declare (ignore args))
-  (format t "Editabpe? ~A ~A" (attribute-label attribute) attribute))
+  (format t "Editable? ~A ~A" (attribute-label attribute) (attribute-editp object attribute)))
 
 
 		       

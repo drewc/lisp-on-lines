@@ -72,10 +72,10 @@
 
 (defun description-class-name  (description-class)
     (read-from-string (symbol-name (class-name description-class))))
-
+  
 (defun initialize-description-class (class)
 
-;;; HACK: initialization does not happen properly 
+;;; HACK: initialization does not happ   en properly 
 ;;; when compiling and loading or something like that.
 ;;; Obviously i'm not sure why.
 ;;; So we're going to explicitly initialize things.
@@ -107,9 +107,15 @@
 			    (find (slot-definition-name direct-slot) 
 				  attribute-objects 
 				  :key #'attribute-name)))
+		       (dprint "Re-initing")
 		       (apply #'reinitialize-instance attribute 
-			      (direct-attribute-properties direct-slot))
-		       (apply #'change-class attribute (attribute-class attribute) (direct-attribute-properties direct-slot))
+			      (print (direct-attribute-properties direct-slot)))
+		       (when (not (eq (find-class (attribute-class attribute))
+				  (class-of attribute)))
+			   
+			   (apply #'change-class attribute  (attribute-class attribute) 
+				  (direct-attribute-properties direct-slot)))
+		       
 
 		       (setf (slot-value description (attribute-name attribute))
 			     attribute))))))))

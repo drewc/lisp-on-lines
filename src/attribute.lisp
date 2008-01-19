@@ -143,33 +143,17 @@
 (define-layered-method slot-value-using-layer 
   :in-layer (layer t)
   :around (class (attribute standard-attribute) property reader)
-  ;(dprint "Getting the slot value of ~A" property)
-  
-  (when (not (slot-boundp-using-class class attribute property))
-    ;; If the slot is unbound, we search for its layered-function
-    
-    (let ((fn (property-layered-function 
-	       (attribute-description attribute)
 
-			(attribute-name attribute)
-			(closer-mop:slot-definition-name property))))
-      (dprint ".. not bound yet, have function ~A" fn)
-      (if (generic-function-methods fn)
-	  (let ((*bypass-property-layered-function* t))
-	   ; (dprint " This shit has been bound!. We gona set the _real_ slot to the generic function like.")
-	    (setf (slot-value-using-class class attribute property) fn))
-	  (progn 
-	    ;(dprint "This shit aint never been bound nowhere! checking for initfunction...")
-	    (when (slot-definition-initfunction property)
-	      ;(dprint "At least we have an initfunction. sweeet")
-	      (let ((*bypass-property-layered-function* nil))
-		(setf (slot-value attribute (slot-definition-name property)) 
-		    (funcall (slot-definition-initfunction property)))))))))
-
-  ;(dprint "If we're here, the slot should be bound")
+  ;;  (dprint "Getting the slot value of ~A" property) 
   
-    
-   (if (and 
+  ;; We do some magic in here and i thought it 
+  ;; would be called magically in call-next-method.
+  ;; This explicit call is good enough for now.
+
+  (unless (slot-boundp-using-class class attribute property)
+    (slot-unbound class attribute (slot-definition-name property)))
+
+  (if (and 
        (contextl::slot-definition-layeredp property)
        (not *bypass-property-layered-function*))
       (let ((fn (call-next-method)))
@@ -177,26 +161,33 @@
       (funcall fn layer  (attribute-description attribute)))
       (call-next-method)))
 
+(defmacro define-bypass-function (name function-name)
+  `(defun ,name (&rest args)
+     (let ((*bypass-property-layered-function* t))
+       (apply (function ,function-name) args))))
 
-
-
+(define-bypass-function real-slot-boundp-using-class slot-boundp-using-class)
+(define-bypass-function real-slot-value-using-class slot-value-using-class)
+(define-bypass-function (setf real-slot-value-using-class) (setf slot-value-using-class))
+  
 (defun slot-boundp-using-property-layered-function (class attribute property)
-  (when (not 
-	 (let ((*bypass-property-layered-function* t))
-	   (slot-boundp-using-class class attribute property)))
-    ;; If the slot is unbound, we search for its layered-function
-
-    (let ((fn (property-layered-function 
-	       (attribute-description attribute)
-
+  (dprint "plf boundp:")
+  (let* ((really-bound-p 
+	  (real-slot-boundp-using-class class attribute property))
+	 (fn (if really-bound-p 
+		 (real-slot-value-using-class class attribute property)
+		 (setf (real-slot-value-using-class class attribute property)
+		       (property-layered-function 
+			(attribute-description attribute)
 			(attribute-name attribute)
-			(closer-mop:slot-definition-name property))))
+			(closer-mop:slot-definition-name property))))))
+    (dprint "Slot was bound? ~A" really-bound-p)
+    ;; If the slot is unbound, we search for its layered-function
       (if (generic-function-methods fn)
-	  (let ((*bypass-property-layered-function* t))
-	    (setf (slot-value-using-class class attribute property) fn))
-	  NIL))))
+	  T
+	  NIL)))
     
-#+nil(define-layered-method slot-boundp-using-layer  
+(define-layered-method slot-boundp-using-layer  
   :in-layer (layer t)
   :around (class (attribute standard-attribute) property reader)
   (if *bypass-property-layered-function*

@@ -1,18 +1,17 @@
 (in-package :lisp-on-lines)
 
-(export '(html-description))
+(export '(html-description) (find-package :lisp-on-lines))
 
 (define-description html-description ()
+  ())
+
+
+(define-description t ()
   ((css-class  :value "lol-description")
    (dom-id :function (lambda (x)
 		       (declare (ignore x))
 		       (symbol-name 
 			(gensym "DOM-ID-")))))
-  (:mixinp t))
-
-
-(define-description t (html-description)
-  ()
   (:in-description html-description))
 
 (define-layered-class html-attribute ()
@@ -28,21 +27,47 @@
 (define-display 
   :in-description html-description ((description t))
  (with-attributes (css-class dom-id) description
-   
+   (<:style
+    (<:as-html "
+
+.lol-attribute-label, .lol-attribute-value {
+      display: block;
+      width: 70%;
+      float: left;
+      margin-bottom: 10px;
+
+}
+.lol-attribute-label {
+     text-align: right;
+     width: 24%;
+     padding-right: 20px;
+}
+
+.lol-attribute-value {
+  
+  }
+
+br {
+clear: left;
+}"))
+
    (<:div 
-    :class (attribute-value* css-class)
+    :class (list (attribute-value* css-class) "lol-description")
     :id    (attribute-value* dom-id)
     (dolist (attribute (attributes description))
       (<:div 
        :class (attribute-css-class attribute)
        (when (attribute-dom-id attribute) 
 	 :id (attribute-dom-id attribute))
-       (<:span 
-	:class "lol-attribute-label"
-	(<:as-html (attribute-label attribute)))
+       (let ((label (attribute-label attribute)))
+	 (when label
+	   (<:label 
+	    :class "lol-attribute-label"
+	    (<:as-html label))))
        (<:span 
 	:class "lol-attribute-value"
-	(<:as-html (attribute-value* attribute))))))))
+	(<:as-html (format nil "~A" (attribute-value* attribute))))
+       (<:br))))))
      
       
   
