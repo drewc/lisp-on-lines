@@ -2,7 +2,8 @@
 
 (defvar *description*)
 (defvar *display*)
-(defvar *object*)
+(defvar *object* nil)
+
 
 (deflayer display-layer)
 
@@ -12,7 +13,7 @@
 
 (defun display (display object &rest args &key attributes )
   (let ((*display-attributes* attributes))
-    (display-using-description (description-of object) display object args)))
+    (apply #'display-using-description (description-of object) display object args)))
 
 (define-layered-method display-using-description 
   :around (description display object &rest args)
@@ -20,19 +21,34 @@
   (let ((*description* description)
 	(*display* display)
 	(*object*  object))
-    (call-next-method)))
+    (contextl::funcall-with-special-initargs  
+      (loop 
+	 :for (key val) :on args :by #'cddr
+	 :collect (list (find key (description-attributes description) 
+			      :key #'attribute-keyword)
+			:value val))
+      (lambda ()
+	(contextl::funcall-with-special-initargs  
+	 (let ((attribute (find-attribute description 'active-attributes)))	
+	   (when attribute
+	     (loop for spec in (attribute-value object attribute)
+		  if (listp spec)
+		  collect (cons (or 
+				 (find-attribute description (car spec))
+						 (error "No attribute matching ~A" (car spec)))
+				 (cdr spec)))))
+     (lambda ()
+       (call-next-method)))))))
+			      
+
 
 (defun display/d (&rest args)
   (apply #'display-using-description args))
-
-
 
 (define-layered-method display-using-description (description display object &rest args)
  (error "No DISPLAY-USING-DESCRIPTION methods are specified for: ~%  DESCRIPTION: ~A ~%  DISPLAY: ~A ~%  OBJECT: ~A ~%  ARGS: ~S
 
 OMGWTF! If you didn't do this, it's a bug!" description display object args))
-
-
 
 (defmacro define-display (&body body)
   (loop with in-descriptionp = (eq (car body) :in-description)

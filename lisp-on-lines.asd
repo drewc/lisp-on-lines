@@ -41,6 +41,7 @@ OTHER DEALINGS IN THE SOFTWARE."
 			:components ((:file "contextl-hacks")
 				     (:file "packages")
 				     
+				     (:file "rofl")
 				     (:file "utilities")
 				     
 				     (:file "display")
@@ -54,6 +55,7 @@ OTHER DEALINGS IN THE SOFTWARE."
 
 				    (:module :standard-descriptions
 					      :components ((:file "t")
+							   (:file "inline")
 							   (:file "edit")
 							   (:file "symbol")
 							   (:file "list")
@@ -63,7 +65,7 @@ OTHER DEALINGS IN THE SOFTWARE."
 				     
 				     :serial t))
   :serial t
-  :depends-on (:contextl :arnesi :alexandria))
+  :depends-on (:contextl :arnesi :alexandria :postmodern))
 
 
 

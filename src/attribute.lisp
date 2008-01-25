@@ -1,64 +1,227 @@
 (in-package :lisp-on-lines)
 
 (define-layered-class direct-attribute-definition-class 
- (special-layered-direct-slot-definition contextl::singleton-direct-slot-definition)
-  ((attribute-properties :accessor direct-attribute-properties
-		     :documentation "This is an plist to hold the values of the attribute's properties as described by this direct attrbiute definition.")))
+  (special-layered-direct-slot-definition 
+   contextl::singleton-direct-slot-definition)
+  ((attribute-properties 
+    :accessor direct-attribute-properties
+    :documentation "This is an plist to hold the values of 
+    the attribute's properties as described by this direct 
+    attribute definition.")))
 
-(defmethod initialize-instance :after ((attribute direct-attribute-definition-class) &rest initargs)
-  (setf (direct-attribute-properties attribute)  initargs))
+(defmethod initialize-instance 
+    :after ((attribute direct-attribute-definition-class) 
+	    &rest initargs)
+  (setf (direct-attribute-properties attribute) initargs))
 
-(define-layered-class effective-attribute-definition-class (special-layered-effective-slot-definition) 
-  ((direct-attributes :accessor attribute-direct-attributes)
-   (attribute-object :accessor attribute-object
-		     :documentation "")
-   (attribute-object-initargs :accessor attribute-object-initargs)))
+(define-layered-class effective-attribute-definition-class 
+    (special-layered-effective-slot-definition) 
+  ((direct-attributes 
+    :accessor attribute-direct-attributes)
+   (attribute-object 
+    :accessor attribute-object)
+   (attribute-object-initargs 
+    :accessor attribute-object-initargs)))
 
+(defvar *function-access* nil
+  "set/get a place's property function instead of its symbol value
+   when this is set to a non-nil value")
 
-(define-layered-function attribute-value (object attribute))
+(defmacro with-function-access (&body body)
+  "executes body in an environment with *function-access* set to t"
+  `(let ((*function-access* t))
+     ,@body))
 
-(define-layered-method attribute-value (object attribute)
-		       
- (let ((fn (handler-case (attribute-function attribute)
-	     (unbound-slot () nil))))
-   (if fn 
-       (funcall fn object)
-       (%attribute-value attribute))))
+(defmacro without-function-access (&body body)
+  "executes body in an environment with *function-access* set to nil"
+  `(let ((*function-access* nil))
+     ,@body))
 
-(defmethod attribute-description (attribute)
-  ;(break "description for ~A is (slot-value attribute 'description-name)")
-  (find-layer (slot-value attribute 'description-class))
-#+nil  (let ((name (slot-value attribute 'description-name)))
-    (when name 
-      (find-description name))))
+(define-layered-function property-access-function (description attribute-name property-name)
+  (:method  (description attribute-name property-name)
+    (ensure-layered-function 
+     (defining-description 
+	 (intern (format nil "~A-~A-~A" 
+			 (description-print-name description)
+			 attribute-name
+			 property-name)))
+	 :lambda-list '(description))))
 
 
 (define-layered-class standard-attribute ()
+ ((description-class :initarg description-class)
+  (name 
+   :layered-accessor attribute-name 
+   :initarg :name)
+  (effective-attribute-definition 
+    :initarg effective-attribute
+    :accessor attribute-effective-attribute-definition)
+  (attribute-class 
+   :accessor attribute-class 
+   :initarg :attribute-class 
+   :initform 'standard-attribute
+   :layered t)
+  (label 
+   :layered-accessor attribute-label 
+   :initarg :label
+   :initform nil
+   :layered t
+   :special t)
+  (function 
+   :initarg :function 
+   :layered-accessor attribute-function
+   :layered t
+   :special t)
+   (value 
+    :layered-accessor %attribute-value 
+    :initarg :value
+    :layered t
+    :special t)
+  (activep 
+   :layered-accessor attribute-active-p
+   :initarg :activep
+   :initform t
+   :layered t
+   :special t)
+  (keyword
+   :layered-accessor attribute-keyword
+   :initarg :keyword
+   :initform nil
+   :layered t)
+))
+
+(defun ensure-access-function (class attribute property)
+  (with-function-access 
+    (if (slot-definition-specialp property)
+	(let ((slot-symbol 
+	       (with-symbol-access
+		 (slot-value-using-class 
+		  class attribute property))))
+	  (if (fboundp slot-symbol)
+	      (symbol-function slot-symbol)
+	      (setf (symbol-function slot-symbol)
+		    (property-access-function
+		     (attribute-description attribute)
+		     (attribute-name attribute)
+		     (slot-definition-name property)))))
+	(if (slot-boundp-using-class class attribute property)
+	    (slot-value-using-class class attribute property)
+	    (setf (slot-value-using-class class attribute property)
+		  (property-access-function
+		   (attribute-description attribute)
+		   (attribute-name attribute)
+		   (slot-definition-name property)))))))
+
+(define-layered-method slot-boundp-using-layer  
+  :in-layer (layer t)
+  :around (class (attribute standard-attribute) property reader)
+
+; (dprint "Checking boundp ~A ~A" (attribute-name attribute)
+	; (slot-definition-name property))
+
+  (if (or *symbol-access* *function-access*)
+      (call-next-method)
+      (or (when (slot-definition-specialp property)
+	    (with-function-access
+	   (slot-boundp-using-class class attribute property)))
+	  (if (generic-function-methods 
+	       (ensure-access-function class attribute property))
+	      T
+	      NIL))))
+
+(define-layered-method (setf slot-value-using-layer)
+  :in-layer (context t)
+  :around
+  (new-value class (attribute standard-attribute) property writer)
+  
+;;  (dprint "Setting ~A ~A to : ~A" attribute property new-value)
+
+  (if (or *symbol-access* *function-access*)
+      (call-next-method)
+	     
+      (if (and (slot-definition-specialp property)
+	       (with-function-access
+		 (without-symbol-access (slot-boundp-using-class class attribute property))))
+	  (with-function-access
+	    (call-next-method))
+	  (let ((layer
+		 ;;FIXME: this is wrong for so many reasons
+		 (find-layer (first (remove nil (closer-mop::class-precedence-list (class-of context))
+					    :key #'class-name))))
+		(boundp (slot-boundp-using-class class attribute property))
+		(fn  (ensure-access-function class attribute property)))
+
+	    (when (not boundp)
+	      ;; * This slot has never been set before.
+	      ;; create a method on property-accessor-function
+	      ;; so subclasses can see this new property.
+	      (ensure-layered-method 
+	       (layered-function-definer 'property-access-function)
+	       `(lambda (description attribute property)
+		  (declare (ignore description attribute property))
+		  ,fn)
+	       :in-layer layer
+	       :specializers  
+	       (list (class-of  
+		      (attribute-description attribute))
+		     (closer-mop:intern-eql-specializer 
+		      (attribute-name attribute))
+		     (closer-mop:intern-eql-specializer 
+		      (closer-mop:slot-definition-name property)))))
+
+	    ;; specialize this property to this description.
+	    ;;(dprint "actrually specializering")
+	    (ensure-layered-method 
+	     fn
+	     `(lambda (description)
+		(funcall ,(lambda()
+				 new-value)))
+	     :in-layer layer 
+	     :specializers (list (class-of (attribute-description attribute))))
+
+	    ;;	and return the set value as is custom
+	    new-value))))
 		      
-  ((effective-attribute-definition :initarg effective-attribute
-				   :accessor attribute-effective-attribute-definition)
-   (description-name)
-   (description-class :initarg description-class)
-   (initfunctions :initform nil)
-   (attribute-class :accessor attribute-class 
-		    :initarg :attribute-class 
-		    :initform 'standard-attribute
-		    :layered t)
-   (name :layered-accessor attribute-name 
-	  :initarg :name)
-   (label :layered-accessor attribute-label 
-	  :initarg :label
-	  :initform nil
-	  :layered t
-	  :special t
-	  )
-   (function 
-    :initarg :function 
-    :layered-accessor attribute-function
-    :layered t)
-   (value :layered-accessor %attribute-value 
-	  :initarg :value
-	  :layered t)))
+(define-layered-method slot-value-using-layer 
+  :in-layer (layer t)
+  :around (class (attribute standard-attribute) property reader)
+  
+;  ;(dprint "Getting the slot value of ~A" property)   
+  (if (or *symbol-access* *function-access*)
+      (call-next-method)
+      (let ((fn (ensure-access-function class attribute property)))
+
+	(unless (slot-boundp-using-class class attribute property)
+	  (slot-unbound class attribute (slot-definition-name property)))
+
+	(if (slot-definition-specialp property)
+	    (if (with-function-access
+		  (slot-boundp-using-class class attribute property))
+		(with-function-access 
+		  (slot-value-using-class class attribute property))
+		(funcall fn layer (attribute-description attribute)))
+	    (funcall fn layer (attribute-description attribute))))))
+		    
+	      
+
+ (define-layered-function attribute-value (object attribute))
+
+ (define-layered-method attribute-value (object attribute)
+		       
+			   (let ((fn (handler-case (attribute-function attribute)
+				       (unbound-slot () nil))))
+			     (if fn 
+				 (funcall fn object)
+				 (%attribute-value attribute))))
+
+(defmethod attribute-description (attribute)
+					;(break "description for ~A is (slot-value attribute 'description-name)")
+      (find-layer (slot-value attribute 'description-class))
+      #+nil  (let ((name (slot-value attribute 'description-name)))
+	       (when name 
+		 (find-description name))))
+
+
 
 (defmethod print-object ((object standard-attribute) stream)
   (print-unreadable-object (object stream :type nil :identity t)
@@ -66,7 +229,7 @@
 
 (defgeneric eval-property-initarg (att initarg)
   (:method ((attribute standard-attribute) initarg)
-  nil)
+    nil)
   (:method ((attribute standard-attribute) (initarg (eql :function)))
     t))
 
@@ -79,143 +242,39 @@
 		      (eval arg)
 		      arg))))
 
-(defvar *bypass-property-layered-function* nil)
 
-(define-layered-function property-layered-function (description attribute-name property-name)
-  (:method  (description attribute-name property-name)
-    ;(dprint "First Time PLFunction for ~A ~A ~A" description attribute-name property-name)
-    (ensure-layered-function 
-     (defining-description (intern (format nil "~A-~A-~A" 
-		    (description-print-name description)
-		     attribute-name
-		     property-name)))
-
-     :lambda-list '(description))))
-
-
-(define-layered-method (setf slot-value-using-layer)
-  :in-layer (context t)
-  :around
-  (new-value class (attribute standard-attribute) property writer)
-
-  (when (or *bypass-property-layered-function* )
-    
-    (return-from slot-value-using-layer (call-next-method)))
-
-  (let ((layer
-	 ;;FIXME: this is wrong for so many reasons
-	 (find-layer (first (remove nil (closer-mop::class-precedence-list (class-of context))
-				    :key #'class-name))))
-	(boundp (slot-boundp-using-class class attribute property))
-	(val (real-slot-value-using-class class attribute property)))
-     
-    (when (special-symbol-p val)
-      (return-from slot-value-using-layer (call-next-method)))
-
-    (when (not boundp)
-      ;; * This slot has never been set before.
-      ;; create a method on property-layered-function
-      ;; so subclasses can see this new property.
-      (ensure-layered-method 
-       (layered-function-definer 'property-layered-function)
-       `(lambda (description attribute property)
-	  (declare (ignore description attribute property))
-	  ,val)
-       :in-layer layer
-       :specializers  
-       (list (class-of  
-	      (attribute-description attribute))
-	     (closer-mop:intern-eql-specializer 
-	      (attribute-name attribute))
-	     (closer-mop:intern-eql-specializer 
-	      (closer-mop:slot-definition-name property)))))
-
-    ;; specialize this property to this description.
-
-    (ensure-layered-method 
-     val
-     `(lambda (description)
-	(funcall ,(lambda()
-			 new-value)))
-     :in-layer layer 
-     :specializers (list (class-of (attribute-description attribute))))
-
-    ;;	and return the set value as is custom
-    (slot-value-using-class class attribute property)))
-	 
-
-(define-layered-method slot-value-using-layer 
-  :in-layer (layer t)
-  :around (class (attribute standard-attribute) property reader)
-
-  ;;  (dprint "Getting the slot value of ~A" property) 
-  
-  ;; We do some magic in here and i thought it 
-  ;; would be called magically in call-next-method.
-  ;; This explicit call is good enough for now.
-
-  (unless (slot-boundp-using-class class attribute property)
-    (slot-unbound class attribute (slot-definition-name property)))
-  
-  (let ((val (print (call-next-method))))
-    
-  (if (and 
-       ;; Not special access 
-       (not (symbolp val))
-       (contextl::slot-definition-layeredp property)
-       (not *bypass-property-layered-function*))
-      (let ((fn val))
-	;(dprint "... using fn ~A to get value" fn)
-      (funcall fn layer  (attribute-description attribute)))
-      val)))
-
-(defmacro define-bypass-function (name function-name)
-  `(defun ,name (&rest args)
-     (let ((*bypass-property-layered-function* t))
-       (apply (function ,function-name) args))))
-
-(define-bypass-function real-slot-boundp-using-class slot-boundp-using-class)
-(define-bypass-function real-slot-value-using-class slot-value-using-class)
-(define-bypass-function (setf real-slot-value-using-class) (setf slot-value-using-class))
-  
-(defun slot-boundp-using-property-layered-function (class attribute property)
-  ;(dprint "plf boundp:")
-  (let* ((really-bound-p 
-	  (real-slot-boundp-using-class class attribute property))
-	 (fn (if really-bound-p 
-		 (real-slot-value-using-class class attribute property)
-		 (setf (real-slot-value-using-class class attribute property)
-		       (property-layered-function 
-			(attribute-description attribute)
-			(attribute-name attribute)
-			(closer-mop:slot-definition-name property))))))
-
-	(if (generic-function-methods fn)
-	    T
-	    NIL)))
-    
-(define-layered-method slot-boundp-using-layer  
-  :in-layer (layer t)
-  :around (class (attribute standard-attribute) property reader)
-  (if (or *bypass-property-layered-function* *symbol-access*)
-      (call-next-method)
-      (slot-boundp-using-property-layered-function class attribute property)))
-        
 (defun attribute-value* (attribute)
   (attribute-value *object* attribute))
 
 (defmacro with-attributes (names description &body body)
   `(with-slots ,names ,description ,@body))  
 
-(defun display-attribute (attribute)
-  (display-using-description attribute *display* *object*))
+(define-layered-function display-attribute (object attribute)
+  (:method (object attribute)
+    (display-using-description attribute *display* object)))
+
+(define-layered-function display-attribute-label (object attribute)
+  (:method (object attribute)
+        (format *display* "~A " (attribute-label attribute))
+))
+
+(define-layered-function display-attribute-value (object attribute)
+  (:method (object attribute)
+    (let ((val (attribute-value object attribute)))
+      (if (eq val object)
+	  (format *display* "~A " val)
+	  	  (with-active-descriptions (inline)
+		    (display *display* val )
+
+		    )
+	  ))))
 
 (define-layered-method display-using-description 
   ((attribute standard-attribute) display object &rest args)
   (declare (ignore args))
   (when (attribute-label attribute)
-    (format display "~A " (attribute-label attribute)))
-  (format display "~A" (attribute-value object attribute)))
+    (display-attribute-label object attribute))
+  (display-attribute-value object attribute))
 
 
 

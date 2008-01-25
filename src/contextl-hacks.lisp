@@ -41,3 +41,24 @@
 		      (find-class 'special-object)))
              initargs)))
      (call-next-method))
+
+
+
+(defun funcall-with-special-initargs (bindings thunk)
+  (let ((arg-count 0))
+  (special-symbol-progv
+      (loop for (object . initargs) in bindings
+            for initarg-keys = (loop for key in initargs by #'cddr 
+				     collect key into keys
+				    count t into count
+				    finally (incf arg-count count)
+				            (return keys))
+            nconc (loop for slot in (class-slots (class-of object))
+                        when (and (slot-definition-specialp slot)
+                                  (intersection initarg-keys (slot-definition-initargs slot)))
+                        collect (with-symbol-access
+                                  (slot-value object (slot-definition-name slot)))))
+      (make-list arg-count :initial-element nil)
+    (loop for (object . initargs) in bindings
+          do (apply #'shared-initialize object nil :allow-other-keys t initargs))
+    (funcall thunk))))

@@ -1,5 +1,8 @@
 (in-package :lisp-on-lines-ucw)
 
+(defclass described-component-class (standard-component-class described-class)
+  ())
+
 (defmacro defaction (&rest args-and-body)
   `(arnesi:defmethod/cc ,@args-and-body))
 
@@ -42,5 +45,5 @@
     :component t
     :initarg :body)))
 
-(defmethod ucw:render-html-body ((window standard-window-component))
+(defmethod render-html-body ((window standard-window-component))
   (ucw:render (window-body window)))

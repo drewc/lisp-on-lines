@@ -36,6 +36,8 @@
    #:shutdown-server
 
 
+   ;; Sessions
+   #:get-session-value
    ;; Standard Application
    #:standard-application
    #:register-application
@@ -62,8 +64,14 @@
 
    ;; Standard Components
    #:render
+   #:render-html-body
    #:component
+
    #:standard-component-class
+   #:described-component-class
+
+   #:container
+   #:find-component
    
    #:standard-window-component ;*
    #:window-body

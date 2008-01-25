@@ -3,7 +3,11 @@
 (define-description T ()
   ((identity :label nil :function #'identity)
    (type :label "Type" :function #'type-of)
-   (class :label "Class" :function #'class-of)))
+   (class :label "Class" :function #'class-of)
+   (active-attributes :label "Attributes"
+		      :value nil
+		      :activep nil
+		      :keyword :attributes)))
 
 (define-layered-method description-of (any-lisp-object)
   (find-description 't))
@@ -13,6 +17,8 @@
 	  (mapcar 
 	   (lambda (attribute)
 	     (with-output-to-string (*display*)
-	       (display-attribute attribute)))
+	       (display-attribute *object* attribute)))
 	   (attributes description))))
+
+
 

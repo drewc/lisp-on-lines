@@ -8,7 +8,8 @@
   (description-class-name (class-of description)))
 
 (defun find-attribute (description attribute-name)
-  (slot-value description attribute-name))
+  (when (slot-exists-p description attribute-name) 
+    (slot-value description attribute-name)))
 
 
 (defun description-attributes (description)
@@ -18,21 +19,34 @@
 	   description) 
 	  (class-slots (class-of description))))
 
-(defvar *display-attributes* nil)
-(defun attribute-active-p (attribute)
-  (or (null *display-attributes*)
-      (find (attribute-name attribute) *display-attributes*)))
+
 
 (define-layered-function attributes (description)
   (:method (description)
-    (remove-if-not 
-     (lambda (attribute)
-       (and (attribute-active-p attribute)
-	    (some #'layer-active-p 
-	     (mapcar #'find-layer 
-		     (slot-definition-layers 
-		      (attribute-effective-attribute-definition attribute))))))
-     (description-attributes description))))
+    (let* ((active-attributes 
+	    (find-attribute description 'active-attributes))
+	   (attributes (when active-attributes
+	     (attribute-value *object* active-attributes))))
+      (if attributes
+	  (mapcar (lambda (spec)		    
+		    (find-attribute 
+		     description
+		     (if (listp spec)
+			 (car spec)
+			 spec)))
+		  attributes)
+	  (remove-if-not 
+	   (lambda (attribute)
+	     (and (attribute-active-p attribute)		     
+		  (some #'layer-active-p 
+			(mapcar #'find-layer 
+				(slot-definition-layers 
+				 (attribute-effective-attribute-definition attribute))))))
+	   (description-attributes description))))))
+	  
+
+
+  
 
   
 ;;; A handy macro.

@@ -68,7 +68,8 @@
             (superclass standard-class))
   t)
 
-(defclass standard-description-object (standard-layer-object) ())
+(defclass standard-description-object (standard-layer-object) 
+  ())
 
 (defun description-class-name  (description-class)
     (read-from-string (symbol-name (class-name description-class))))
@@ -82,7 +83,7 @@
 ;;; For now. --drewc
 
   (pushnew class *defined-descriptions*)
-  
+
 ;;; ENDHACK.
 
   (let* ((description (find-layer class)) 

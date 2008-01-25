@@ -4,7 +4,7 @@
   (find-description 'symbol))
 
 (define-description symbol ()
-  ((identity :label "Symbol:")
+  ((identity :label nil)
    (name 
     :function #'symbol-name
     :label "Name:")
