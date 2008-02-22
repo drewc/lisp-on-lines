@@ -12,10 +12,13 @@
    #:standard-db-access-class
    #:make-dao-from-row
    #:described-db-access-class
+   #:select-only
+   #:select
 
 ;; Descriptions
    #:find-description
    #:define-description
+   #:described-object
    #:described-class
    #:with-active-descriptions
 

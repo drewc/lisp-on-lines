@@ -187,6 +187,28 @@ or return nil if it does not exist."
       
       (slot-value-using-class class dao (class-id-slot-definition class)))))
 
+(postmodern::def-row-reader symbol-plist-row-reader (fields)
+
+  (let ((symbols (map 'list (lambda (desc) 
+		   (postmodern::from-sql-name (postmodern::field-name desc))) fields)))
+    (loop :while (postmodern::next-row)
+          :collect (loop :for field :across fields
+                         :for symbol :in symbols
+                         :nconc (list symbol (postmodern::next-field field))))))
+
+
+(setf postmodern::*result-styles* 
+      (nconc (list '(:plists symbol-plist-row-reader nil)
+		   '(:plist symbol-plist-row-reader t))
+	     postmodern::*result-styles*))
+
+(defun select (&rest query)
+    (query (sql-compile (cons :select query)) :plists))
+
+(defun select-only (num &rest query)
+  (query (sql-compile `(:limit ,(cons :select query) ,num)) 
+	 :plists))
+
 (defun make-dao-from-row (type row &key slots)
   (let* ((class (find-class type))
 	 (dao (make-instance class))

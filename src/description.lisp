@@ -13,11 +13,12 @@
 
 
 (defun description-attributes (description)
-  (mapcar (curry
-	   #'slot-value-using-class 
-	   (class-of 'description)
-	   description) 
-	  (class-slots (class-of description))))
+  (let ((class (class-of description)))
+    (loop :for slot :in (class-slots class)
+       :if (and 
+		(not (eq 'described-object 
+			 (slot-definition-name slot))))
+       :collect (slot-definition-attribute-object slot))))
 
 
 
@@ -26,7 +27,7 @@
     (let* ((active-attributes 
 	    (find-attribute description 'active-attributes))
 	   (attributes (when active-attributes
-	     (attribute-value *object* active-attributes))))
+	     (attribute-value active-attributes))))
       (if attributes
 	  (mapcar (lambda (spec)		    
 		    (find-attribute 

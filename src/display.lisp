@@ -21,6 +21,7 @@
   (let ((*description* description)
 	(*display* display)
 	(*object*  object))
+    (dletf (((described-object description) object))
     (contextl::funcall-with-special-initargs  
       (loop 
 	 :for (key val) :on args :by #'cddr
@@ -31,14 +32,14 @@
 	(contextl::funcall-with-special-initargs  
 	 (let ((attribute (find-attribute description 'active-attributes)))	
 	   (when attribute
-	     (loop for spec in (attribute-value object attribute)
+	     (loop for spec in (attribute-value attribute)
 		  if (listp spec)
 		  collect (cons (or 
 				 (find-attribute description (car spec))
 						 (error "No attribute matching ~A" (car spec)))
 				 (cdr spec)))))
      (lambda ()
-       (call-next-method)))))))
+       (call-next-method))))))))
 			      
 
 

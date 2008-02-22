@@ -25,7 +25,7 @@
 	      (setf (slot-value o (attribute-slot-name object)) v))))))
 		  
 
-(define-layered-method attribute-value (object (attribute slot-definition-attribute))
+(define-layered-method attribute-value-using-object (object (attribute slot-definition-attribute))
   (if (slot-boundp object (attribute-slot-name attribute))
 		       
       (slot-value object (attribute-slot-name attribute))
@@ -53,6 +53,7 @@
 			:metaclass 'standard-description-class))
   (find-description name)))
 
+
 (defclass described-class ()
   ())
 
@@ -73,8 +74,6 @@
   (ensure-description-for-class class))
 
 
-  
-  
 (define-layered-method description-of ((object standard-object))
   (or (ignore-errors (find-description (class-name (class-of object))))
       (find-description 'standard-object)))

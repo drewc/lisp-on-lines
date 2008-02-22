@@ -17,14 +17,13 @@
        (:in-layer . attribute-test))))
 
   (let ((d (find-description 'attribute-test-description)))
-    
+    (dletf (((described-object d) nil))
     (is (equalp "VALUE" (slot-value (find-attribute d 'attribute-1) 'lol::value)))
 		
-
     (with-active-layers (attribute-test)
-      (is (equalp (attribute-value nil (find-attribute d 'attribute-1))
-		  (attribute-value nil (find-attribute d 'attribute-2))))
-      (is (equalp "VALUE2" (attribute-value nil (find-attribute d 'attribute-1)))))))
+      (is (equalp (attribute-value (find-attribute d 'attribute-1))
+		  (attribute-value (find-attribute d 'attribute-2))))
+      (is (equalp "VALUE2" (attribute-value (find-attribute d 'attribute-1))))))))
 
 (deftest test-attribute-property-inheriting ()
   (test-attribute-value)
@@ -36,17 +35,18 @@
 	    (:in-layer . attribute-property-test))))
   (with-active-layers (attribute-property-test)
     (let ((d (find-description 'attribute-test-description)))
+      (dletf (((described-object d) nil))
     
-      (is (equalp "VALUE" (slot-value (find-attribute d 'attribute-1) 'lol::value)))
+	(is (equalp "VALUE" (slot-value (find-attribute d 'attribute-1) 'lol::value)))
 
-      (is (equalp "attribute1" (attribute-label (find-attribute d 'attribute-1))))
-      (is (equalp "attribute2" (attribute-label (find-attribute d 'attribute-2))))
+	(is (equalp "attribute1" (attribute-label (find-attribute d 'attribute-1))))
+	(is (equalp "attribute2" (attribute-label (find-attribute d 'attribute-2))))
 		
 
-      (with-active-layers (attribute-test)
-	(is (equalp (attribute-value nil (find-attribute d 'attribute-1))
-		    (attribute-value nil (find-attribute d 'attribute-2))))
-	(is (equalp "VALUE2" (attribute-value nil (find-attribute d 'attribute-1))))))))
+	(with-active-layers (attribute-test)
+	  (is (equalp (attribute-value (find-attribute d 'attribute-1))
+		      (attribute-value (find-attribute d 'attribute-2))))
+	  (is (equalp "VALUE2" (attribute-value (find-attribute d 'attribute-1)))))))))
 
 (deftest (test-attribute-with-different-class :compile-before-run t) ()
   (eval '(progn 

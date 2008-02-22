@@ -19,7 +19,7 @@
   ((direct-attributes 
     :accessor attribute-direct-attributes)
    (attribute-object 
-    :accessor attribute-object)
+    :accessor slot-definition-attribute-object)
    (attribute-object-initargs 
     :accessor attribute-object-initargs)))
 
@@ -41,15 +41,25 @@
   (:method  (description attribute-name property-name)
     (ensure-layered-function 
      (defining-description 
-	 (intern (format nil "~A-~A-~A" 
+	 (intern (format nil "=PROPERTY-ACCESS-FUNCTION-FOR-~A->~A.~A=" 
 			 (description-print-name description)
 			 attribute-name
 			 property-name)))
 	 :lambda-list '(description))))
 
 
-(define-layered-class standard-attribute ()
- ((description-class :initarg description-class)
+(defvar *init-time-description* nil)
+
+(defmethod attribute-description :around (attribute)
+  (handler-case (call-next-method)
+    (unbound-slot () 
+      (or 
+       *init-time-description*
+q       (call-next-method)))))
+
+(define-layered-class attribute ()
+ ((description :initarg :description 
+	       :accessor attribute-description)
   (name 
    :layered-accessor attribute-name 
    :initarg :name)
@@ -61,7 +71,21 @@
    :initarg :attribute-class 
    :initform 'standard-attribute
    :layered t)
-  (label 
+  (keyword
+   :layered-accessor attribute-keyword
+   :initarg :keyword
+   :initform nil
+   :layered t)
+  (object 
+   :layered-accessor attribute-object
+   :accessor described-object
+   :special t)))
+
+
+     
+		         
+(define-layered-class standard-attribute (attribute)
+ ((label 
    :layered-accessor attribute-label 
    :initarg :label
    :initform nil
@@ -73,22 +97,38 @@
    :layered t
    :special t)
    (value 
-    :layered-accessor %attribute-value 
+    :layered-accessor attribute-value 
     :initarg :value
     :layered t
     :special t)
   (activep 
    :layered-accessor attribute-active-p
-   :initarg :activep
+   :initarg :activep ;depreciated
+   :initarg :active
    :initform t
    :layered t
-   :special t)
-  (keyword
-   :layered-accessor attribute-keyword
-   :initarg :keyword
-   :initform nil
-   :layered t)
-))
+   :special t
+   :documentation
+   "Can be T, NIL or :WHEN. In the latter case, attribute is only active if the attribute value is non-null.")))
+
+
+(define-layered-method attribute-object ((attribute standard-attribute))
+ (if (slot-boundp attribute 'object)
+     (call-next-method)
+     (described-object (attribute-description attribute))))
+
+
+(define-layered-method attribute-value ((attribute standard-attribute))
+ (attribute-value-using-object (attribute-object attribute) attribute))
+		       
+(define-layered-function attribute-value-using-object (object attribute))
+
+(define-layered-method attribute-value-using-object (object attribute)
+ (let ((fn (handler-case (attribute-function attribute)
+	     (unbound-slot () nil))))
+   (if fn 
+       (funcall fn object)
+       (slot-value attribute 'value))))
 
 (defun ensure-access-function (class attribute property)
   (with-function-access 
@@ -204,22 +244,6 @@
 		    
 	      
 
- (define-layered-function attribute-value (object attribute))
-
- (define-layered-method attribute-value (object attribute)
-		       
-			   (let ((fn (handler-case (attribute-function attribute)
-				       (unbound-slot () nil))))
-			     (if fn 
-				 (funcall fn object)
-				 (%attribute-value attribute))))
-
-(defmethod attribute-description (attribute)
-					;(break "description for ~A is (slot-value attribute 'description-name)")
-      (find-layer (slot-value attribute 'description-class))
-      #+nil  (let ((name (slot-value attribute 'description-name)))
-	       (when name 
-		 (find-description name))))
 
 
 
@@ -249,32 +273,7 @@
 (defmacro with-attributes (names description &body body)
   `(with-slots ,names ,description ,@body))  
 
-(define-layered-function display-attribute (object attribute)
-  (:method (object attribute)
-    (display-using-description attribute *display* object)))
 
-(define-layered-function display-attribute-label (object attribute)
-  (:method (object attribute)
-        (format *display* "~A " (attribute-label attribute))
-))
-
-(define-layered-function display-attribute-value (object attribute)
-  (:method (object attribute)
-    (let ((val (attribute-value object attribute)))
-      (if (eq val object)
-	  (format *display* "~A " val)
-	  	  (with-active-descriptions (inline)
-		    (display *display* val )
-
-		    )
-	  ))))
-
-(define-layered-method display-using-description 
-  ((attribute standard-attribute) display object &rest args)
-  (declare (ignore args))
-  (when (attribute-label attribute)
-    (display-attribute-label object attribute))
-  (display-attribute-value object attribute))
 
 
 

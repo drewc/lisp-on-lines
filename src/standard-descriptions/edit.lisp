@@ -14,7 +14,7 @@
    (class :editp nil))
   (:in-description editable))
 
-(define-layered-function (setf attribute-value) (v o a)
+#+nil(define-layered-function (setf attribute-value) (v o a)
   (:method (value object attribute)
     (let ((setter (attribute-setter attribute)))
       (if setter
@@ -54,7 +54,9 @@
   ((attribute standard-attribute) display object &rest args)
   
   (declare (ignore args))
-  (format t "Editable? ~A ~A" (attribute-label attribute) (attribute-editp object attribute)))
+  (if (attribute-editp object attribute)
+      (format *display* "This is where we'd edit")
+      (call-next-method)))
 
 
 		       

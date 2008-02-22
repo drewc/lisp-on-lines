@@ -54,9 +54,15 @@
 	  ;; This plist will be used to init the attribute object
           ;; Once the description itself is properly initiated.
 	  (list :name name 
-		'effective-attribute attribute
-		'description-class class))
+		'effective-attribute attribute))
     attribute))
+
+(defmethod slot-value-using-class ((class description-access-class) object slotd)
+  (if (or 
+       (eq (slot-definition-name slotd) 'described-object)
+       (not (slot-boundp slotd 'attribute-object)))
+      (call-next-method)
+      (slot-definition-attribute-object slotd)))
     
 
 (defclass standard-description-class (description-access-class layered-class)
@@ -68,8 +74,9 @@
             (superclass standard-class))
   t)
 
-(defclass standard-description-object (standard-layer-object) 
-  ())
+(define-layered-class standard-description-object (standard-layer-object) 
+  ((described-object :accessor described-object 
+		     :special t)))
 
 (defun description-class-name  (description-class)
     (read-from-string (symbol-name (class-name description-class))))
@@ -90,11 +97,16 @@
 	 (attribute-objects 
 	  (mapcar 
 	   (lambda (slot)
-	     (setf (attribute-object slot)
-		   (apply #'make-instance 
-			  'standard-attribute
-			  (attribute-object-initargs slot))))
-	   (class-slots (class-of description))))
+	     (let* ((*init-time-description* description)
+			  (attribute 		     (apply #'make-instance 
+			    'standard-attribute
+			    :description description
+			    (attribute-object-initargs slot))))
+		     
+		     
+	       (setf (slot-definition-attribute-object slot) attribute)))
+	   (remove 'described-object (class-slots (class-of description))
+		   :key #'slot-definition-name)))
 	 (defining-classes (partial-class-defining-classes (class-of description))))
 
     (loop 
@@ -120,8 +132,7 @@
 				  initargs)))
 		       
 
-		       (setf (slot-value description (attribute-name attribute))
-			     attribute))))))))
+		       )))))))
 
 ;;;; HACK: run this at startup till we figure things out.
 (defun initialize-descriptions () 

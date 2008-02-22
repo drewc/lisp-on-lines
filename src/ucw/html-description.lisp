@@ -5,7 +5,6 @@
 (define-description html-description ()
   ())
 
-
 (define-description t ()
   ((css-class  :value "lol-description" :activep nil)
    (dom-id :function (lambda (x)
@@ -39,8 +38,9 @@
   (:method (object attribute)
     (<:span 
 	:class "lol-attribute-value"
-	(<:as-html   (with-output-to-string (*display*)
-		 (display-attribute-value object attribute))))
+	(<:as-html   
+	 (with-output-to-string (*display*)
+	   (display-attribute-value object attribute))))
 ))
 
 (define-layered-function display-html-attribute (object attribute)
@@ -127,7 +127,9 @@ clear: left;
   )
 
 (define-display 
-  :in-description html-description ((description t) (display lol-ucw:component) object )
+  :in-description html-description ((description t) 
+				    (display lol-ucw:component) 
+				    object)
   (display-html-description description display object))
      
       
