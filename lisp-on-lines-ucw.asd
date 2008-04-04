@@ -11,9 +11,12 @@
 			:components
 			((:module :ucw
 				  :components ((:file "packages")
-					       (:file "standard-components")
 					       (:file "lol-tags")
-					       (:file "html-description"))
+					       (:file "standard-components")
+					       (:file "contextl-components")
+					       (:file "html-description")
+					       (:file "lol-components")
+					       )
 			
 				  :serial t))))
   :serial t

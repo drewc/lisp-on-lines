@@ -50,10 +50,6 @@
 
 (deftest (test-attribute-with-different-class :compile-before-run t) ()
   (eval '(progn 
-;;;; We cannot ever redefine this class ic think... 
-;;; as attributes are also slot meta-objects.
-
-
 	  (define-layered-class
 		test-attribute-class (lol::standard-attribute)
 		((some-slot :initarg :some-slot 
@@ -64,6 +60,20 @@
 	    ((attribute-with-different-class :attribute-class test-attribute-class :some-slot "BRILLANT!")))))
 
   (let* ((d (find-description 'test-attribute-with-different-class-description))
+
+	 (a (find-attribute d 'attribute-with-different-class)))
+    (is (eq (class-of a)
+	    (find-class 'test-attribute-class)))
+    (is (equalp "BRILLANT!" (some-slot a)))))
+
+(deftest (test-attribute-with-different-class-and-subclassed-description :compile-before-run t) ()
+  (test-attribute-with-different-class)
+  (eval '(progn 	  
+	  (define-description test-attribute-with-different-class-description-sub 
+	      (test-attribute-with-different-class-description)
+	    ())))
+
+  (let* ((d (find-description 'test-attribute-with-different-class-description-sub))
 
 	 (a (find-attribute d 'attribute-with-different-class)))
     (is (eq (class-of a)

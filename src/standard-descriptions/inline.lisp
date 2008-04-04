@@ -4,13 +4,16 @@
 
 (define-description t ()
   ((identity :label nil)
-   (active-attributes :value (identity)))
+   (active-attributes :value '(identity))
+   (attribute-delimiter :value ", ")
+   (label-formatter :value (curry #'format nil "~A: "))
+   (value-formatter :value (curry #'format nil "~A")))
   (:in-description inline))
 
-(define-display :in-description inline ((description t))
-  (format *display* "~{~A ~}" 
-	  (mapcar 
-	   (lambda (attribute)
-	     (with-output-to-string (*display*)
-	       (display-attribute *object* attribute)))
-	   (attributes description))))
+(define-layered-class standard-attribute
+  :in-layer #.(defining-description 'inline)
+  ()
+  ())
+
+(define-display :in-description inline ((description t))		
+		(call-next-method))

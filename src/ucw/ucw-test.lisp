@@ -93,7 +93,15 @@
    (<:li 
     (<lol:a 
      :action (call-component $component (make-instance 'lol-test-answer))
-     "Test CALL/ANSWER"))
+     "Test CALL-COMPONENT/ANSWER-COMPONENT"))
+   (<:li 
+    (<lol:a 
+     :action (call-component $component (make-instance 'lol-test-call-magic))
+     "Test CALL/ANSWER MAGIC"))
+   (<:li 
+    (<lol:a 
+     :action (call-component $component (make-instance 'lol-test-call-answer-action-magic))
+     "Test CALL/ANSWER ACTION MAGIC"))
    (<:li 
     (<lol:a 
      :action (call-component $component (make-instance 'lol-test-simple-form))
@@ -105,7 +113,8 @@
    (<:li 
     (<lol:a 
      :action (call-component $component (make-instance 'lol-test-input))
-     "Test Form input"))))
+     "Test Form input"))
+))
 
 (defcomponent lol-test-answer (lol-test-render) ()
   (:default-initargs :message "CALL was ok. Go Back will answer"))
@@ -153,6 +162,43 @@
   (<lol:a :action (answer-component self nil) "Go Back."))
 
 
+
+(defcomponent lol-test-call-magic (lol-test-render) 
+ ()	      
+  (:default-initargs :message "Testing CALL magic."))
+
+(defmethod render :wrapping ((self lol-test-call-magic))
+  (call-next-method)
+  (<lol:a :action (setf (message self) (call 'lol-test-answer-magic)) "Test CALL")
+  (<:br)
+  (<lol:a :action (answer-component self nil) "Go Back."))
+
+
+
+(defcomponent lol-test-answer-magic (lol-test-render) 
+ ()	      
+  (:default-initargs :message "Hit it to answer"))
+
+(defmethod render :wrapping ((self lol-test-answer-magic))
+  (call-next-method)
+  
+  (<lol:a :action (answer "Ja, dat is vut ve answer" ) "IT! (hit here)"))
+
+(defcomponent lol-test-call-answer-action-magic (lol-test-render) 
+ ()	      
+  (:default-initargs :message "Hit it to answer"))
+
+(defaction test-call-component ()
+  (call 'lol-test-call-answer-action-magic :message "We made it"))
+
+(defaction test-answer-component ()
+  (answer "We Made IT BACK!!!"))
+
+(defmethod render :wrapping ((self lol-test-call-answer-action-magic))
+  (call-next-method)
+  (<lol:a :action (test-call-component) "Test CALL from ACTION")
+  (<:br)  
+  (<lol:a :action (test-answer-component) "Test ANSWER from ACTION"))
 
 
 	    	      

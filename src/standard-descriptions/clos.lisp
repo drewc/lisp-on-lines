@@ -14,7 +14,9 @@
 		:function (compose 'class-slots 'class-of))))
 
 (define-layered-class slot-definition-attribute (standard-attribute)
- ((slot-name :initarg :slot-name :accessor attribute-slot-name)))
+ ((slot-name :initarg :slot-name 
+	     :accessor attribute-slot-name
+	     :layered t)))
 
 (defmethod shared-initialize :around ((object slot-definition-attribute) 
 				      slots &rest args)
@@ -29,7 +31,7 @@
   (if (slot-boundp object (attribute-slot-name attribute))
 		       
       (slot-value object (attribute-slot-name attribute))
-      (gensym "UNBOUND-SLOT-")))
+      +unbound-slot+))
 
 (defun ensure-description-for-class (class &optional (name (intern (format nil "DESCRIPTION-FOR-~A" (class-name class)))))
   (let ((desc-class 
@@ -39,11 +41,12 @@
 				 :collect `(:name ,(slot-definition-name slot) 
 					    :attribute-class slot-definition-attribute
 					    :slot-name ,(slot-definition-name slot)
-					    :label ,(slot-definition-name slot))
+					    :label ,(format nil 
+							    "~@(~A~)" (substitute #\Space #\- (symbol-name (slot-definition-name slot)))))
 				 :into slots
 				 :collect (slot-definition-name slot) :into names
 				 :finally (return (cons `(:name active-attributes
-							  :value ,names)
+							  :value ',names)
 							slots)))	
 		:metaclass 'standard-description-class)))
     

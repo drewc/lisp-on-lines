@@ -4,16 +4,30 @@
 (defvar *display*)
 (defvar *object* nil)
 
-
-(deflayer display-layer)
-
 (define-layered-function display-using-description (description display object &rest args)
   (:documentation
    "Displays OBJECT via description using/in/with/on display"))
 
-(defun display (display object &rest args &key attributes )
-  (let ((*display-attributes* attributes))
-    (apply #'display-using-description (description-of object) display object args)))
+
+
+(defun modify-layer-context (context &key activate deactivate)
+  (dolist (d deactivate)
+    (setf context (remove-layer (find-description d)
+				context)))
+  (dolist (d activate context)
+    (setf context (adjoin-layer (find-description d)
+				context))))
+  
+
+
+
+(defun display (display object &rest args &key deactivate activate &allow-other-keys)
+  (funcall-with-layer-context 
+   (modify-layer-context (current-layer-context) 
+			 :activate activate 
+			 :deactivate deactivate)
+   (lambda () 
+     (apply #'display-using-description (description-of object) display object args))))
 
 (define-layered-method display-using-description 
   :around (description display object &rest args)
@@ -21,26 +35,37 @@
   (let ((*description* description)
 	(*display* display)
 	(*object*  object))
+;    (<:as-html " " description "Layer Active?: "  (layer-active-p (defining-description 'maxclaims::link-to-viewer)))
     (dletf (((described-object description) object))
-    (contextl::funcall-with-special-initargs  
-      (loop 
-	 :for (key val) :on args :by #'cddr
-	 :collect (list (find key (description-attributes description) 
-			      :key #'attribute-keyword)
-			:value val))
-      (lambda ()
-	(contextl::funcall-with-special-initargs  
-	 (let ((attribute (find-attribute description 'active-attributes)))	
-	   (when attribute
-	     (loop for spec in (attribute-value attribute)
-		  if (listp spec)
-		  collect (cons (or 
-				 (find-attribute description (car spec))
-						 (error "No attribute matching ~A" (car spec)))
-				 (cdr spec)))))
-     (lambda ()
-       (call-next-method))))))))
-			      
+      (flet ((do-display ()
+	       (contextl::funcall-with-special-initargs  
+		(loop 
+		   :for (key val) :on args :by #'cddr
+		   :collect (list (find key (description-attributes description) 
+					:key #'attribute-keyword)
+				  :value val))
+		(lambda ()
+		  (contextl::funcall-with-special-initargs  
+		   (let ((attribute (ignore-errors (find-attribute description 'active-attributes))))	
+		     (when attribute
+		       (loop for spec in (attribute-value attribute)
+			  if (listp spec)
+			  collect (cons (or 
+					 (find-attribute description (car spec))
+					 (error "No attribute matching ~A" (car spec)))
+					(cdr spec)))))
+		   (lambda () (call-next-method)))))))
+	(funcall-with-layer-context
+	 (modify-layer-context 
+	  (if (standard-description-p description)
+	      (adjoin-layer description (current-layer-context))
+	      (current-layer-context))
+	  :activate (description-active-descriptions description)
+	  :deactivate (description-inactive-descriptions description))
+	 (function do-display))))))
+
+
+
 
 
 (defun display/d (&rest args)

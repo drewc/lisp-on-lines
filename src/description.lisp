@@ -7,20 +7,24 @@
 (defun description-print-name (description)
   (description-class-name (class-of description)))
 
-(defun find-attribute (description attribute-name)
-  (when (slot-exists-p description attribute-name) 
-    (slot-value description attribute-name)))
-
-
 (defun description-attributes (description)
-  (let ((class (class-of description)))
-    (loop :for slot :in (class-slots class)
-       :if (and 
-		(not (eq 'described-object 
-			 (slot-definition-name slot))))
-       :collect (slot-definition-attribute-object slot))))
+  (description-class-attributes (class-of description)))
 
+(defun find-attribute (description attribute-name)
+  (find attribute-name (description-attributes description)
+	:key #'attribute-name))
 
+(define-layered-function description-active-descriptions (description)
+  (:method ((description standard-description-object))
+    (attribute-value (find-attribute description 'active-descriptions)))
+  (:method ((description attribute))
+    (attribute-active-descriptions description)))
+
+(define-layered-function description-inactive-descriptions (description)
+  (:method ((description standard-description-object))
+    (attribute-value (find-attribute description 'inactive-descriptions)))
+  (:method ((description attribute))
+    (attribute-inactive-descriptions description)))
 
 (define-layered-function attributes (description)
   (:method (description)

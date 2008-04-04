@@ -1,5 +1,12 @@
 (in-package :lisp-on-lines)
 
+(defgeneric generic-format (stream string &rest args)
+  (:method (stream string &rest args)
+    (apply #'format stream string args)))
+
+
+
+
 (defun make-enclosing-package (name)
   (make-package name :use '()))
 
@@ -18,6 +25,12 @@
        `(with-active-layers ,(mapcar #'defining-description descriptions)
 	  
 	 ,@body))
+
+(defmacro with-inactive-descriptions (descriptions &body body)
+       `(with-inactive-layers ,(mapcar #'defining-description descriptions)
+	  
+	 ,@body))
+
 #|
 Descriptoons are represented as ContextL classes and layers. To avoid nameclashes with other classes or layers, the name of a description is actually mappend to an internal unambiguous name which is used instead of the regular name.
 |#
@@ -42,6 +55,14 @@ Descriptoons are represented as ContextL classes and layers. To avoid nameclashe
 (defun find-slot-using-initarg (class initarg)
   (cdr (assoc-if #'(lambda (x) (member initarg x))
 				   (initargs.slots class))))
+
+(defun ensure-class-finalized (class)
+  (unless (class-finalized-p class)
+      (finalize-inheritance class)))
+
+(defun superclasses (class)
+  (ensure-class-finalized class)
+  (rest (class-precedence-list class)))
   
   
 

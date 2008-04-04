@@ -66,7 +66,9 @@ OTHER DEALINGS IN THE SOFTWARE."
 				     
 				     :serial t))
   :serial t
-  :depends-on (:contextl :arnesi :alexandria :postmodern))
+  :depends-on (:contextl :arnesi :alexandria 
+			 ;;for rofl:
+			 :postmodern :simple-date))
 
 
 
@@ -77,6 +79,7 @@ OTHER DEALINGS IN THE SOFTWARE."
 				     (:file "description-test")
 				     (:file "attribute-test")
 				     (:file "display-test")
+				     (:file "rofl-test")
 				     (:module :ucw
 				      :components ((:file "ucw-test"))
 				      :serial t))

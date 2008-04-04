@@ -1,5 +1,31 @@
 (in-package :contextl)
 
+
+
+
+;;; HACK:
+;;; Since i'm not using deflayer, ensure-layer etc, 
+;;; There are a few places where contextl gets confused 
+;;; trying to locate my description layers.
+
+;;; TODO: investigate switching to deflayer!
+
+(defun contextl::prepare-layer (layer)
+  (if (symbolp layer)
+      (if (eq (symbol-package layer)
+	  (find-package :description-definers))
+	  layer
+	  (contextl::defining-layer layer))
+      
+      layer))
+
+(defmethod find-layer-class :around ((layer symbol) &optional errorp environment)
+  (if (eq (symbol-package layer)
+	  (find-package :description-definers))
+      (find-class layer)
+      (call-next-method)))
+
+
 ;;; HACK: We are ending up with classes named NIL in the superclass list.
 ;;; These cannot be given the special object superclass when re-initializing
 ;;; is it will be in the subclasses superclasses AFTER this class, causing

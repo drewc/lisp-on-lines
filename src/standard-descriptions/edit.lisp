@@ -14,12 +14,13 @@
    (class :editp nil))
   (:in-description editable))
 
-#+nil(define-layered-function (setf attribute-value) (v o a)
-  (:method (value object attribute)
-    (let ((setter (attribute-setter attribute)))
-      (if setter
-	  (funcall setter value object)
-	  (error "No setter in ~A for ~A" attribute object)))))
+(define-layered-method (setf attribute-value-using-object)
+ :in-layer #.(defining-description 'editable)(value object attribute)
+
+ (let ((setter (attribute-setter attribute)))
+   (if setter
+       (funcall setter value object)
+       (error "No setter in ~A for ~A" attribute object))))
 
 (define-layered-class standard-attribute
   :in-layer #.(defining-description 'editable)
@@ -43,9 +44,9 @@
   (object (attribute standard-attribute))
 		       
   (if (eq :inherit (%attribute-editp attribute))
-      (attribute-value object (find-attribute 
-			       (attribute-description attribute) 
-			       'editp))
+      (attribute-value (find-attribute 
+			(attribute-description attribute) 
+			'editp))
       (%attribute-editp attribute)))
 		       
 

@@ -1,15 +1,46 @@
 (in-package :lisp-on-lines-ucw)
 
+(defparameter *source-component* nil)
+
+(defclass standard-basic-action (basic-action)
+  ((source-component :accessor action-source-component))
+  (:metaclass mopp:funcallable-standard-class))
+
+(defmethod shared-initialize :before ((action standard-basic-action) slots &rest args)
+  (declare (ignore slots args))  
+  (setf (action-source-component action) *source-component*))
+
+(defmethod handle-action :around ((action standard-basic-action) a s f)
+  (let ((*source-component* (action-source-component action)))
+    (call-next-method)))
+
+(defmethod render :around (component)
+  (let ((*source-component* component))
+    (call-next-method)))
+
+
+(defun/cc call (name &rest args)
+  (call-component *source-component* 
+		  (apply #'make-instance name args)))
+
+(defun/cc answer (&optional val)
+  (answer-component *source-component* 
+	  val))
+
 (defclass described-component-class (standard-component-class described-class)
   ())
 
 (defmacro defaction (&rest args-and-body)
   `(arnesi:defmethod/cc ,@args-and-body))
 
-(defun make-action (lambda &rest args)
-  (let ((ucw::*default-action-class* 'basic-action))
-    (apply #'ucw::make-action lambda args)))
+(defparameter *default-action-class* 'standard-basic-action)
 
+(defun make-action (lambda &rest initargs &key (class *default-action-class*) &allow-other-keys)
+  "Makes a new unregistered action."
+  (remf-keywords initargs :class)
+  (apply #'make-instance class :lambda lambda initargs))
+
+  
 (defclass standard-application (ucw:basic-application)
   ())
 
@@ -24,7 +55,6 @@
 (defmethod ucw::find-action-id :around ((context standard-request-context))
   (or 
    (loop
-
       :for (k . v) in (ucw::parameters 
 		      (context.request context))
       :do(destructuring-bind (param-name &optional action-id)
@@ -46,3 +76,14 @@
 
 (defmethod render-html-body ((window standard-window-component))
   (ucw:render (window-body window)))
+
+(defcomponent info-message ()
+  ((message :accessor message :initarg :message)))
+
+(defmethod render ((m info-message))
+  (<:div
+   :class "info-mssage" 
+   (<:as-html (message m)))
+   (<lol:a :action (answer-component m nil) "Ok"))
+
+

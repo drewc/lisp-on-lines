@@ -1,8 +1,46 @@
 (in-package :lisp-on-lines)
 
+;;;; NB: These could really be in upstream
+
+;;;; * A PLIST reader for postmodern.	  
+(postmodern::def-row-reader symbol-plist-row-reader (fields)
+  (let ((symbols (map 'list (lambda (desc) 
+		   (postmodern::from-sql-name (postmodern::field-name desc))) fields)))
+    (loop :while (postmodern::next-row)
+          :collect (loop :for field :across fields
+                         :for symbol :in symbols
+                         :nconc (list symbol (postmodern::next-field field))))))
+
+(s-sql::def-sql-op :between (n start end)
+  `(,@(s-sql::sql-expand n) " BETWEEN " ,@(s-sql::sql-expand start) " AND " ,@(s-sql::sql-expand end)))
+
+(s-sql::def-sql-op :case (&rest clauses)
+  `("CASE " ,@(loop for (test expr) in clauses collect (format nil "WHEN ~A THEN ~A " (s-sql::sql-expand test) (s-sql::sql-expand expr))) "END"))
+
+
+;;;; now the rofl code itself
+(defun %query (query)
+  (cl-postgres:exec-query *database* (sql-compile query) 'symbol-plist-row-reader))
+
+(defun select (&rest query)
+  (%query (cons :select query)))
+
+(defun select-only (num &rest query)
+  (let ((results (%query `(:limit ,(cons :select query) ,num))))
+    (if (eql 1 num)
+	(first results)
+	results)))
+
+(defun insert-into (table &rest values-plist)
+  (postmodern:execute 
+   (postmodern:sql-compile `(:insert-into ,table :set ,@values-plist))))
+    
 
 (defclass db-access-slot-definition ()
-  ((column-name  :initform nil :initarg :db-name :accessor slot-definition-column-name
+  ((column-name  :initform nil 
+		 :initarg :db-name 
+		 :initarg :column
+		 :accessor slot-definition-column-name
                :documentation
               "If non-NIL, contains the name of the column this slot is representing.")
    (primary-key :initform nil 
@@ -33,9 +71,6 @@ not a foreign key, it does nothing.")
 that, for some reason, could not be executed. If there's a slot with
 this attribute not-NIL in a class definition, then there's something
 wrong with its SQL counterpart.")))
-
-(defmethod slot-definition-column-name :around (slotd)
-  (or (call-next-method) (slot-definition-name slotd)))
 
 
 (defclass db-access-class (standard-class)
@@ -89,6 +124,11 @@ inheritance and does not create any tables for it."))
   (let ((slotd (call-next-method)))
     (setf (slot-definition-primary-key-p slotd) 
 	  (some #'slot-definition-primary-key-p direct-slot-definitions)
+	  (slot-definition-column-name slotd)
+	  (or (let ((slot (find-if #'slot-definition-column-name direct-slot-definitions)))
+		(when slot
+		  (slot-definition-column-name slot)))
+	      name)
 	  (slot-definition-transient-p slotd) 
 	  (every #'slot-definition-transient-p direct-slot-definitions)
 	  (slot-definition-foreign-type slotd) 
@@ -146,6 +186,44 @@ inheritance and does not create any tables for it."))
 (defclass standard-db-access-object (standard-object)
   ())
 
+(defun %select-objects (type select-fn query)
+  (mapcar (curry 'make-object-from-plist type)
+	  (apply select-fn (intern (format nil "*")) 
+		 (if (string-equal (first query) :from)
+		     query
+		     (append `(:from ,type) query)))))
+
+(defun select-objects (type &rest query)
+  (%select-objects type #'select query))
+
+(defun select-only-n-objects (n type &rest query)
+  (let ((results (%query `(:limit ,(cons :select 
+					 (intern (format nil "*")) 
+					 (if (string-equal (first query) :from)
+					     query
+					     (append `(:from ,type) query))) ,n))))
+    (if (eql 1 n)
+	(make-object-from-plist type (first results))
+	(mapcar (curry 'make-object-from-plist type) results))))
+
+(defun make-object-from-plist (type plist)
+  (let* ((class (find-class type))
+	 (object (make-instance class))
+	 (slotds (class-slots class)))
+	 
+    (loop 
+       :for (key val) :on plist :by #'cddr 
+       :do 
+       (dolist (slotd (remove key slotds 
+			      :key #'slot-definition-column-name
+			      :test-not #'string-equal))
+
+	     (setf (slot-value-using-class class object slotd) val))
+       :finally (return (reinitialize-instance object)))))
+
+(defun make-object (type &rest plist)
+  (make-object-from-plist type plist))
+
 
 
 (defun find-dao (type id 
@@ -154,20 +232,24 @@ inheritance and does not create any tables for it."))
 			     
   "Get the dao corresponding to the given primary key,
 or return nil if it does not exist."
-  (let ((row (first (query 
-	      (:select '* 
+  (let ((plist 
+	      (select-only 1 '* 
 	       :from table 
-               :where (:= id (or id-column-name
+               :where (list ':= id (or id-column-name
 				 (dao-id-column-name 
-				  (find-class type)))))))))
-    (make-dao-from-row type row)))
+				  (find-class type)))))))
+    (make-object-from-plist type plist)))
 
 (defmethod shared-initialize :after ((dao standard-db-access-object) 
 				     slots &rest initargs)
-  (let ((class (class-of dao)))
+  (let ((class (class-of dao))
+	(foreign-key))
     (dolist (slotd (class-slots class))
       (with-slots (foreign-type) slotd
 	(when foreign-type
+	  (when (consp foreign-type)
+	    (setf foreign-key (cdr foreign-type)
+		  foreign-type (car foreign-type)))
 	  (if (slot-boundp-using-class class dao slotd)
 	      (let ((value (slot-value-using-class class dao slotd)))		
 		(unless (typep value foreign-type)
@@ -186,28 +268,6 @@ or return nil if it does not exist."
     (let ((class (class-of dao)))
       
       (slot-value-using-class class dao (class-id-slot-definition class)))))
-
-(postmodern::def-row-reader symbol-plist-row-reader (fields)
-
-  (let ((symbols (map 'list (lambda (desc) 
-		   (postmodern::from-sql-name (postmodern::field-name desc))) fields)))
-    (loop :while (postmodern::next-row)
-          :collect (loop :for field :across fields
-                         :for symbol :in symbols
-                         :nconc (list symbol (postmodern::next-field field))))))
-
-
-(setf postmodern::*result-styles* 
-      (nconc (list '(:plists symbol-plist-row-reader nil)
-		   '(:plist symbol-plist-row-reader t))
-	     postmodern::*result-styles*))
-
-(defun select (&rest query)
-    (query (sql-compile (cons :select query)) :plists))
-
-(defun select-only (num &rest query)
-  (query (sql-compile `(:limit ,(cons :select query) ,num)) 
-	 :plists))
 
 (defun make-dao-from-row (type row &key slots)
   (let* ((class (find-class type))

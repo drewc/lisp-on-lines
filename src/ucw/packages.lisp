@@ -8,7 +8,10 @@
    #:make-action
    #:standard-action
    #:uri-parse-error
-   #:standard-application)
+   #:standard-application
+
+   #:call
+   #:answer)
 
   (:shadowing-import-from :ucw
    #:parent)
@@ -23,8 +26,9 @@
    #:service)
 		
   (:export 
-   ;;; Symbols marked ";*" are not from UCW 
-   ;;; but either shadowed or created for lol. 
+
+   ;;; First, LOL-UCW exports. The rest are from UCW.
+   #:lol-component
 
    #:defcomponent
 
@@ -51,6 +55,7 @@
 
    ;; Actions
    #:call
+   #:answer
    #:make-action
    #:find-action
    #:defaction
@@ -75,6 +80,7 @@
    
    #:standard-window-component ;*
    #:window-body
+   #:info-message
 
    ))
 

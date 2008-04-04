@@ -55,7 +55,7 @@
     (unbound-slot () 
       (or 
        *init-time-description*
-q       (call-next-method)))))
+       (call-next-method)))))
 
 (define-layered-class attribute ()
  ((description :initarg :description 
@@ -69,8 +69,7 @@ q       (call-next-method)))))
   (attribute-class 
    :accessor attribute-class 
    :initarg :attribute-class 
-   :initform 'standard-attribute
-   :layered t)
+   :initform 'standard-attribute)
   (keyword
    :layered-accessor attribute-keyword
    :initarg :keyword
@@ -82,8 +81,6 @@ q       (call-next-method)))))
    :special t)))
 
 
-     
-		         
 (define-layered-class standard-attribute (attribute)
  ((label 
    :layered-accessor attribute-label 
@@ -91,16 +88,28 @@ q       (call-next-method)))))
    :initform nil
    :layered t
    :special t)
+  (label-formatter 
+   :layered-accessor attribute-label-formatter
+   :initarg :label-formatter
+   :initform  nil 
+   :layered t
+   :special t)
   (function 
    :initarg :function 
    :layered-accessor attribute-function
    :layered t
    :special t)
-   (value 
-    :layered-accessor attribute-value 
-    :initarg :value
-    :layered t
-    :special t)
+  (value 
+   :layered-accessor attribute-value 
+   :initarg :value
+   :layered t
+   :special t)
+  (value-formatter 
+   :layered-accessor attribute-value-formatter
+   :initarg :value-formatter
+   :initform nil
+   :layered t
+   :special t)
   (activep 
    :layered-accessor attribute-active-p
    :initarg :activep ;depreciated
@@ -109,7 +118,33 @@ q       (call-next-method)))))
    :layered t
    :special t
    :documentation
-   "Can be T, NIL or :WHEN. In the latter case, attribute is only active if the attribute value is non-null.")))
+   "Can be T, NIL or :WHEN. In the latter case, attribute is only active if the attribute value is non-null.")
+  (active-attributes :layered-accessor attribute-active-attributes
+		       :initarg :attributes
+		       :layered t
+		       :special t)
+  (active-descriptions :layered-accessor attribute-active-descriptions
+		       :initarg :activate
+		       :initform nil
+		       :layered t
+		       :special t)
+  (inactive-descriptions :layered-accessor attribute-inactive-descriptions
+		       :initarg :deactivate
+		       :initform nil
+		       :layered t
+		       :special t)))
+
+(define-layered-method attribute-label-formatter :around (attribute)
+   (or (slot-value attribute 'label-formatter) 
+       (attribute-value (find-attribute (attribute-description attribute) 'label-formatter))
+       (error "No Formatter .. fool!")))
+
+(define-layered-method attribute-value-formatter :around (attribute)
+		       
+   (or (slot-value attribute 'value-formatter) 
+       (attribute-value (find-attribute (attribute-description attribute) 'value-formatter))
+       (error "No Formatter .. fool!")))
+		       
 
 
 (define-layered-method attribute-object ((attribute standard-attribute))
@@ -118,10 +153,11 @@ q       (call-next-method)))))
      (described-object (attribute-description attribute))))
 
 
+(define-layered-function attribute-value-using-object (object attribute))
+(define-layered-function (setf attribute-value-using-object) (value object attribute))
+
 (define-layered-method attribute-value ((attribute standard-attribute))
  (attribute-value-using-object (attribute-object attribute) attribute))
-		       
-(define-layered-function attribute-value-using-object (object attribute))
 
 (define-layered-method attribute-value-using-object (object attribute)
  (let ((fn (handler-case (attribute-function attribute)
@@ -129,6 +165,14 @@ q       (call-next-method)))))
    (if fn 
        (funcall fn object)
        (slot-value attribute 'value))))
+
+(define-layered-method (setf attribute-value) (value (attribute standard-attribute))
+ (setf (attribute-value-using-object (attribute-object attribute) attribute) value))
+
+(define-layered-method (setf attribute-value-using-object) (value object attribute)
+ (error "No (SETF ATTRIBUTE-VALUE-USING-OBJECT) for ~A ~A and we are not editable"
+	object attribute))
+
 
 (defun ensure-access-function (class attribute property)
   (with-function-access 
@@ -255,6 +299,8 @@ q       (call-next-method)))))
   (:method ((attribute standard-attribute) initarg)
     nil)
   (:method ((attribute standard-attribute) (initarg (eql :function)))
+    t)
+  (:method ((attribute standard-attribute) (initarg (eql :value)))
     t))
 
 (defun prepare-initargs (att args)
@@ -271,7 +317,9 @@ q       (call-next-method)))))
   (attribute-value *object* attribute))
 
 (defmacro with-attributes (names description &body body)
-  `(with-slots ,names ,description ,@body))  
+  `(let ,(loop for name in names collect 
+	      (list name `(find-attribute ,description ',name)))
+     ,@body))q
 
 
 
