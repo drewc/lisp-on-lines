@@ -197,14 +197,30 @@ inheritance and does not create any tables for it."))
   (%select-objects type #'select query))
 
 (defun select-only-n-objects (n type &rest query)
-  (let ((results (%query `(:limit ,(cons :select 
-					 (intern (format nil "*")) 
-					 (if (string-equal (first query) :from)
-					     query
-					     (append `(:from ,type) query))) ,n))))
+  (let ((fields (if (eq :fields (car query))
+		    (loop 
+		       :for cons :on (cdr query)
+		       :if (not (keywordp (car cons)))
+		       :collect (car cons) into fields
+		       :else :do  
+		         (setf query cons)
+		         (return (nreverse (print fields)))
+		       :finally 		       
+		         (setf query cons)
+		         (return (nreverse (print fields))))
+		       
+		    (list (intern "*")))))
+    (let ((results 
+	   (%query 
+	    (print `(:limit (:select 
+		      ,@fields 
+		      ,@(if (string-equal (first query) :from)
+			    (print query)
+			    (append `(:from ,type) query)))
+		     ,n)))))
     (if (eql 1 n)
 	(make-object-from-plist type (first results))
-	(mapcar (curry 'make-object-from-plist type) results))))
+	(mapcar (curry 'make-object-from-plist type) results)))))
 
 (defun make-object-from-plist (type plist)
   (let* ((class (find-class type))

@@ -20,8 +20,11 @@
 			:value nil
 			:activep nil
 			:keyword :deactivate)
-   (label-formatter :value (curry #'format nil "~A "))
-   (value-formatter :value (curry #'format nil "~A"))))
+   (label-formatter :value (lambda (label)
+			     (generic-format *display* "~A " label))
+		    :activep nil)
+   (value-formatter :value (curry #'format nil "~A")
+		    :activep nil)))
 
 (define-layered-method description-of (any-lisp-object)
   (find-description 't))
@@ -32,8 +35,8 @@
 
 (define-layered-function display-attribute-label (attribute)
   (:method (attribute)
-    (princ (funcall (attribute-label-formatter attribute) (attribute-label attribute))
-	   *display*)))
+    (funcall (attribute-label-formatter attribute) (attribute-label attribute))))
+	   
 
 
 (define-layered-function display-attribute-value (attribute)
@@ -62,16 +65,16 @@
 (define-display ((description t))
  (let ((attributes (attributes description)))
    (display-attribute (first attributes))
-   (dolist (attribute (rest attributes))
+   (dolist (attribute (rest attributes) (values))
      (generic-format *display* 
       (attribute-value 
        (find-attribute description 'attribute-delimiter)))
      (display-attribute attribute))))
   
 
-(define-display :around ((description t) (display null))
- (with-output-to-string (*display*) 
-   (print (call-next-method) *display*)))		
+(define-display :around ((description t) (display null) object)
+ (with-output-to-string (*standard-output*)
+   (call-next-layered-method description t object)))		
 
 
 

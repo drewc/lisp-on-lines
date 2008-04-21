@@ -87,20 +87,39 @@
  (display-html-attribute object attribute))
 
 
+(defun make-attribute-value-writer (attribute)
+ (let ((obj (described-object (attribute-description attribute))))
+   (lambda (val)
+     (dletf (((described-object attribute) obj))
+       (setf (attribute-value attribute) 
+	     (parse-attribute-value attribute val))))))
+
+
+(defmethod display-html-attribute-editor (attribute editor)
+  (<lol:input :type "text"
+	      :reader (attribute-value attribute)
+	      :writer (make-attribute-value-writer attribute)))
+
+(defmethod display-html-attribute-editor (attribute (editor password-attribute-editor))
+  (<lol:input :type "password"
+	      :reader (attribute-value attribute)
+	      :writer (make-attribute-value-writer attribute)))
+
+
+(define-layered-method display-attribute-editor 
+   :in-layer #.(defining-description 'html-description) (attribute)
+   (display-html-attribute-editor attribute (attribute-editor attribute)))
+					     
 
 (define-layered-method display-html-attribute-value 
   :in-layer #.(defining-description 'editable) (object attribute)
 
     (<:span 
 	:class "lol-attribute-value"
-    (if (attribute-editp object attribute)	
-    (<lol:input :reader (attribute-value attribute)
-		:writer (let ((obj (described-object (attribute-description attribute))))
-			  (lambda (val)
-			    (dletf (((described-object attribute) obj))
-			      (setf (attribute-value attribute) val)))))
-    (call-next-method))
-))		
+    (if (attribute-editp attribute)	
+	(display-attribute-editor attribute)
+    
+	(call-next-method))))		
 
 (define-layered-function display-html-description (description display object &optional next-method)
   (:method (description display object &optional (next-method #'display-using-description))

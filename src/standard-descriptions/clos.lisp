@@ -76,10 +76,18 @@
   (finalize-inheritance class)
   (ensure-description-for-class class))
 
+(defclass described-standard-class (standard-class described-class) ())
+
+(defmethod validate-superclass
+    ((class described-standard-class)
+     (superclass standard-class))
+  t)
 
 (define-layered-method description-of ((object standard-object))
   (or (ignore-errors (find-description (class-name (class-of object))))
       (find-description 'standard-object)))
+
+
 		      
 		       
   

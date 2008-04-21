@@ -24,6 +24,7 @@
    #:define-description
    #:described-object
    #:described-class
+   #:described-standard-class
    #:with-active-descriptions
    #:with-inactive-descriptions
 
@@ -41,6 +42,12 @@
    #:attribute-label
    #:attribute-function
    #:attribute-value
-   #:active-attributes))
+   #:active-attributes
+
+   ;; Standard Library
+   #:editable
+   #:string-attribute-editor
+   #:number-attribute-editor
+   #:password-attribute-editor))
 
 
