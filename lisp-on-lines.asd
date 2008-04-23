@@ -68,7 +68,7 @@ OTHER DEALINGS IN THE SOFTWARE."
   :serial t
   :depends-on (:contextl :arnesi :alexandria :parse-number
 			 ;;for rofl:
-			  :simple-date :postmodern))
+			  :cl-postgres :simple-date :postmodern))
 
 
 

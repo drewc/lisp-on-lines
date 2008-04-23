@@ -1,8 +1,8 @@
 (in-package :lisp-on-lines)
 
-(defvar *description*)
+
 (defvar *display*)
-(defvar *object* nil)
+
 
 (define-layered-function display-using-description (description display object &rest args)
   (:documentation
@@ -32,37 +32,11 @@
 (define-layered-method display-using-description 
   :around (description display object &rest args)
   (declare (ignorable args))
-  (let ((*description* description)
-	(*display* display)
-	(*object*  object))
-;    (<:as-html " " description "Layer Active?: "  (layer-active-p (defining-description 'maxclaims::link-to-viewer)))
-    (dletf (((described-object description) object))
-      (flet ((do-display ()
-	       (contextl::funcall-with-special-initargs  
-		(loop 
-		   :for (key val) :on args :by #'cddr
-		   :collect (list (find key (description-attributes description) 
-					:key #'attribute-keyword)
-				  :value val))
-		(lambda ()
-		  (contextl::funcall-with-special-initargs  
-		   (let ((attribute (ignore-errors (find-attribute description 'active-attributes))))	
-		     (when attribute
-		       (loop for spec in (attribute-value attribute)
-			  if (listp spec)
-			  collect (cons (or 
-					 (find-attribute description (car spec))
-					 (error "No attribute matching ~A" (car spec)))
-					(cdr spec)))))
-		   (lambda () (call-next-method)))))))
-	(funcall-with-layer-context
-	 (modify-layer-context 
-	  (if (standard-description-p description)
-	      (adjoin-layer description (current-layer-context))
-	      (current-layer-context))
-	  :activate (description-active-descriptions description)
-	  :deactivate (description-inactive-descriptions description))
-	 (function do-display))))))
+  (let ((*display* display))
+    (apply #'funcall-with-described-object 
+     (lambda ()
+       (call-next-method))
+     object description args)))
 
 
 
@@ -88,7 +62,7 @@ OMGWTF! If you didn't do this, it's a bug!" description display object args))
 	(return
 	  (destructuring-bind (description-spec &optional  (display-spec (gensym)) (object-spec (gensym))) 
 	      (car tail) 
-		`(define-layered-method
+	    `(define-layered-method
 		  display-using-description
 		   :in-layer ,(if (eq t description) 
 				  t

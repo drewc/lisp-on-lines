@@ -51,7 +51,7 @@
    #:*context*
    #:context.current-frame
    #:context.window-component
-
+   #:*current-component*
 
    ;; Actions
    #:call

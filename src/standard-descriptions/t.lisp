@@ -2,7 +2,7 @@
 
 (define-description T ()
   ((identity :label nil :function #'identity)
-   (type :label "Type of" :function #'type-of)
+   (type :label "Type" :function #'type-of)
    (class :label "Class" :function #'class-of)
    (active-attributes :label "Attributes"
 		      :value nil
@@ -21,7 +21,7 @@
 			:activep nil
 			:keyword :deactivate)
    (label-formatter :value (lambda (label)
-			     (generic-format *display* "~A " label))
+			     (generic-format *display* "~A:" label))
 		    :activep nil)
    (value-formatter :value (curry #'format nil "~A")
 		    :activep nil)))
@@ -74,7 +74,8 @@
 
 (define-display :around ((description t) (display null) object)
  (with-output-to-string (*standard-output*)
-   (call-next-layered-method description t object)))		
+   (call-next-layered-method description t object))
+)		
 
 
 

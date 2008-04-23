@@ -7,17 +7,17 @@
   ((identity :label nil)
    (name 
     :function #'symbol-name
-    :label "Name:")
+    :label "Name")
    (value 
-    :label "Value:" 
+    :label "Value" 
     :function 
     (lambda (symbol)
       (if (boundp symbol)
 	  (symbol-value symbol)
 	  "<UNBOUND>")))
    (package :function #'symbol-package
-	    :label "Package:")
-   (function :label "Function:"
+	    :label "Package")
+   (function :label "Function"
     :function     	     
     (lambda (symbol)
      (if (fboundp symbol)

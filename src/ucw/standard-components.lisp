@@ -74,6 +74,23 @@
     :component t
     :initarg :body)))
 
+(defmethod render-html-head ((window standard-window-component))
+  (let* ((app (context.application *context*))
+	 (url-prefix (application.url-prefix app)))
+    (<:meta :http-equiv "Content-Type" :content (window-component.content-type window))
+    (awhen (window-component.title window)
+      (<:title (if (functionp it)
+		   (funcall it window)
+		   (<:as-html it))))
+    (awhen (window-component.icon window)
+      (<:link :rel "icon"
+	      :type "image/x-icon"
+	      :href (concatenate 'string url-prefix it)))
+    (dolist (stylesheet (effective-window-stylesheets window))
+      (<:link :rel "stylesheet"
+	      :href stylesheet
+	      :type "text/css"))))
+
 (defmethod render-html-body ((window standard-window-component))
   (ucw:render (window-body window)))
 
