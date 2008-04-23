@@ -1,0 +1,168 @@
+\modeline{-*- mode: outline;  transient-mark-mode: t -*-}
+
+* Lisp on Lines : An Tutorial.
+
+**. intro
+
+Lisp on Lines is a framework for rapid development of data-driven applications, with a particular focus on web-based applications. It builds on the UncommonWeb engine and Contextl, and uses CLOS and the MOP extensively. Most of LoL can be used both at the REPL and through the browser, offering many options for development and testing.
+
+While the target audience for LoL is developers experienced with both web technologies and common lisp, a good programmer with a little experience in either should be able to pick things up fairly quickly.
+
+** Describing the domain with MAO.
+
+LoL uses a protocol known as Meta-Attributed Objects, or MAO, as the basis of its display mechanism. In MAO, we create context-aware DESCRIPTIONs of objects, and those descriptions are used to generate the display of the object itself. By having these external descriptions change based on the context in which they are used, a few generic components can come together to create complex applications.
+
+Descriptions are a similar to classes. Every Lisp object has one, and the root description that all descriptions inherit from is known as T. FIND-DESCRIPTION is used to, well, find descriptions. 
+
+\code{
+ (find-description t) \=>{#<DESCRIPTION T {B7B9861}>}}
+
+A description is really just a collection of attributes. Each attribute describes a part of an object, and any number of attributes may or may not be active. The ATTRIBUTES function is used to find a the list attributes that are both active and applicable in the current context.
+
+\code{ (attributes (find-description t) )
+ 
+\=>{(#<ATTRIBUTE IDENTITY {BBC9691}> 
+  #<ATTRIBUTE TYPE {BBC96A1}>
+ #<ATTRIBUTE CLASS {BBC96B1}>)}}
+
+When a description is associated with an object, these attributes have properties, for example ATTRIBUTE-LABEL and ATTRIBUTE-VALUE. By simply iterating through the attributes of a described object, we can create a generic display for any lisp object. This is very similar to the technique outlined by (foo) in MEWA: A meta-blah blah.
+
+MAO adds to MEWA the concept of dynamic context. By changing the context in which an object is described, we combine and specialize the generic displays, ultimately creating different views of our objects. LoL uses ContextL extensively. Descriptions are contextl layers, and attributes themselves are layered classes. Most of the exported functions are layered methods, and the idea of dynamic context-sensitivity is used throughout LoL. If you're not familiar with contextl, don't worry, LoL mostly stands on its own. Still, reading through the material won't hurt.
+
+The functions DESCRIPTION-ATTRIBUTES, DESCRIPTION-ACTIVE-ATTRIBUTES and DESCRIPTION-CURRENT-ATTRIBUTES return all the descriptions attributes, Attributes that are currently active regardless of context, and attributes that exist in the current context but may or may not be active, respectively.
+
+To access the properties of an attribute, it is neccessary to create the proper context. For the most part, LoL does this for you, but for demonstration purposes we'll do it manually. The function FUNCALL-WITH-DESCRIBED-OBJECT takes care of setting up the proper context. There is some syntax for it in the form of WITH-DESCRIBED-OBJECT.
+
+\code{
+(let ((description (find-description t))
+	   (object "Hello World"))
+       (with-described-object (object description)
+	 (dolist (a (attributes description))
+	   (format t "~@[~A: ~]~A~%" 
+		   (attribute-label a)
+		   (attribute-value a)))))
+
+\outputs{Hello World
+Type: (SIMPLE-ARRAY CHARACTER (11))
+Class: #<BUILT-IN-CLASS SB-KERNEL::SIMPLE-CHARACTER-STRING>}}
+
+FUNCALL-WITH-DESCRIBED-OBJECT binds two specials, *description* and *object*, to its arguments. Knowing this, we can shorten our code somewhat. Later on we'll be far away from the lexical bindings of description and object, so these special variables are essential.
+
+\code{
+(with-described-object ("Hello World" (find-description t))
+  (dolist (a (attributes *description*))
+    (format t "~@[~A: ~]~A~%" 
+            (attribute-label a)
+	    (attribute-value a))))}
+
+Lets wrap that up in a function that we can re-use
+
+\code {(defun present (object description) 
+       (with-described-object (object description)
+	 (dolist (a (attributes *description*))
+	   (format t "~@[~A: ~]~A~%" 
+		   (attribute-label a)
+		   (attribute-value a)))))}
+
+** Defining description contexts
+
+The basics of MAO should now be clear, so lets start using it. First, lets create our very own description.
+
+\code{(define-description hello-world ()
+       ((title :value "Lisp on Lines Demo")
+	(identity :label "Message")
+	(length :label "Length" :function #'length)
+	(active-attributes :value '(title identity length))))}
+
+Descriptions are very much like CLOS classes, and are in fact implemented that way, so normal inheritance rules apply. Attributes can have any number of properties, (see the class STANDARD-ATTRIBUTE), but the three most important are ATTRIBUTE-LABEL, ATTRIBUTE-VALUE and ATTRIBUTE-FUNCTION, named by the :label, :value, and :function keywords. ATTRIBUTE-LABEL is simply a textual label that describes the attribute. ATTRIBUTE-VALUE is defined to return the result of calling ATTRIBUTE-FUNCTION with the object. If ATTRIBUTE-FUNCTION is NIL, the value :value property is returned directly.
+
+ In the example above, the IDENTITY and ACTIVE-ATTRIBUTES attribures are inherited from T, and we are simply overriding the default properties for our description. LENGTH and TITLE are specific to this description. A look at src/standard-descriptions/t.lisp may be instructive at this point.
+
+Now, we can present our object using our new description. LoL include a DISPLAY function, but for now we'll use our PRESENT function, as it's a little more transparent.
+
+\code{(present "Hello World" (find-description 'hello-world))
+\outputs {Lisp on Lines Demo
+Message: Hello World
+Length: 11})
+
+When an object is being described, the description context is also made active. One can also activate/deactivate individual description contexts, without using them to describe an object. One can also define partial descriptions that are only active when other description contexts have been activated. This is easier to show than to tell.
+
+\code{(define-description one-line ())
+
+(define-description hello-world ()
+  ((identity :label nil)
+   (active-attributes :value '(identity))
+   (attribute-delimiter :value ", ")
+   (label-formatter :value (curry #'format nil "~A: "))
+   (value-formatter :value (curry #'format nil "~A")))
+  (:in-description one-line))}
+
+Here we've defined a new description, ONE-LINE, and a context-sensitive extension to our HELLO-WORLD description. This partial desription will be active only when in the context of a one-line description. One can have attributes that only exist in certain description contexts, and attributes can have different properties.
+
+\code{
+(let ((message "Hello World!")
+	   (description (find-description 'hello-world)))
+       (print :normal)(terpri)
+       (present message description)       
+       (print :one-line)(terpri)
+       (with-active-descriptions (one-line)
+	 (present message description)))
+\outputs{:NORMAL 
+Lisp on Lines Demo
+Message: Hello World!
+Length: 12
+
+:ONE-LINE 
+Hello World!}
+
+
+By activating the description ONE-LINE, we've changed the context in which our object is displayed. We can create any number of descriptions and contexts and activate/deactivate them in any order.
+
+Because all descriptions inherit from T, we can describe contexts for T and they will apply to every description. LoL includes a standard description, INLINE, which is almost exactly like our ONE-LINE definition above. It can be found in standard-descriptions/inline.lisp, and should look something like the following:
+
+\code{;; Defined by LoL:
+(define-description t ()
+  ((identity :label nil)
+   (active-attributes :value '(identity))
+   (attribute-delimiter :value ", ")
+   (label-formatter :value (curry #'format nil "~A: "))
+   (value-formatter :value (curry #'format nil "~A")))
+  (:in-description inline))}
+
+
+The DISPLAY protocol using this internally to display attribute values. This allows infinitely deep nesting of descriptions and contexts, so that one can describe how one object looks when displayed within another, and it's turtles all the way down. We can demonstrate this by modifying our PRESENT function.
+
+\code{ 
+(defun present (object description) 
+  (with-described-object (object description)
+    (dolist (a (attributes *description*))
+      (format t (concatenate 
+		 'string "~@[~A: ~]~A"  
+		 (attribute-value  
+		  (FIND-ATTRIBUTE *description* 'attribute-delimiter)))
+	      (attribute-label a)
+	      (let ((value (attribute-value a)))
+		;; prevent circles
+		(if (eq object value)
+		    value
+		    (with-output-to-string (*standard-output*)
+		      (with-active-descriptions (inline)
+			(present value (DESCRIPTION-OF value))))))))))
+
+\outputs }
+
+This is not perfect, but it serves to demonstrate the idea.
+
+
+
+
+
+
+
+
+
+ 
+        	
+ 
+
+

@@ -1,7 +1,14 @@
 (in-package :lisp-on-lines)
 
 (define-description T ()
-  ((identity :label nil :function #'identity)
+  ((label :label nil 
+	  :function (lambda (object)
+		      (format nil "~@(~A~)" 
+			      (substitute #\Space #\- 
+					  (symbol-name 
+					   (class-name (class-of 
+							object)))))))
+   (identity :label nil :function #'identity)
    (type :label "Type" :function #'type-of)
    (class :label "Class" :function #'class-of)
    (active-attributes :label "Attributes"
@@ -17,9 +24,9 @@
 			:activep nil
 			:keyword :activate)
    (inactive-descriptions :label "Inactive Descriptions"
-			:value nil
-			:activep nil
-			:keyword :deactivate)
+			  :value nil
+			  :activep nil
+			  :keyword :deactivate)
    (label-formatter :value (lambda (label)
 			     (generic-format *display* "~A:" label))
 		    :activep nil)

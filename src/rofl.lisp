@@ -150,6 +150,22 @@ inheritance and does not create any tables for it."))
 (defclass standard-db-access-class (db-access-class)
   ())
 
+(defmethod ensure-class-using-class :around ((class standard-db-access-class) name &rest args &key direct-slots &allow-other-keys)
+       (let ((direct-slots (loop for slot in direct-slots 
+			      collect (let* ((sname (getf slot :name))
+					     (readers (getf slot :readers))
+					     (writers (getf slot :writers)))
+					(setf (getf slot :readers)
+					      (cons (intern (format nil "~A.~A"
+								    name sname)) readers))
+					(setf (getf slot :writers)
+					      (cons `(setf ,(intern (format nil "~A.~A"
+								    name sname))) writers))
+					slot))))
+	 
+					      
+       (apply #'call-next-method class name :direct-slots direct-slots args)))
+
 (defun dao-id-column-name (class)
   (slot-definition-column-name
    (or (class-id-slot-definition class)
