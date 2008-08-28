@@ -51,21 +51,22 @@
 	    (find-attribute description 'active-attributes))
 	   (attributes (when active-attributes
 			 (ignore-errors (attribute-value active-attributes)))))
-      (if attributes
-	  (mapcar (lambda (spec)		    
-		    (find-attribute 
-		     description
-		     (if (listp spec)
-			 (car spec)
-			 spec)))
-		  attributes)
-	  (remove-if-not 
-	   (lambda (attribute)
-	     (and (attribute-active-p attribute)		     
-		  (some #'layer-active-p 
-			(mapcar #'find-layer 
-				(slot-definition-layers 
-				 (attribute-effective-attribute-definition attribute))))))
+      (remove-if-not 
+       (lambda (attribute)
+	 (and attribute
+	      (attribute-active-p attribute)		     
+	      (some #'layer-active-p 
+		    (mapcar #'find-layer 
+			    (slot-definition-layers 
+			     (attribute-effective-attribute-definition attribute))))))
+       (if attributes
+	   (mapcar (lambda (spec)		    
+		     (find-attribute 
+		      description
+		      (if (listp spec)
+			  (car spec)
+			  spec)))
+		   attributes)
 	   (description-attributes description))))))
 	  
 

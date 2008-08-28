@@ -1,6 +1,5 @@
 (in-package :lisp-on-lines)
 
-
 (define-description editable ()
   ()
   (:mixinp t))
@@ -19,38 +18,51 @@
     :accessor attribute-setter
     :initform nil)
    (attribute-editor 
-    :initarg :input 
+    :initarg :editor
     :layered t
     :accessor attribute-editor
-    :initform nil
+    :initform (make-instance 'attribute-editor)
     :documentation "This ones a bit odd")))
 
-(defmethod attribute-editor :around (attribute)
-  (flet ((find-editor-class (spec)
-	   (let ((class (getf spec :class))
-		 (type (getf spec :type)))
-	     (or class (when (and type (symbolp type)) 
-			 (intern (format nil "~A-~A" type 'attribute-editor)))
-		 'string-attribute-editor))))
-  (let ((editor? (call-next-method)))
-    (if (listp editor?)
-	(setf (attribute-editor attribute)
-	      (apply #'make-instance (find-editor-class editor?) 
-		     editor?))
-	(call-next-method)))))
+(defmethod shared-initialize :after ((object standard-attribute) 
+				      slots &rest args &key input &allow-other-keys)
 
+  (when input 
+    (setf (attribute-editor object) 
+	  (apply #'make-instance (find-editor-class input)
+		 input))))
+
+      
+(defun find-editor-class (spec)
+  (let ((class (getf spec :class))
+	(type (getf spec :type)))
+    (or class (when 
+		  (and type (symbolp type)) 
+		(let ((name (format nil "~A-~A" type 'attribute-editor)))
+		  (or (find-class (intern name (symbol-package type)) nil)
+		      (find-class (intern name) nil)
+		      'string-attribute-editor))))))
 
 (defclass attribute-editor ()
     ((type :initarg :type
-	   :initform 'string)
+	   :initform 'string
+	   :accessor attribute-editor-type)
      (parser :initarg :parse-using
 	     :initform 'identity
 	     :accessor attribute-editor-parsing-function)
      (prompt :initarg :prompt 
-	     :initform nil)))
+	     :initform nil)
+     (unbound-value
+	 :initarg :unbound-value
+       :initform "")))
+
+
 
 (defclass string-attribute-editor (attribute-editor) ())
 (defclass text-attribute-editor (string-attribute-editor) ())
+
+(deftype password () 'string)
+
 (defclass password-attribute-editor (string-attribute-editor) ())
 
 (defclass number-attribute-editor (attribute-editor) ()
@@ -94,6 +106,12 @@
 (define-layered-method attribute-editp 
   :in-layer #.(defining-description 'editable)
   ((attribute standard-attribute))
+  (let ((value (attribute-value attribute)))
+  (unless (or (unbound-slot-value-p value)
+	      (typep value 
+		     (attribute-editor-type 
+		      (attribute-editor attribute))))
+    (return-from attribute-editp nil)))
   (let ((edit?       (call-next-method)))
     (if (eq :inherit edit?)
 	(attribute-value (find-attribute 

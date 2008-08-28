@@ -24,10 +24,11 @@
 		  (apply #'make-instance name args)))
 
 (defun/cc answer (&optional val)
-  (answer-component *source-component* 
-	  val))
+  (let ((child *source-component*))
+    (setf *source-component* (ucw::component.calling-component child))
+    (answer-component child val)))
 
-(defclass described-component-class (standard-component-class described-class)
+(defclass described-component-class (described-class standard-component-class )
   ())
 
 (defmacro defaction (&rest args-and-body)
@@ -66,8 +67,12 @@
 	      (return action-id))))
    (call-next-method)))
 
+
+
+
+
 (defcomponent standard-window-component 
-  (ucw:basic-window-component)
+  (ucw::basic-window-component)
   ((body
     :initform nil
     :accessor window-body

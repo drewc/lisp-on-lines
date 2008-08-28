@@ -19,6 +19,9 @@
 
 
 ;;;; now the rofl code itself
+
+(defvar *row-reader* 'symbol-plist-row-reader)
+
 (defun %query (query)
   (cl-postgres:exec-query *database* (sql-compile query) 'symbol-plist-row-reader))
 

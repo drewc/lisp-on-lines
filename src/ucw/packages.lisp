@@ -2,7 +2,7 @@
 (defpackage lisp-on-lines-ucw
   (:documentation "An LoL Layer over ucw.basic")
   (:nicknames #:lol-ucw)
-  (:use #:lisp-on-lines #:ucw :common-lisp :arnesi :yaclml :puri)
+  (:use #:lisp-on-lines #:ucw :common-lisp :arnesi :yaclml)
   (:shadow 
    #:standard-window-component
    #:make-action

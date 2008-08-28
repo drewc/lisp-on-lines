@@ -33,50 +33,98 @@
       (slot-value object (attribute-slot-name attribute))
       +unbound-slot+))
 
-(defun ensure-description-for-class (class &optional (name (intern (format nil "DESCRIPTION-FOR-~A" (class-name class)))))
-  (let ((desc-class 
-	 (ensure-class (defining-description name) 
-		:direct-superclasses (list (class-of (find-description 'standard-object)))
-		:direct-slots (loop :for slot in (class-slots class)
-				 :collect `(:name ,(slot-definition-name slot) 
-					    :attribute-class slot-definition-attribute
-					    :slot-name ,(slot-definition-name slot)
-					    :label ,(format nil 
-							    "~@(~A~)" (substitute #\Space #\- (symbol-name (slot-definition-name slot)))))
-				 :into slots
+(defun attribute-slot-makunbound (attribute)
+  (slot-makunbound (attribute-object attribute) (attribute-slot-name attribute)))
+
+(defun ensure-description-for-class (class &key attributes (name (intern (format nil "DESCRIPTION-FOR-~A" (class-name class)))) 
+				     direct-superclasses direct-slot-specs)
+
+  (let* ((super-descriptions
+	  (mapcar #'class-of 
+			      (delete nil (mapcar (rcurry #'find-description nil) 
+						  (mapcar #'class-name direct-superclasses)))))
+	 (desc-class 
+	  (ensure-class (defining-description name) 
+		:direct-superclasses (or super-descriptions (list (class-of (find-description 'standard-object))))
+		:direct-slots 
+		(loop 
+		   :for slot in (class-slots class)
+		   :collect 
+		   (let ((direct-spec 
+			  (find (slot-definition-name slot) 
+				direct-slot-specs
+				:key (rcurry 'getf :name))))
+		     (if direct-spec 
+			 (append (alexandria:remove-from-plist direct-spec 
+							       :initfunction
+							       :initform
+							       :initargs
+							       :readers
+							       :writers)
+				 (unless 
+				     (getf direct-spec :attribute-class)
+				   (list :attribute-class 'slot-definition-attribute))
+				 (unless 
+				     (getf direct-spec :label)
+				   (list :label (format nil 
+							"~@(~A~)" (substitute #\Space #\- (symbol-name (slot-definition-name slot))))))
+				 (list :slot-name (slot-definition-name slot)))
+			 `(:name ,(slot-definition-name slot) 
+				 :attribute-class slot-definition-attribute
+				 :slot-name ,(slot-definition-name slot)
+				 :label ,(format nil 
+						 "~@(~A~)" (substitute #\Space #\- (symbol-name (slot-definition-name slot)))))))
+		   :into slots
 				 :collect (slot-definition-name slot) :into names
 				 :finally (return (cons `(:name active-attributes
-							  :value ',names)
+							  :value ',(or attributes names))
 							slots)))	
-		:metaclass 'standard-description-class)))
-    
+		:metaclass 'standard-description-class)))    
     (unless (ignore-errors (find-description (class-name class)))
       (ensure-class (defining-description (class-name class))
 		    :direct-superclasses (list desc-class)
-			:metaclass 'standard-description-class))
-  (find-description name)))
+		    :metaclass 'standard-description-class))
+    (find-description name)))
 
 
 (defclass described-class ()
+  ((direct-slot-specs :accessor class-direct-slot-specs)
+   (attributes :initarg :attributes :initform nil)))
+
+(defmethod ensure-class-using-class :around ((class described-class) name &rest args)
+  
+  (call-next-method))
+
+(defmethod direct-slot-definition-class ((class described-class) &rest initargs)
+  (let ((slot-class (call-next-method))) 
+    (make-instance (class-of slot-class) :direct-superclasses (list slot-class (find-class 'described-class-direct-slot-definition)))))
+
+(defclass described-class-direct-slot-definition ()
   ())
 
+(defmethod shared-initialize :around ((class described-class-direct-slot-definition) slot-names &key &allow-other-keys)
+  (call-next-method))
+  
 (defmethod validate-superclass
            ((class described-class)
             (superclass standard-class))
   t)
 
-(defmethod initialize-instance :after ((class described-class) &rest initargs &key (direct-superclasses '()))
+(defmethod initialize-instance :after ((class described-class) &rest initargs &key (direct-superclasses '()) direct-slots)
   (declare (dynamic-extent initargs))
   (finalize-inheritance class)
-  (ensure-description-for-class class))
+  (ensure-description-for-class class :direct-slot-specs direct-slots 
+				      :direct-superclasses  direct-superclasses
+				      :attributes (slot-value class 'attributes)))
 
-
-(defmethod reinitialize-instance :after ((class described-class) &rest initargs &key (direct-superclasses '() direct-superclasses-p))
+(defmethod reinitialize-instance :after ((class described-class) &rest initargs &key (direct-superclasses '()) direct-slots)
   (declare (dynamic-extent initargs))
   (finalize-inheritance class)
-  (ensure-description-for-class class))
+  (ensure-description-for-class class :direct-slot-specs direct-slots 
+				      :direct-superclasses direct-superclasses
+				      :attributes (slot-value class 'attributes)))
 
-(defclass described-standard-class (standard-class described-class) ())
+(defclass described-standard-class (described-class standard-class ) ())
 
 (defmethod validate-superclass
     ((class described-standard-class)
@@ -88,7 +136,4 @@
       (find-description 'standard-object)))
 
 
-		      
-		       
-  
 

@@ -17,6 +17,7 @@
    #:insert-into   
    #:select-objects
    #:select-only-n-objects
+   #:insert-object
    
 ;; Descriptions
    #:find-description
@@ -27,6 +28,7 @@
    #:described-standard-class
    #:with-active-descriptions
    #:with-inactive-descriptions
+
 
    ;; Displays
    #:define-display
@@ -39,15 +41,27 @@
    #:find-attribute
    #:attribute
    #:attributes
+   #:attribute-object
    #:attribute-label
+   #:label
    #:attribute-function
    #:attribute-value
+   #:display-attribute-value
    #:active-attributes
-
+   #:attribute-delimiter
+   #:standard-attribute
    ;; Standard Library
+   
+   ;; editing
    #:editable
+   #:attribute-editor
    #:string-attribute-editor
    #:number-attribute-editor
-   #:password-attribute-editor))
+   #:password-attribute-editor
+   #:password
+
+   ;; html
+   #:display-html-attribute-editor
+   #:make-attribute-value-writer))
 
 

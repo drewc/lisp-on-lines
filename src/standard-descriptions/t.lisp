@@ -40,10 +40,12 @@
   (:method (attribute)
     (display-using-description attribute *display* (attribute-object attribute))))
 
+
 (define-layered-function display-attribute-label (attribute)
   (:method (attribute)
     (funcall (attribute-label-formatter attribute) (attribute-label attribute))))
 	   
+
 
 
 (define-layered-function display-attribute-value (attribute)
@@ -55,12 +57,16 @@
 		    args)))
 	     
     (let ((val (attribute-value attribute)))
-      (if (eql val (attribute-object attribute))
+      (if (and (not (slot-boundp attribute 'active-attributes))
+	       (eql val (attribute-object attribute)))
 	  (generic-format *display* (funcall (attribute-value-formatter attribute) val))
 	  (with-active-descriptions (inline)
-	    (if (slot-boundp attribute 'active-attributes)
-		(disp val :attributes (slot-value attribute 'active-attributes))
-		(disp val))))))))
+	    (cond ((slot-value attribute 'value-formatter)
+		   (generic-format *display* (funcall (attribute-value-formatter attribute) val)))
+		   ((slot-boundp attribute 'active-attributes)
+		    (disp val :attributes (slot-value attribute 'active-attributes)))
+		   (t
+		    (disp val)))))))))
 
 (define-layered-method display-using-description 
   ((attribute standard-attribute) display object &rest args)
@@ -68,6 +74,19 @@
   (when (attribute-label attribute)
     (display-attribute-label attribute))
   (display-attribute-value attribute))
+
+(define-layered-method display-attribute :around
+  ((attribute standard-attribute))
+    (funcall-with-layer-context 
+   (modify-layer-context (current-layer-context) 
+			 :activate (attribute-active-descriptions attribute)
+			 :deactivate (attribute-inactive-descriptions attribute))
+   (lambda () 
+     (call-next-method))))
+
+(define-layered-method display-attribute :before
+  ((attribute standard-attribute))
+)
 
 (define-display ((description t))
  (let ((attributes (attributes description)))
