@@ -134,6 +134,12 @@
 		       :layered t
 		       :special t)))
 
+(define-layered-method attribute-active-p :around (attribute)		       
+ (let ((active? (call-next-method)))
+   (if (eq :when active?)
+       (not (null (attribute-value attribute)))
+       active?)))
+		       
 (define-layered-method attribute-label-formatter :around (attribute)
    (or (slot-value attribute 'label-formatter) 
        (attribute-value (find-attribute (attribute-description attribute) 'label-formatter))

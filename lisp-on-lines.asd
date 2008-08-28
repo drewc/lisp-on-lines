@@ -60,7 +60,9 @@ OTHER DEALINGS IN THE SOFTWARE."
 							   (:file "edit")
 							   (:file "symbol")
 							   (:file "list")
-							   (:file "clos"))
+							   (:file "null")
+							   (:file "clos")
+							   )
 							   
 					      :serial t))
 				     
@@ -68,9 +70,9 @@ OTHER DEALINGS IN THE SOFTWARE."
   :serial t
   :depends-on (:contextl :arnesi :alexandria :parse-number
 			 ;;for rofl:
-			  :cl-postgres :simple-date :postmodern))
-
-
+			 :cl-postgres
+			 :simple-date-postgres
+			 :postmodern ))
 
 
 (defsystem :lisp-on-lines.test
