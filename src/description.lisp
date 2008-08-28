@@ -28,9 +28,10 @@
 	   #'attribute-active-p
 	   (description-attributes description)))
 
-(defun find-attribute (description attribute-name)
-  (find attribute-name (description-attributes description)
-	:key #'attribute-name))
+(defun find-attribute (description attribute-name &optional (errorp t))
+  (or (find attribute-name (description-attributes description)
+	    :key #'attribute-name)
+      (when errorp (error "No attribute named ~A found in ~A" attribute-name description))))
 
 (define-layered-function description-active-descriptions (description)
   (:method ((description standard-description-object))

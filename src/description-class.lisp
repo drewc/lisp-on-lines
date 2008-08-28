@@ -92,7 +92,7 @@
 		(mapcar 
 		 (lambda (slot)
 		   (or (find-attribute description 
-				       (slot-definition-name slot))
+				       (slot-definition-name slot) nil)
 		       (let* ((*init-time-description* description)
 			      (attribute-class (or 
 						(ignore-errors 
@@ -129,7 +129,7 @@
 				initargs )
 			 (setf (slot-value description (attribute-name attribute)) 
 			       (attribute-class attribute))
-			 (apply #'change-class attribute  (attribute-class attribute)
+			 (apply #'change-class attribute  (find-class (attribute-class attribute))
 				initargs)))))))))
 
 
@@ -232,8 +232,9 @@
   (print-unreadable-object (object stream :type t :identity t)
     (princ  (ignore-errors (description-print-name (find-layer object))) stream)))
 
-(defun find-description (name)
-  (find-layer (find-class (defining-description name))))
+(defun find-description (name &optional (errorp t))
+  (let ((class (find-class (defining-description name) errorp)))
+    (when class (find-layer class))))
 
 
 

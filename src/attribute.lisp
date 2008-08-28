@@ -290,7 +290,9 @@
 		(with-function-access 
 		  (slot-value-using-class class attribute property))
 		(funcall fn layer (attribute-description attribute)))
-	    (funcall fn layer (attribute-description attribute))))))
+	    (handler-case (funcall fn layer (attribute-description attribute))
+	      (error ()
+		(warn "Error calling ~A" fn)))))))
 		    
 	      
 
