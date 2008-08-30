@@ -18,6 +18,7 @@
    #:select-objects
    #:select-only-n-objects
    #:insert-object
+   #:primary-key-boundp
    
 ;; Descriptions
    #:find-description

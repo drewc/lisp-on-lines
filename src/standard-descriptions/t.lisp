@@ -45,9 +45,6 @@
   (:method (attribute)
     (funcall (attribute-label-formatter attribute) (attribute-label attribute))))
 	   
-
-
-
 (define-layered-function display-attribute-value (attribute)
   (:method (attribute)
     (flet ((disp (val &rest args)

@@ -23,10 +23,14 @@
 (defvar *row-reader* 'symbol-plist-row-reader)
 
 (defun %query (query)
-  (cl-postgres:exec-query *database* (sql-compile query) 'symbol-plist-row-reader))
+  (cl-postgres:exec-query *database* (sql-compile query) *row-reader*))
 
 (defun select (&rest query)
   (%query (cons :select query)))
+
+(defun prepare (&rest query)
+  (cl-postgres:prepare-query *database* "test2" (sql-compile (cons :select query))))
+
 
 (defun select-only (num &rest query)
   (let ((results (%query `(:limit ,(cons :select query) ,num))))
@@ -61,6 +65,16 @@ constrained will be introduced.")
     :initarg :foreign-type
     :initarg :references
     :accessor slot-definition-foreign-type)
+   (foreign-relation
+    :initform nil
+    :initarg :referenced-from
+    :initarg :referenced-by
+    :accessor slot-definition-foreign-relation)
+   (foreign-join-spec
+    :initform nil
+    :initarg :on
+    :initarg :using
+    :accessor slot-definition-foreign-join-spec)
    (unique :initform nil :initarg :unique :accessor slot-definition-unique)
    
 
@@ -136,6 +150,10 @@ inheritance and does not create any tables for it."))
 	  (every #'slot-definition-transient-p direct-slot-definitions)
 	  (slot-definition-foreign-type slotd) 
 	  (slot-definition-foreign-type (car direct-slot-definitions))
+	  (slot-definition-foreign-relation slotd) 
+	  (slot-definition-foreign-relation (car direct-slot-definitions))
+	  (slot-definition-foreign-join-spec slotd) 
+	  (slot-definition-foreign-join-spec (car direct-slot-definitions))
 	  (slot-definition-not-null-p slotd) 
 	  (slot-definition-not-null-p (car direct-slot-definitions))
 	  (slot-definition-unique slotd) (slot-definition-unique (car direct-slot-definitions))
@@ -153,54 +171,99 @@ inheritance and does not create any tables for it."))
 (defclass standard-db-access-class (db-access-class)
   ())
 
-(defmethod ensure-class-using-class :around ((class standard-db-access-class) name &rest args &key direct-slots &allow-other-keys)
-       (let ((direct-slots (loop for slot in direct-slots 
-			      collect (let* ((sname (getf slot :name))
-					     (readers (getf slot :readers))
-					     (writers (getf slot :writers)))
-					(setf (getf slot :readers)
-					      (cons (intern (format nil "~A.~A"
-								    name sname)) readers))
-					(setf (getf slot :writers)
-					      (cons `(setf ,(intern (format nil "~A.~A"
-								    name sname))) writers))
-					slot))))
-	 
-					      
-       (apply #'call-next-method class name :direct-slots direct-slots args)))
+(defun find-foreign-relations (class object slotd)
+  (when (slot-boundp object (dao-id-column-name class))
+  (select-objects (slot-definition-foreign-relation slotd)
+		  :where `(:= ,(or (slot-definition-foreign-join-spec slotd) 
+				   (dao-id-column-name class))
+			   ,(slot-value object (dao-id-column-name class))))))
 
-(defun dao-id-column-name (class)
+(defmethod slot-boundp-using-class :around 
+    ((class standard-db-access-class) object slotd)
+  (let ((bound? (call-next-method)))
+    (when (and (not bound?) (slot-definition-foreign-relation slotd))
+	  (setf (slot-value-using-class class object slotd) 
+		(find-foreign-relations class object slotd)))
+
+    (call-next-method)))
+
+(defmethod slot-value-using-class :around 
+    ((class standard-db-access-class) object slotd)
+  (if (slot-definition-foreign-relation slotd)
+      (if (slot-boundp-using-class class object slotd)
+	  (call-next-method)
+	  (setf (slot-value-using-class class object slotd) 
+		(find-foreign-relations class object slotd)))
+      (call-next-method)))
+
+
+ (defun dao-id-column-name (class)
   (slot-definition-column-name
    (or (class-id-slot-definition class)
        (error "No ID slot (primary key) for ~A" class))))
 
-(defclass described-db-access-class (standard-db-access-class described-class)
+(defun primary-key-boundp (object)
+  (slot-boundp object (dao-id-column-name (class-of object))))
+
+(defclass described-db-access-class (described-class standard-db-access-class)
   ())
 
-(defmethod initialize-instance :around ((class standard-db-access-class) &rest initargs &key (direct-superclasses '()))
+(defmethod initialize-instance :around ((class standard-db-access-class) &rest initargs &key name (direct-superclasses '()) direct-slots)
   (declare (dynamic-extent initargs))
-  (if (loop for direct-superclass in direct-superclasses
-	 thereis (ignore-errors (subtypep direct-superclass 'standard-db-access-object)))
-      (call-next-method)
-      (apply #'call-next-method
-	     class
-	     :direct-superclasses
-	     (append direct-superclasses
-		     (list (find-class 'standard-db-access-object)))
-	     initargs)))
+  (let ((direct-slots (loop for slot in direct-slots 
+			 collect (let* ((sname (getf slot :name))
+					(readers (getf slot :readers))
+					(writers (getf slot :writers)))
+				   (setf (getf slot :readers)
+					 (cons (intern (format nil "~A.~A"
+							       name sname)) readers))
+				   (setf (getf slot :writers)
+					 (cons `(setf ,(intern (format nil "~A.~A"
+								       name sname))) writers))
+				   slot))))
+	 
+					      
 
-(defmethod reinitialize-instance :around ((class standard-db-access-class) &rest initargs &key (direct-superclasses '() direct-superclasses-p))
+    (if (loop for direct-superclass in direct-superclasses
+	   thereis (ignore-errors (subtypep direct-superclass 'standard-db-access-object)))
+	(call-next-method)
+	(apply #'call-next-method
+	       class
+	       :direct-superclasses
+	       (append direct-superclasses
+		       (list (find-class 'standard-db-access-object)))
+	       :direct-slots direct-slots
+	       initargs))))
+
+(defmethod reinitialize-instance :around ((class standard-db-access-class) 
+					  &rest initargs 
+					  &key (name (class-name class)) 
+					  (direct-superclasses '() direct-superclasses-p) direct-slots)
   (declare (dynamic-extent initargs))
-  (if (or (not direct-superclasses-p)
-	  (loop for direct-superclass in direct-superclasses
-	     thereis (ignore-errors (subtypep direct-superclass 'standard-db-access-object))))
-      (call-next-method)
-      (apply #'call-next-method
-	     class
-	     :direct-superclasses
-	     (append direct-superclasses
-		     (list (find-class 'standard-db-access-object)))
-	     initargs)))
+  (let ((direct-slots (loop for slot in direct-slots 
+			 collect (let* ((sname (getf slot :name))
+					(readers (getf slot :readers))
+					(writers (getf slot :writers)))
+				   (setf (getf slot :readers)
+					 (cons (intern (format nil "~A.~A"
+							       name sname)) readers))
+				   (setf (getf slot :writers)
+					 (cons `(setf ,(intern (format nil "~A.~A"
+								       name sname))) writers))
+				   slot))))
+	 
+					      
+
+    (if (loop for direct-superclass in direct-superclasses
+	   thereis (ignore-errors (subtypep direct-superclass 'standard-db-access-object)))
+	(call-next-method)
+	(apply #'call-next-method
+	       class
+	       :direct-superclasses
+	       (append direct-superclasses
+		       (list (find-class 'standard-db-access-object)))
+	       :direct-slots direct-slots
+	       initargs))))
 
 (defclass standard-db-access-object (standard-object)
   ())
@@ -259,7 +322,55 @@ inheritance and does not create any tables for it."))
 (defun make-object (type &rest plist)
   (make-object-from-plist type plist))
 
+(defun insert-object (object)
+  (let ((class (class-of object))
+	insert-query)
+    (flet ((ins (slotd &optional (val (slot-value-using-class class object slotd)))
+	     (push (slot-definition-column-name slotd) insert-query)
+	     (push  val insert-query)))
+    (loop :for slotd in (class-slots class) 
+	  :do (cond ((slot-boundp-using-class class object slotd)
+		     (unless (or (slot-definition-foreign-relation slotd)
+				 (slot-definition-foreign-type  slotd))
+		       (ins slotd)))
+		    ((slot-definition-primary-key-p slotd)
+		     (setf (slot-value-using-class class object slotd) (get-default-value (class-table-name class)
+						  (slot-definition-column-name slotd)))
+		     (ins slotd ))))
+    (apply #'insert-into (class-table-name class) (nreverse insert-query))))
+  object)
 
+(defun select-using-object (object &key (combinator :and))
+  (let ((class (class-of object))
+	select-query)
+    (flet ((sel (slotd &optional (val (slot-value-using-class class object slotd)))
+	     (push `(:ilike ,(slot-definition-column-name slotd) ,(if (stringp val)
+								      (format nil "~A%" val) val)) select-query)))
+    (loop :for slotd in (class-slots class) 
+	  :do (cond ((slot-boundp-using-class class object slotd)
+		     (unless (or (slot-definition-foreign-relation slotd)
+				 (slot-definition-foreign-type  slotd))
+		       (sel slotd)))))
+    (if select-query
+	   (select-objects (class-table-name class) 
+	     :where (print `(,combinator ,@(nreverse select-query))))
+	   nil))))
+  
+
+(defun get-default-value-query (table column)
+  (format nil "select ~A " 
+	  (second (select-only 1 ':adsrc 
+			       :from 'pg_attribute 'pg_attrdef 
+			       :where `(:and (:= adnum attnum) 
+					(:= attname ,(s-sql::to-sql-name column)) 
+					(:= adrelid attrelid) 
+					(:= attrelid 
+					 (:select oid 
+					  :from pg_class 
+					  :where (:= relname ,(s-sql::to-sql-name table)))))))))
+
+(defun get-default-value (table column)
+  (caar (query (get-default-value-query table column))))
 
 (defun find-dao (type id 
 		 &key (table (class-table-name (find-class type)))
@@ -286,8 +397,7 @@ or return nil if it does not exist."
 	    (setf foreign-key (cdr foreign-type)
 		  foreign-type (car foreign-type)))
 	  (if (slot-boundp-using-class class dao slotd)
-	      (let ((value (slot-value-using-class class dao slotd)))		
-		(unless (typep value foreign-type)
+	      (let ((value (slot-value-using-class class dao slotd)))				(unless (typep value foreign-type)
 		  (if (connected-p *database*)
 		      (setf (slot-value-using-class class dao slotd)
 			    (find-dao foreign-type value))
