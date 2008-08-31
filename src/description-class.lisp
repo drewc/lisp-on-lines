@@ -14,6 +14,7 @@
 
 (define-layered-class description-access-class (standard-layer-class contextl::special-layered-access-class )
   ((defined-in-descriptions :initarg :in-description)
+   (class-active-attributes-definition :initarg :attributes)
    (mixin-class-p :initarg :mixinp)))
 
 (defmethod direct-slot-definition-class
@@ -73,47 +74,33 @@
     NIL)
   (:method ((description standard-description-object))
     T))
-  
-(defun initialize-description-class (class)
 
-;;; HACK: initialization does not happ   en properly 
-;;; when compiling and loading or something like that.
-;;; Obviously i'm not sure why.
-;;; So we're going to explicitly initialize things.
-;;; For now. --drewc
+(defun compute-effective-attribute-objects (description)
+  (mapcar 
+   (lambda (slot)
+     (or (find-attribute description 
+			 (slot-definition-name slot) nil)
+	 (let* ((*init-time-description* description)
+		(attribute-class (or 
+				  (ignore-errors 
+				    (slot-value-using-class 
+				     (class-of description) description slot))
+				  'standard-attribute))
+		(attribute 		     
+		 (apply #'make-instance 
+			attribute-class
+			:description description
+			:attribute-class attribute-class
+			(attribute-object-initargs slot))))
+	   (setf (slot-definition-attribute-object slot) attribute))))
+   (remove 'described-object (class-slots (class-of description))
+	   :key #'slot-definition-name)))
 
-  (pushnew class *defined-descriptions*)
-
-;;; ENDHACK.
-  
-  (let* ((description (find-layer class)) 
-	 (attribute-objects 
-	  (setf (description-class-attributes (class-of description))
-		(mapcar 
-		 (lambda (slot)
-		   (or (find-attribute description 
-				       (slot-definition-name slot) nil)
-		       (let* ((*init-time-description* description)
-			      (attribute-class (or 
-						(ignore-errors 
-						  (slot-value-using-class 
-						   (class-of description) description slot))
-						'standard-attribute))
-			      (attribute 		     
-			       (apply #'make-instance 
-				      attribute-class
-				      :description description
-				      :attribute-class attribute-class
-				      (attribute-object-initargs slot))))
-			 (setf (slot-definition-attribute-object slot) attribute))))
-		 (remove 'described-object (class-slots (class-of description))
-			 :key #'slot-definition-name))))
-	 (defining-classes 
-	  (partial-class-defining-classes class)))
+(defun initialize-effective-attribute-values-for-description-class (class description attribute-objects)
 
     (loop 
        :for (layer class) 
-       :on  defining-classes :by #'cddr 
+       :on    (partial-class-defining-classes class) :by #'cddr 
        :do (funcall-with-layer-context 
 	    (adjoin-layer (find-layer layer) (current-layer-context))
 	    (lambda ()
@@ -130,7 +117,31 @@
 			 (setf (slot-value description (attribute-name attribute)) 
 			       (attribute-class attribute))
 			 (apply #'change-class attribute  (find-class (attribute-class attribute))
-				initargs)))))))))
+				initargs))))
+	      (when (slot-boundp  class 'class-active-attributes-definition)
+	      (with-described-object (nil description) 
+		(setf (slot-value (find-attribute description 'active-attributes) 'value) 
+		      (slot-value class 'class-active-attributes-definition))))))))
+    
+(defun initialize-description-class (class)
+
+;;; HACK: initialization does not happ   en properly 
+;;; when compiling and loading or something like that.
+;;; Obviously i'm not sure why.
+;;; So we're going to explicitly initialize things.
+;;; For now. --drewc
+
+  (pushnew class *defined-descriptions*)
+
+;;; ENDHACK.
+  
+  (let* ((description (find-layer class)) 
+	 (attribute-objects 
+	  (setf (description-class-attributes (class-of description))
+		(compute-effective-attribute-objects description))))
+
+    (initialize-effective-attribute-values-for-description-class class description attribute-objects)
+))
 
 
 #+old(defun initialize-description-class (class)
