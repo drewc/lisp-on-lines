@@ -41,6 +41,10 @@
 (defun insert-into (table &rest values-plist)
   (postmodern:execute 
    (postmodern:sql-compile `(:insert-into ,table :set ,@values-plist))))
+
+(defun update (table &rest query)
+  (postmodern:execute 
+   (postmodern:sql-compile `(:update ,table ,@query))))
     
 
 (defclass db-access-slot-definition ()
@@ -196,13 +200,40 @@ inheritance and does not create any tables for it."))
 		(find-foreign-relations class object slotd)))
       (call-next-method)))
 
+(defun set-fkey-from-slotd (value object slotd)
+  (when (slot-boundp value (dao-id-column-name (class-of value)))
+    (setf (slot-value object (slot-definition-column-name slotd))
+	  (slot-value value (dao-id-column-name (class-of value))))))
+
+(defmethod (setf slot-value-using-class) :after 
+    (value (class standard-db-access-class) object slotd)
+  (when (and value 
+	     (typep value 'standard-db-access-object)
+	     (slot-definition-foreign-type slotd)
+	     (primary-key-boundp value))
+
+    (set-fkey-from-slotd value object slotd)))
+
+(defun find-foreign-objects (db-object)
+    (let* ((class (class-of db-object)) 
+	 (foreign-objects ))
+      (mapcar (lambda (x)
+		(and (slot-value-using-class class db-object x)  
+		     (slot-value-using-class class db-object  x)))
+	      (remove-if-not #'lol::slot-definition-foreign-type 
+			     (lol::class-slots class)))))
+
 
  (defun dao-id-column-name (class)
   (slot-definition-column-name
    (or (class-id-slot-definition class)
        (error "No ID slot (primary key) for ~A" class))))
 
+(defun db-access-object-p (thing)
+  (typep thing 'standard-db-access-object))
+
 (defun primary-key-boundp (object)
+  (check-type object standard-db-access-object) 
   (slot-boundp object (dao-id-column-name (class-of object))))
 
 (defclass described-db-access-class (described-class standard-db-access-class)
@@ -324,20 +355,64 @@ inheritance and does not create any tables for it."))
 
 (defun insert-object (object)
   (let ((class (class-of object))
-	insert-query)
+	insert-query
+	delayed)
     (flet ((ins (slotd &optional (val (slot-value-using-class class object slotd)))
-	     (push (slot-definition-column-name slotd) insert-query)
-	     (push  val insert-query)))
+	     (push (lambda ()  (push (slot-definition-column-name slotd) insert-query)
+			   (push  val insert-query)) 
+		   delayed)))
     (loop :for slotd in (class-slots class) 
 	  :do (cond ((slot-boundp-using-class class object slotd)
-		     (unless (or (slot-definition-foreign-relation slotd)
-				 (slot-definition-foreign-type  slotd))
-		       (ins slotd)))
+		     (cond ((or (slot-definition-foreign-relation slotd)
+				)
+			    )
+			   ((slot-definition-foreign-type slotd)
+			    (set-fkey-from-slotd 
+			     (slot-value-using-class class object slotd) 
+			     object slotd
+)
+			    )
+			   (t 
+			    (ins slotd)) ))
 		    ((slot-definition-primary-key-p slotd)
 		     (setf (slot-value-using-class class object slotd) (get-default-value (class-table-name class)
 						  (slot-definition-column-name slotd)))
 		     (ins slotd ))))
+    (map nil #'funcall delayed)
     (apply #'insert-into (class-table-name class) (nreverse insert-query))))
+  object)
+
+
+(defun update-object (object)
+  (let ((class (class-of object))
+	update-query
+	delayed)
+    (flet ((ins (slotd &optional (val (slot-value-using-class class object slotd)))
+	     (push (lambda ()  (push (slot-definition-column-name slotd) update-query)
+			   (push  val update-query)) 
+		   delayed)))
+    (loop :for slotd in (class-slots class) 
+	  :do (cond ((slot-boundp-using-class class object slotd)
+		     (cond ((or (slot-definition-foreign-relation slotd)
+				)
+			    )
+			   ((slot-definition-foreign-type slotd)
+			    (set-fkey-from-slotd 
+			     (slot-value-using-class class object slotd) 
+			     object slotd
+)
+			    )
+			   (t 
+			    (ins slotd)) ))
+		    ((slot-definition-primary-key-p slotd)
+		     (setf (slot-value-using-class class object slotd) (get-default-value (class-table-name class)
+						  (slot-definition-column-name slotd)))
+		     (ins slotd ))))
+    (map nil #'funcall delayed)
+    (apply #'update (class-table-name class) :set (nconc  (nreverse update-query)
+						     (list  :where `(:= ,(dao-id-column-name class)
+								     ,(slot-value object (dao-id-column-name class))
+								     ))))))
   object)
 
 (defun select-using-object (object &key (combinator :and))
@@ -402,6 +477,7 @@ or return nil if it does not exist."
 		      (setf (slot-value-using-class class dao slotd)
 			    (find-dao foreign-type value))
 		      (let ((obj (make-instance foreign-type)))
+			(break "here")
 			(setf (slot-value-using-class 
 			       (class-of obj)
 			       obj

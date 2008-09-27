@@ -10,6 +10,7 @@
 
 ;; ROFL stuff here temporarily
    #:standard-db-access-class
+   #:standard-db-access-object
    #:make-object-from-plist
    #:described-db-access-class
    #:select-only
