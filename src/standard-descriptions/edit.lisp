@@ -44,7 +44,8 @@
 		      'string-attribute-editor))))))
 
 (defclass attribute-editor ()
-    ((type :initarg :type
+    ((class :initarg :class)
+     (type :initarg :type
 	   :initform 'string
 	   :accessor attribute-editor-type)
      (parser :initarg :parse-using
