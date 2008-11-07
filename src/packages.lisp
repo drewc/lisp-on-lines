@@ -3,23 +3,11 @@
    :common-lisp
    #:contextl
    #:closer-mop
-   #:postmodern
+
    #:alexandria)
   (:nicknames #:lol)
   (:export
 
-;; ROFL stuff here temporarily
-   #:standard-db-access-class
-   #:standard-db-access-object
-   #:make-object-from-plist
-   #:described-db-access-class
-   #:select-only
-   #:select
-   #:insert-into   
-   #:select-objects
-   #:select-only-n-objects
-   #:insert-object
-   #:primary-key-boundp
    
 ;; Descriptions
    #:find-description
@@ -52,6 +40,7 @@
    #:active-attributes
    #:attribute-delimiter
    #:standard-attribute
+
    ;; Standard Library
    
    ;; editing
@@ -61,6 +50,14 @@
    #:number-attribute-editor
    #:password-attribute-editor
    #:password
+
+   ;; :validation
+   #:validation
+   #:validate
+   #:validp
+
+   ;; CLOS
+   #:slot-definition-attribute
 
    ;; html
    #:display-html-attribute-editor

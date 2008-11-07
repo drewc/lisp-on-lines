@@ -2,34 +2,22 @@
 (defpackage lisp-on-lines-ucw
   (:documentation "An LoL Layer over ucw.basic")
   (:nicknames #:lol-ucw)
-  (:use #:lisp-on-lines #:ucw :common-lisp :arnesi :yaclml)
-  (:shadow 
-   #:standard-window-component
-   #:make-action
-   #:standard-action
-   #:uri-parse-error
-   #:standard-application
+  (:use #:lisp-on-lines #:ucw-core :common-lisp :arnesi :yaclml :js :contextl)
 
-   #:call
-   #:answer)
-
-  (:shadowing-import-from :ucw
-   #:parent)
+  (:shadowing-import-from :js
+   #:new)  
+  (:shadowing-import-from :ucw-core
+   #:parent )
+  (:import-from :ucw-standard 
+	#:call #:answer	#:defaction #:*source-component*)
   
-  (:import-from :ucw
-   #:register-action-in-frame
-   #:+action-parameter-name+
-   #:context.current-frame
-   #:uri.query
-   #:*current-component*
-   #:find-action
-   #:service)
+
 		
   (:export 
 
    ;;; First, LOL-UCW exports. The rest are from UCW.
    #:lol-component
-
+   #:*source-component*
    #:defcomponent
 
    #:uri.query

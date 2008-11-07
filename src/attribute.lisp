@@ -69,7 +69,7 @@
   (attribute-class 
    :accessor attribute-class 
    :initarg :attribute-class 
-   :initform 'standard-attribute)
+  :initform 'standard-attribute)
   (keyword
    :layered-accessor attribute-keyword
    :initarg :keyword

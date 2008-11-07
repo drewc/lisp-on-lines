@@ -51,6 +51,9 @@
      (parser :initarg :parse-using
 	     :initform 'identity
 	     :accessor attribute-editor-parsing-function)
+     (attributes :initarg :attributes
+		 :initform nil
+		 :accessor attribute-editor-attributes)
      (prompt :initarg :prompt 
 	     :initform nil)
      (unbound-value

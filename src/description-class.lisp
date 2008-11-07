@@ -144,58 +144,6 @@
 ))
 
 
-#+old(defun initialize-description-class (class)
-
-;;; HACK: initialization does not happ   en properly 
-;;; when compiling and loading or something like that.
-;;; Obviously i'm not sure why.
-;;; So we're going to explicitly initialize things.
-;;; For now. --drewc
-
-  (pushnew class *defined-descriptions*)
-
-;;; ENDHACK.
-
-  (let* ((description (find-layer class)) 
-	 (attribute-objects 
-	  (mapcar 
-	   (lambda (slot)
-	     (let* ((*init-time-description* description)
-			  (attribute 		     
-			   (apply #'make-instance 
-			    'standard-attribute
-			    :description description
-			    (attribute-object-initargs slot))))
-	       
-		     
-	       (setf (slot-definition-attribute-object slot) attribute)))
-	   (remove 'described-object (class-slots (class-of description))
-		   :key #'slot-definition-name)))
-	 (defining-classes (partial-class-defining-classes (class-of description))))
-
-    (loop 
-       :for (layer class) 
-       :on  defining-classes :by #'cddr 
-       :do (funcall-with-layer-context 
-	    (adjoin-layer (find-layer layer) (current-layer-context))
-	    (lambda ()
-	      (loop :for direct-slot :in (class-direct-slots class) 
-		 :do (let ((attribute 
-			    (find (slot-definition-name direct-slot) 
-				  attribute-objects 
-				  :key #'attribute-name)))
-		       (let ((initargs 
-			      (prepare-initargs attribute (direct-attribute-properties direct-slot))))
-			 
-			 (apply #'reinitialize-instance attribute 
-				initargs )
-			 (warn "Attribute class for ~A is ~A" attribute (attribute-class attribute))
-			 (when (not (eq (find-class (attribute-class attribute))
-					(class-of attribute)))
-			   (warn "~%CHANGING CLASS~%")
-			   
-			   (apply #'change-class attribute  (attribute-class attribute) 
-				  initargs))))))))))
 
 ;;;; HACK: run this at startup till we figure things out.
 (defun initialize-descriptions () 

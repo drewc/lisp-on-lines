@@ -83,7 +83,7 @@
       (postmodern:query (:CREATE-TABLE rofl_test_parent 
 				       ((rofl_test_parent_id 
 					 :type SERIAL 
-					 :primary-key t)
+				 	 :primary-key t)
 					(test_string 
 					 :type string) 
 						(test_integer 
@@ -119,21 +119,34 @@
 
        (defclass rofl-test-child ()
 	 ((rofl-test-child-id 
+	  :primary-key t)       ((rofl_test_child_id 
+						 :type SERIAL 
+						 :primary-key t)
+						(rofl_test_parent_id 
+						 :type integer
+						 :references (rofl_test_parent))
+						(test_string 
+						 :type string) 
+						(test_integer 
+						 :type integer)))))))
+
+)
+
+
+(deftest test-rofl-def-references ()
+  (finishes 
+    (eval 
+     '(progn
+       (defclass rofl-test-parent ()
+	 ((rofl-test-parent-id 
 	  :primary-key t)
-	  (rofl-test-parent-id
-	   :references rofl-test-parent)
-	  (parent :column rofl-test-parent-id 
-		  :references rofl-test-parent)
-	  (same-parent :column rofl-test-parent-id
-		       :references (rofl-test-parent . 
-				    rofl-test-parent-id))
-		       
 	  (test-string)
 	  (test-integer))
-	 (:metaclass standard-db-access-class))))))
+	 (:metaclass standard-db-access-class))
 
-(deftest test-rofl-foreign-references ()
-  (test-rofl-create-references-tables)
+       ;;; three ways to get to the parent.
+       ;;; The should all point to the same object.
+
   (test-rofl-def-references-classes)
   (db 
   (finishes 
@@ -150,7 +163,7 @@
     
     (is (equal 1 (slot-value parent-same-slot-name/fkey 'test-integer)))
     (is (equal 1 (slot-value parent-column-same-fkey 'test-integer)))
-    (is (equal 1 (slot-value parent-column-table-and-key 'test-integer))))))
+    (is (equal 1 (slot-value parent-column-table-and-key 'test-integer)))))))))
 
 
  

@@ -18,6 +18,24 @@
 	     :accessor attribute-slot-name
 	     :layered t)))
 
+
+(define-layered-method attribute-active-p :around ((attribute slot-definition-attribute))		       
+ (let ((active? (slot-value attribute 'activep)))
+   (if (and (eq :when active?)
+	    (unbound-slot-value-p (attribute-value attribute)))
+       NIL
+       
+       (call-next-method))))
+
+(define-layered-method attribute-active-p 
+ :in-layer #.(defining-description 'editable) 
+ :around ((attribute slot-definition-attribute))		       
+ (let ((active? (slot-value attribute 'activep)))
+   (if (and (eq :when active?)
+	    (unbound-slot-value-p (attribute-value attribute)))
+       t      
+       (call-next-method))))
+
 (defmethod shared-initialize :around ((object slot-definition-attribute) 
 				      slots &rest args)
   (prog1 (call-next-method)

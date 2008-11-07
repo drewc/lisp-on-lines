@@ -1,78 +1,63 @@
 (in-package :lisp-on-lines-ucw)
 
-(defparameter *source-component* nil)
-
-(defclass standard-basic-action (basic-action)
-  ((source-component :accessor action-source-component))
-  (:metaclass mopp:funcallable-standard-class))
-
-(defmethod shared-initialize :before ((action standard-basic-action) slots &rest args)
-  (declare (ignore slots args))  
-  (setf (action-source-component action) *source-component*))
-
-(defmethod handle-action :around ((action standard-basic-action) a s f)
-  (let ((*source-component* (action-source-component action)))
-    (call-next-method)))
-
-(defmethod render :around (component)
-  (let ((*source-component* component))
-    (call-next-method)))
+(defclass lisp-on-lines-action (ucw-standard::standard-action) 
+  ((layer-context :accessor action-layer-context
+		  :initform nil
+		  :initarg :layer-context))
+  (:metaclass closer-mop:funcallable-standard-class))
 
 
-(defun/cc call (name &rest args)
-  (call-component *source-component* 
-		  (apply #'make-instance name args)))
+(setf ucw-standard::*default-action-class* 'lisp-on-lines-action)
 
-(defun/cc answer (&optional val)
-  (let ((child *source-component*))
-    (setf *source-component* (ucw::component.calling-component child))
-    (answer-component child val)))
+
+
+(defmethod ucw-core:call-action :around ((action lisp-on-lines-action) application session frame)
+  (let ((next-method (lambda ()
+		       (layered-call-action 
+			action application session frame 
+			(lambda () 
+			  (call-next-method))))))
+    (let ((layer-context (action-layer-context action)))
+      (if layer-context 
+	  (funcall-with-layer-context layer-context next-method)
+	  (funcall next-method)))
+    ))
+
+(defmethod ucw-core:handle-action :around ((action lisp-on-lines-action) application session frame)
+     (let ((lol::*invalid-objects* (make-hash-table)))
+       (handler-bind ((lol::validation-condition 
+		       (lambda (c)
+			 (let ((object (lol::validation-condition-object c))
+			       (attribute (lol::validation-condition-attribute c)))
+
+
+			   (setf (gethash object lol::*invalid-objects*)
+				 (cons (cons attribute c)
+				       (gethash object lol::*invalid-objects*)))))))
+       (call-next-method))))
+
+
+(define-layered-function layered-call-action (action application session frame next-method)
+  (:method (action application session frame next-method)
+    (funcall next-method)))
+
+
+(contextl:define-layered-method layered-call-action 
+   :in-layer #.(lol::defining-description 'lol::validate)
+   :around ((action lisp-on-lines-action) application session frame next-method)
+   (call-next-method)
+
+   )
+
+
 
 (defclass described-component-class (described-class standard-component-class )
   ())
 
-(defmacro defaction (&rest args-and-body)
-  `(arnesi:defmethod/cc ,@args-and-body))
-
-(defparameter *default-action-class* 'standard-basic-action)
-
-(defun make-action (lambda &rest initargs &key (class *default-action-class*) &allow-other-keys)
-  "Makes a new unregistered action."
-  (remf-keywords initargs :class)
-  (apply #'make-instance class :lambda lambda initargs))
-
-  
-(defclass standard-application (ucw:basic-application)
-  ())
-
-(defclass standard-request-context (ucw::standard-request-context)
-  ())
-
-(defmethod ucw:request-context-class list ((application standard-application))
-  'standard-request-context)
-
-(defvar +action-compound-name-delimiter+ #\|)
-
-(defmethod ucw::find-action-id :around ((context standard-request-context))
-  (or 
-   (loop
-      :for (k . v) in (ucw::parameters 
-		      (context.request context))
-      :do(destructuring-bind (param-name &optional action-id)
-	      (split-sequence:split-sequence 
-	       +action-compound-name-delimiter+ k)
-	    (when (and action-id 
-		       (string= 
-			ucw::+action-parameter-name+ param-name))
-	      (return action-id))))
-   (call-next-method)))
-
-
-
 
 
 (defcomponent standard-window-component 
-  (ucw::basic-window-component)
+  (ucw-standard::basic-window-component)
   ((body
     :initform nil
     :accessor window-body
@@ -97,7 +82,7 @@
 	      :type "text/css"))))
 
 (defmethod render-html-body ((window standard-window-component))
-  (ucw:render (window-body window)))
+  (render (window-body window)))
 
 (defcomponent info-message ()
   ((message :accessor message :initarg :message)))

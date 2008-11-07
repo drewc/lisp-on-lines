@@ -42,7 +42,7 @@ OTHER DEALINGS IN THE SOFTWARE."
 
 				     (:file "packages")
 				     
-				     (:file "rofl")
+
 				     (:file "utilities")
 				     
 				     (:file "display")
@@ -62,6 +62,7 @@ OTHER DEALINGS IN THE SOFTWARE."
 							   (:file "list")
 							   (:file "null")
 							   (:file "clos")
+							   (:file "validate")
 							   )
 							   
 					      :serial t))
@@ -69,10 +70,7 @@ OTHER DEALINGS IN THE SOFTWARE."
 				     :serial t))
   :serial t
   :depends-on (:contextl :arnesi :alexandria :parse-number
-			 ;;for rofl:
-			 :cl-postgres
-			 :simple-date-postgres
-			 :postmodern ))
+ ))
 
 
 (defsystem :lisp-on-lines.test
@@ -81,7 +79,6 @@ OTHER DEALINGS IN THE SOFTWARE."
 				     (:file "description-test")
 				     (:file "attribute-test")
 				     (:file "display-test")
-				     (:file "rofl-test")
 				     (:module :standard-descriptions
 				      :components ((:file "edit-test"))
 				      :serial t)
@@ -98,6 +95,4 @@ OTHER DEALINGS IN THE SOFTWARE."
   :depends-on (:lisp-on-lines :lisp-on-lines-ucw :stefil))
 
 
-(if (asdf:find-system :asdf-system-connections nil)
-    (asdf:oos 'asdf:load-op :ucw-system-connections)
-    (#+sbcl sb-int:style-warn #-sbcl warn "UCW suggests asdf-system-connections in order to optionally integrate some other libraries. See http://www.cliki.net/asdf-system-connections for details and download instructions."))
+

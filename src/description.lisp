@@ -31,7 +31,7 @@
 (defun find-attribute (description attribute-name &optional (errorp t))
   (or (find attribute-name (description-attributes description)
 	    :key #'attribute-name)
-      (when errorp (error "No attribute named ~A found in ~A" attribute-name description))))
+      (when errorp (error "No attribute named ~A found in ~A describing ~A" attribute-name description (described-object description)))))
 
 (define-layered-function description-active-descriptions (description)
   (:method ((description standard-description-object))
