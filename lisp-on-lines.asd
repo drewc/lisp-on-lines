@@ -69,7 +69,7 @@ OTHER DEALINGS IN THE SOFTWARE."
 				     
 				     :serial t))
   :serial t
-  :depends-on (:contextl :arnesi :alexandria :parse-number
+  :depends-on (:contextl :arnesi :alexandria :parse-number :yaclml :trivial-garbage
  ))
 
 

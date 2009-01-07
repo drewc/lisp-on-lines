@@ -327,7 +327,7 @@
 (defmacro with-attributes (names description &body body)
   `(let ,(loop for name in names collect 
 	      (list name `(find-attribute ,description ',name)))
-     ,@body))q
+     ,@body))
 
 
 

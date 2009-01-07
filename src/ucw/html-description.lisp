@@ -128,6 +128,8 @@
 	      :writer (make-attribute-value-writer attribute)))
 
 
+
+
 (define-layered-method display-attribute-editor 
    :in-layer #.(defining-description 'html-description) (attribute)
    (display-html-attribute-editor attribute (attribute-editor attribute)))
@@ -206,15 +208,8 @@ clear: left;
 
 (define-layered-method display-html-attribute-value 
   (object (attribute list-attribute))
-   (<:ul
-     (arnesi:dolist* (item (attribute-value attribute))
-       (<:li (apply #'display *display* item (slot-value attribute 'item-args))))))
-
-
-
-
-     
-      
-  
-		
-  
+  (let ((val (attribute-value attribute)))
+    (when (listp  val) 
+      (<:ul
+       (arnesi:dolist* (item (attribute-value attribute))
+	 (<:li (apply #'display *display* item (slot-value attribute 'item-args))))))))

@@ -39,8 +39,11 @@
     (or class (when 
 		  (and type (symbolp type)) 
 		(let ((name (format nil "~A-~A" type 'attribute-editor)))
-		  (or (find-class (intern name (symbol-package type)) nil)
+		  (or (unless (eq (find-package :cl)
+				  (symbol-package type)) 
+			(find-class (intern name (symbol-package type)) nil))
 		      (find-class (intern name) nil)
+		      (find-class (intern name :lol) nil)
 		      'string-attribute-editor))))))
 
 (defclass attribute-editor ()

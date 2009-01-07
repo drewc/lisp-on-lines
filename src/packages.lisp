@@ -10,10 +10,12 @@
 
    
 ;; Descriptions
-   #:find-description
+   #:*description*
+   #:find-description   
    #:description-of
    #:define-description
    #:described-object
+   #:with-described-object
    #:described-class
    #:described-standard-class
    #:with-active-descriptions
@@ -24,6 +26,7 @@
    #:define-display
    #:display
    #:display-using-description
+   #:display-attribute-label
    #:*display*
    #:*object*
    
@@ -33,6 +36,8 @@
    #:attributes
    #:attribute-object
    #:attribute-label
+   #:attribute-delimiter
+   #:attribute-slot-name
    #:label
    #:attribute-function
    #:attribute-value
