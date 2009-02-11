@@ -1,7 +1,8 @@
 (in-package :lol-ucw)
 
-(defcomponent lol-component ()
-  ())
+(defclass lol-component ()
+  ()
+  (:metaclass standard-component-class))
 
 (defmethod output-component ((self lol-component))
   self)

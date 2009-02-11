@@ -22,6 +22,7 @@
 
 
 (defun display (display object &rest args &key deactivate activate &allow-other-keys)
+
   (funcall-with-layer-context 
    (modify-layer-context (current-layer-context) 
 			 :activate activate 
@@ -32,6 +33,7 @@
 (define-layered-method display-using-description 
   :around (description display object &rest args)
   (declare (ignorable args))
+#+nil  (break "Entering DISPLAY for ~A on ~A using ~A" object display description)
   (let ((*display* display))
     (apply #'funcall-with-described-object 
      (lambda ()

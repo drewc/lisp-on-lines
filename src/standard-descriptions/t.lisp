@@ -52,14 +52,25 @@
 		    :activate (attribute-active-descriptions attribute)
 		    :deactivate (attribute-inactive-descriptions attribute)
 		    args)))
-	     
+
+
     (let ((val (attribute-value attribute)))
+#+nil            (break "display Attribute value: ~A with object ~A ~% Description ~A att-d ~A ~% VALUE ~A display on ~A" 
+		   	 attribute 
+			 (attribute-object attribute)
+			 *description*
+			 (attribute-description attribute)
+			 val
+			 *display*
+			 )
       (if (and (not (slot-boundp attribute 'active-attributes))
-	       (eql val (attribute-object attribute)))
-	  (generic-format *display* (funcall (attribute-value-formatter attribute) val))
+	       (equal val (attribute-object attribute)))
+	  (progn (generic-format *display* "~A"(funcall (attribute-value-formatter attribute) val))		 
+		 #+nil(break "using generic format because val is object and there is no active attributes."))
+	  
 	  (with-active-descriptions (inline)
 	    (cond ((slot-value attribute 'value-formatter)
-		   (generic-format *display* (funcall (attribute-value-formatter attribute) val)))
+		   (generic-format *display* "~A"(funcall (attribute-value-formatter attribute) val)))
 		   ((slot-boundp attribute 'active-attributes)
 		    (disp val :attributes (slot-value attribute 'active-attributes)))
 		   (t
@@ -83,7 +94,12 @@
 
 (define-layered-method display-attribute :before
   ((attribute standard-attribute))
-)
+#+nil  (break "Attribute : ~A with object ~A ~% Description ~A att-d ~A" 
+	 attribute 
+	 (attribute-object attribute)
+	 *description*
+	 (attribute-description attribute)
+))
 
 (define-display ((description t))
  (let ((attributes (attributes description)))

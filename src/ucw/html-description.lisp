@@ -4,11 +4,10 @@
 
 (defvar *escape-html* t)
 
-(defmethod generic-format ((display lol-ucw:component) string &rest args)
+(defmethod generic-format ((display ucw-core:component) string &rest args)
   (<:as-html (with-output-to-string (stream)
 	       (apply #'call-next-method stream string args))))
       
-
 (define-description html-description ()
   ())
 
@@ -115,7 +114,7 @@
 	val)))
 
 (defmethod display-html-attribute-editor (attribute editor)
-  (<lol:input :type "text"
+  (<ucw:input :type "text"
 	      :reader (html-attribute-value attribute)
 	      :writer (make-attribute-value-writer attribute)))
 
@@ -123,7 +122,7 @@
   (call-next-method))
 
 (defmethod display-html-attribute-editor (attribute (editor password-attribute-editor))
-  (<lol:input :type "password"
+  (<ucw:input :type "password"
 	      :reader (html-attribute-value attribute)
 	      :writer (make-attribute-value-writer attribute)))
 
@@ -201,7 +200,7 @@ clear: left;
 
 (define-display 
   :in-description html-description ((description t) 
-				    (display lol-ucw:component) 
+				    (display ucw-core:component) 
 				    object)
   (display-html-description description display object (lambda ()
 							 (call-next-method))))
@@ -212,4 +211,6 @@ clear: left;
     (when (listp  val) 
       (<:ul
        (arnesi:dolist* (item (attribute-value attribute))
-	 (<:li (apply #'display *display* item (slot-value attribute 'item-args))))))))
+
+	 (dletf (((attribute-object attribute) item))
+	   (<:li (apply #'display *display* item (slot-value attribute 'item-args)))))))))

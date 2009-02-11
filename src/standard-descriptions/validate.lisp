@@ -50,7 +50,7 @@
   (setf (gethash name *validators*) fn))
 
 (defun find-validator (name)
-  (gethash name *validators*))
+   (gethash name *validators*))
 
 (register-validator 'boundp 
  (lambda (a v)
@@ -63,22 +63,24 @@
 				 :object (attribute-object a))))
        t)))
 
-(defun validp (object)
 
+
+(defun validp (object)
   (with-described-object (object nil)
     (every #'identity (mapcar (lambda (attribute)
-					     (validate-attribute-value attribute (attribute-value attribute)))
-					   (attributes (description-of object))))))
+				(validate-attribute-value attribute (attribute-value attribute)))
+			      (attributes (description-of object))))))
 
 (define-layered-method lol::display-attribute-editor 
   :in-layer #.(defining-description 'validate)
   :after (attribute)
-  (let ((conditions (remove-if-not (lambda (a)
- (eq a attribute)) 
-				     (gethash 
-				      (attribute-object attribute) 
-				      lol::*invalid-objects*)
-				     :key #'car)))
+  (let ((conditions (remove-if-not 
+		     (lambda (a)
+		       (eq a attribute)) 
+			(gethash 
+			 (attribute-object attribute) 
+			 lol::*invalid-objects*)
+			:key #'car)))
     (dolist (c conditions)
       (<:div :style "color:red"
 	      (<:as-html 

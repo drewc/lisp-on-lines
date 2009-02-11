@@ -6,8 +6,24 @@
 
 (define-layered-method display-attribute-value 
   ((attribute list-attribute))
-  (arnesi:dolist* (item (attribute-value attribute))
-    (apply #'display *display* item (slot-value attribute 'item-args))))
+  (generic-format *display* "(")
+  (let ((list (attribute-value attribute)))
+    
+    (loop 
+       :for cons :on list
+       :do (let ((item (first cons
+)))
+	     	 (break "Display T ~A" item) 
+	     (dletf (((attribute-object attribute) item))
+	       (apply #'display *display* item (slot-value attribute 'item-args))
+	       (unless (endp (cdr cons))
+		 (generic-format *display* " "))))))
+  (generic-format *display* ")"))
+	   
+       
+ 
+	   
+
 
 (define-description list ()
  ((list :attribute-class list-attribute

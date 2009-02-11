@@ -11,7 +11,7 @@
 			:components
 			((:module :ucw
 				  :components ((:file "packages")
-					       (:file "lol-tags")
+					       
 					       (:file "standard-components")
 					       (:file "contextl-components")
 					       (:file "html-description")
