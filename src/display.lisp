@@ -17,10 +17,18 @@
   (dolist (d activate context)
     (setf context (adjoin-layer (find-description d)
 				context))))
+
+(defun funcall-with-attribute-context (attribute thunk)
+  (funcall-with-layer-context 
+   (modify-layer-context (current-layer-context) 
+			 :activate (attribute-active-descriptions attribute)
+			 :deactivate (attribute-inactive-descriptions attribute))
+   thunk))
+
+(defmacro with-attribute-context ((attribute) &body body)
+  `(funcall-with-attribute-context ,attribute (lambda () ,@body)))
   
-
-
-
+  
 (defun display (display object &rest args &key deactivate activate &allow-other-keys)
 
   (funcall-with-layer-context 
@@ -39,8 +47,6 @@
      (lambda ()
        (call-next-method))
      object description args)))
-
-
 
 
 

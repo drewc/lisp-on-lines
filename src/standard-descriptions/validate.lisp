@@ -64,7 +64,6 @@
        t)))
 
 
-
 (defun validp (object)
   (with-described-object (object nil)
     (every #'identity (mapcar (lambda (attribute)

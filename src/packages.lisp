@@ -14,6 +14,7 @@
    #:find-description   
    #:description-of
    #:define-description
+   #:defining-description
    #:described-object
    #:with-described-object
    #:described-class
@@ -39,12 +40,15 @@
    #:attribute-delimiter
    #:attribute-slot-name
    #:label
+   #:attribute-active-p
    #:attribute-function
    #:attribute-value
    #:display-attribute-value
    #:active-attributes
    #:attribute-delimiter
    #:standard-attribute
+   #:funcall-with-attribute-context
+   #:with-attribute-context
 
    ;; Standard Library
    

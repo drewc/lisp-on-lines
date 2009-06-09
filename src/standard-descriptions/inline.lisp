@@ -15,6 +15,16 @@
   ()
   ())
 
+(defun display-inline (object &rest args)
+  (with-active-descriptions (inline)
+    (apply #'display *display* object args)))
 
-(define-display :in-description inline ((description t))		
-		(call-next-method))
+(defun display-inline-attribute (attribute value)
+  (if (ignore-errors (lol::attribute-active-attributes attribute))
+      (handler-case (display-inline value :attributes (lol::attribute-active-attributes attribute))
+	(error ()
+	  (display-inline value)))
+      (display-inline value)))
+
+
+

@@ -24,6 +24,7 @@
   ((css-class :accessor attribute-css-class 
 	      :initform "lol-attribute")
    (dom-id :accessor attribute-dom-id :initform nil)
+   (value-tag :accessor attribute-html-tag :initform nil :initarg :html-tag)
    (display-empty-label :accessor attribute-display-empty-label-p :initarg :display-empty-label-p :initform t)))
 
 (define-layered-class standard-attribute
@@ -47,26 +48,26 @@
       (object attribute)
     (let ((label (attribute-label attribute)))
       (when label
-		 (<:as-html
-	  (with-output-to-string (*display*)
-	    (display-attribute-label attribute)))))))
+	(<:as-html (display-attribute-label attribute))))))
 
 (define-layered-function display-html-attribute-value (object attribute)
   (:method (object attribute)
+
     (<:td 
-	:class "lol-attribute-value"
-	(<:as-html   
-	 (display-attribute-value attribute))))
+     :class "lol-attribute-value"
+     (<:as-html   
+      (display-attribute-value attribute))))
 
   (:method 
     :in-layer #.(defining-description 'inline) (object attribute)
     (display-attribute-value attribute)))
 
+
 (define-layered-function display-html-attribute (object attribute)
   
   (:method (object attribute)
     (<:tr 
-     :class (attribute-css-class attribute)
+     :class (format nil "~A lol-attribute" (attribute-css-class attribute))
      (when (attribute-dom-id attribute) 
        :id (attribute-dom-id attribute))
      (display-html-attribute-label object attribute)
@@ -79,8 +80,10 @@
        :class (attribute-css-class attribute)
        (when (attribute-dom-id attribute) 
 	 :id (attribute-dom-id attribute))
-       (display-html-attribute-label object attribute)
-       (display-html-attribute-value object attribute))))
+       (<:span :class "lol-attribute-label"
+       (display-html-attribute-label object attribute))
+       (<:span :class "lol-attribute-value"
+       (display-html-attribute-value object attribute)))))
 
 (define-layered-method display-using-description 
   :in-layer #.(defining-description 'html-description)
@@ -137,47 +140,15 @@
 (define-layered-method display-html-attribute-value 
   :in-layer #.(defining-description 'editable) (object attribute)
 
-    (<:td
-	:class "lol-attribute-value"
+
     (if (attribute-editp attribute)	
-	(display-attribute-editor attribute)
-	(call-next-method))))		
+	    (<:td
+	     :class "lol-attribute-value"(display-attribute-editor attribute))
+	(call-next-method)))
 
 (define-layered-function display-html-description (description display object &optional next-method)
   (:method (description display object &optional (next-method #'display-using-description))
-    (<:style
-     (<:as-html "
-
-
-
-div.lol-description .lol-attribute-label, 
-div.lol-description .lol-attribute-value {
-      display: block;
-      width: 69%;
-      float: left;
-      margin-bottom: 1em;
-border:1px solid black;
-
-}
-div.lol-description 
-.lol-attribute-label {
-     text-align: right;
-     width: 24%;
-     padding-right: 1em;
-}
-
-span.lol-attribute-value .lol-attribute-value (
- border: 1px solid red;}
-
-
-div.lol-description 
-br {
-clear: left;
-}
-
-.clear {clear:left}"
-
-))
+    
 		       
     (with-attributes (css-class dom-id) description
    

@@ -7,7 +7,7 @@
   (:metaclass closer-mop:funcallable-standard-class))
 
 
-(setf ucw-standard::*default-action-class* 'lisp-on-lines-action)
+(setf ucw-core::*default-action-class* 'lisp-on-lines-action)
 
 
 (defmethod ucw-core:call-action :around ((action lisp-on-lines-action) application session frame)
@@ -22,7 +22,7 @@
 	  (funcall next-method)))
     ))
 
-(defmethod ucw-core:handle-action :around ((action lisp-on-lines-action) application session frame)
+(defmethod ucw-core:handle-action :wrap-around ((action lisp-on-lines-action) application session frame)
      (let ((lol::*invalid-objects* (make-hash-table)))
        (handler-bind ((lol::validation-condition 
 		       (lambda (c)

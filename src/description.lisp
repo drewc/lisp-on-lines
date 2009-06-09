@@ -101,13 +101,7 @@
 			function))))))))
 
 
-(defmacro with-described-object ((object description &rest args)
-				 &body body)
-    `(funcall-with-described-object 
-      (lambda () ,@body)
-      ,object
-      ,description
-      ,@args))
+
 		   
 (defmacro define-description (name &optional superdescriptions &body options)
   (let ((description-name (defining-description name)))     

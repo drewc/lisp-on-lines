@@ -96,6 +96,14 @@
    (remove 'described-object (class-slots (class-of description))
 	   :key #'slot-definition-name)))
 
+(defmacro with-described-object ((object description &rest args)
+				 &body body)
+    `(funcall-with-described-object 
+      (lambda () ,@body)
+      ,object
+      ,description
+      ,@args))
+
 (defun initialize-effective-attribute-values-for-description-class (class description attribute-objects)
 
     (loop 

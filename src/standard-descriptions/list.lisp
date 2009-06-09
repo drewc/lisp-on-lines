@@ -12,8 +12,7 @@
     (loop 
        :for cons :on list
        :do (let ((item (first cons
-)))
-	     	 (break "Display T ~A" item) 
+))) 
 	     (dletf (((attribute-object attribute) item))
 	       (apply #'display *display* item (slot-value attribute 'item-args))
 	       (unless (endp (cdr cons))

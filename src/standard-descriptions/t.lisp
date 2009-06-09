@@ -46,6 +46,7 @@
     (funcall (attribute-label-formatter attribute) (attribute-label attribute))))
 	   
 (define-layered-function display-attribute-value (attribute)
+  (:method-combination arnesi:wrapping-standard)
   (:method (attribute)
     (flet ((disp (val &rest args)
 	     (apply #'display *display* val 
@@ -103,7 +104,7 @@
 
 (define-display ((description t))
  (let ((attributes (attributes description)))
-   (display-attribute (first attributes))
+   (when (first attributes)(display-attribute (first attributes)))
    (dolist (attribute (rest attributes) (values))
      (generic-format *display* 
       (attribute-value 
