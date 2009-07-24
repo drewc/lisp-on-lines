@@ -1,26 +1,54 @@
 (in-package :lisp-on-lines-ucw)
 
-(defclass lisp-on-lines-action (ucw-standard::standard-action) 
-  ((layer-context :accessor action-layer-context
-		  :initform nil
-		  :initarg :layer-context))
+(defclass lisp-on-lines-application (contextl-application)
+  ()
+  (:default-initargs :action-class 'lisp-on-lines-action))
+
+(defclass lisp-on-lines-action (contextl-action) 
+  ()
   (:metaclass closer-mop:funcallable-standard-class))
 
+(defclass lisp-on-lines-component (contextl-component) 
+  () 
+  (:metaclass standard-component-class))
 
-(setf ucw-core::*default-action-class* 'lisp-on-lines-action)
+(defclass lisp-on-lines-component-class (standard-component-class) 
+  ())
 
 
-(defmethod ucw-core:call-action :around ((action lisp-on-lines-action) application session frame)
-  (let ((next-method (lambda ()
-		       (layered-call-action 
-			action application session frame 
-			(lambda () 
-			  (call-next-method))))))
-    (let ((layer-context (action-layer-context action)))
-      (if layer-context 
-	  (contextl:funcall-with-layer-context layer-context next-method)
-	  (funcall next-method)))
-    ))
+(defmethod initialize-instance :around ((class lisp-on-lines-component-class) 
+					&rest initargs &key (direct-superclasses '()))
+  (declare (dynamic-extent initargs))
+  (if (loop for direct-superclass in direct-superclasses
+	 thereis (ignore-errors (subtypep direct-superclass 'lisp-on-lines-component)))
+      (call-next-method)
+      (apply #'call-next-method
+	     class
+	     :direct-superclasses
+	     (append direct-superclasses
+		     (list (find-class 'lisp-on-lines-component)))
+	     initargs)))
+
+
+(defmethod reinitialize-instance :around ((class lisp-on-lines-component-class) 
+					  &rest initargs &key (direct-superclasses '() direct-superclasses-p))
+  (declare (dynamic-extent initargs))
+  (if (or (not direct-superclasses-p)
+	  (loop for direct-superclass in direct-superclasses
+	     thereis (ignore-errors (subtypep direct-superclass 'lisp-on-lines-component))))
+      (call-next-method)
+      (apply #'call-next-method
+	     class
+	     :direct-superclasses
+	     (append direct-superclasses
+		     (list (find-class 'lisp-on-lines-component)))
+	     initargs)))
+
+(defclass described-component-class (described-class standard-component-class )
+  ())
+
+
+
 
 (defmethod ucw-core:handle-action :wrap-around ((action lisp-on-lines-action) application session frame)
      (let ((lol::*invalid-objects* (make-hash-table)))
@@ -36,17 +64,9 @@
        (call-next-method))))
 
 
-(contextl:define-layered-function layered-call-action (action application session frame next-method)
-  (:method (action application session frame next-method)
-    (funcall next-method)))
 
 
-(contextl:define-layered-method layered-call-action 
-   :in-layer #.(lol::defining-description 'lol::validate)
-   :around ((action lisp-on-lines-action) application session frame next-method)
-   (call-next-method)
 
-   )
 
 
 

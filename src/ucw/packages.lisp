@@ -2,7 +2,7 @@
 (defpackage lisp-on-lines-ucw
   (:documentation "An LoL Layer over ucw.basic")
   (:nicknames #:lol-ucw)
-  (:use #:lisp-on-lines #:ucw :ucw-core :common-lisp :arnesi)
+  (:use #:lisp-on-lines #:ucw :ucw-core :common-lisp :arnesi :contextl)
 
   (:shadowing-import-from :js
    #:new)  
@@ -14,9 +14,7 @@
 
 		
   (:export 
-
-   ;;; First, LOL-UCW exports. The rest are from UCW.
-   #:lol-component
    
+   #:lol-component   
    #:described-component-class))
 
