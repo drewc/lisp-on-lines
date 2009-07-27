@@ -1,0 +1,885 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+               "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+lang="en" xml:lang="en">
+<head>
+<title>Lisp on Lines : The Missing Manual.</title>
+<meta http-equiv="Content-Type" content="text/html;charset=iso-8859-1"/>
+<meta name="generator" content="Org-mode"/>
+<meta name="generated" content="2009/07/27 01:46:25 PM"/>
+<meta name="author" content="Drew Crampsie"/>
+<style type="text/css">
+  html {
+	font-family: Times, serif;
+	font-size: 12pt;
+  }
+  .title { text-align: center; }
+  .todo  { color: red; }
+  .done { color: green; }
+  .timestamp { color: grey }
+  .timestamp-kwd { color: CadetBlue }
+  .tag { background-color:lightblue; font-weight:normal }
+  .target { }
+  pre {
+	border: 1pt solid #AEBDCC;
+	background-color: #F3F5F7;
+	padding: 5pt;
+	font-family: courier, monospace;
+        font-size: 90%;
+  }
+  table { border-collapse: collapse; }
+  td, th {
+	vertical-align: top;
+	<!--border: 1pt solid #ADB9CC;-->
+  }
+  dt { font-weight: bold; }
+</style>
+</head><body>
+<h1 class="title">Lisp on Lines : The Missing Manual.</h1>
+<i>Abstract</i>: Lisp on Lines is a Common Lisp based framework for rapid
+development of data-driven applications. It is particularly useful
+for producing Web based applications, but is also useful elsewhere.
+
+
+
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#sec-1">1 Introduction</a></li>
+<li><a href="#sec-2">2 Installation</a></li>
+<li><a href="#sec-3">3 Describing the domain with the MAO protocol.</a>
+<ul>
+<li><a href="#sec-3.1">3.1 Descriptions</a></li>
+<li><a href="#sec-3.2">3.2 Attributes and Properties</a></li>
+<li><a href="#sec-3.3">3.3 Contexts</a></li>
+</ul>
+</li>
+<li><a href="#sec-4">4 Defining and Using Descriptions</a>
+<ul>
+<li><a href="#sec-4.1">4.1 Defining a simple description </a></li>
+<li><a href="#sec-4.2">4.2 Using descriptions as and with contexts.</a></li>
+<li><a href="#sec-4.3">4.3 T : The root of all descriptions.</a></li>
+<li><a href="#sec-4.4">4.4 DESCRIPTION-OF : Permanently Associate a description with a class.</a></li>
+</ul>
+</li>
+<li><a href="#sec-5">5 The DISPLAY Protocol</a></li>
+<li><a href="#sec-6">6 Automatic Descriptions for CLOS classes.</a>
+<ul>
+<li><a href="#sec-6.1">6.1 Described CLOS objects an the EDITABLE description</a></li>
+<li><a href="#sec-6.2">6.2 Extending the generated description</a></li>
+</ul>
+</li>
+<li><a href="#sec-7">7 Using Lisp-on-Lines for the Web.</a></li>
+</ul>
+</div>
+</div>
+
+<div id="outline-container-1" class="outline-2">
+<h2 id="sec-1">1 Introduction</h2>
+<div id="text-1">
+
+
+<p>
+Lisp on Lines (LoL) is a framework for rapid development of data-driven
+applications, with a particular focus on web-based applications. It
+builds on the UncommonWeb engine and Contextl, and uses CLOS and the
+MOP extensively. Most of LoL can be used both at the REPL and through
+the browser, offering many options for development and testing.
+</p>
+<p>
+While the target audience for LoL is developers experienced with both
+web technologies and common lisp, a good programmer with a little
+experience in either should be able to pick things up fairly quickly.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-2" class="outline-2">
+<h2 id="sec-2">2 Installation</h2>
+<div id="text-2">
+
+
+<p>
+LoL has a load of dependencies, which themselves depend on others,
+etc. The best way to deal with this is to use <a href="http://common-lisp.net/project/clbuild/">clbuild</a>, a library
+management tool.
+</p>
+<p>
+If you'd prefer to manage your libraries manually, the dependencies,
+according to clbuild, are :
+</p>
+<p>
+alexandria arnesi bordeaux-threads cl-base64 cl-fad cl-mime cl-ppcre
+cl-qprint closer-mop contextl iterate lift local-time lw-compat
+net-telent-date parenscript parse-number portable-threads puri rfc2109
+slime split-sequence trivial-garbage ucw usocket yaclml
+</p>
+<p>
+All libraries should be installed from version control where available.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-3" class="outline-2">
+<h2 id="sec-3">3 Describing the domain with the MAO protocol.</h2>
+<div id="text-3">
+
+
+<p>
+LoL uses a protocol it calls Meta-Attributed Objects, or MAO, as the
+basis of its display mechanism. In MAO, we create context-aware
+DESCRIPTIONs of objects, and those descriptions are used to generate
+the display of the object itself. By having these external
+descriptions change based on the context in which they are used, a few
+generic components can come together to create complex interfaces.
+</p>
+
+</div>
+
+<div id="outline-container-3.1" class="outline-3">
+<h3 id="sec-3.1">3.1 Descriptions</h3>
+<div id="text-3.1">
+
+<p>Descriptions are a similar conceptually to classes. Every Lisp object
+has one, and the root description that all descriptions inherit from
+is known as T. FIND-DESCRIPTION is used to, well, find descriptions.
+</p>
+
+
+<pre class="src">  (find-description t) 
+  =&gt; #&lt;DESCRIPTION T {B7B9861}&gt;
+</pre>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-3.2" class="outline-3">
+<h3 id="sec-3.2">3.2 Attributes and Properties</h3>
+<div id="text-3.2">
+
+<p>A description is a collection of ATTRIBUTEs, among other things. Each
+attribute describes a part of an object, and any number of attributes
+may or may not be active. The ATTRIBUTES function is used to find a
+the list attributes that are both active and applicable in the current
+context.
+</p>
+
+
+<pre class="src">(attributes (find-description t))
+=&gt;(#&lt;ATTRIBUTE IDENTITY {BBC9691}&gt; 
+   #&lt;ATTRIBUTE TYPE {BBC96A1}&gt;
+   #&lt;ATTRIBUTE CLASS {BBC96B1}&gt;)
+</pre>
+
+
+<p>
+The functions DESCRIPTION-ATTRIBUTES, DESCRIPTION-ACTIVE-ATTRIBUTES
+and DESCRIPTION-CURRENT-ATTRIBUTES return all the descriptions
+attributes, Attributes that are currently active regardless of
+context, and attributes that exist in the current context but may or
+may not be active, respectively.
+</p>
+<p>
+Attributes have properties, for example ATTRIBUTE-LABEL and
+ATTRIBUTE-VALUE.  By simply iterating through the attributes of a
+described object, we can create a generic display for any lisp
+object. This is very similar, and was inspired by the technique
+outlined by Adrian Lienhard in <a href="http://www.adrian-lienhard.ch/files/mewa.pdf">MEWA: A Meta-level Architecture for Generic Web-Application Construction_</a>.
+</p>
+
+<p>
+For attribute properties to be useful, the description must be
+associated with the object it is meant to describe.
+</p>
+<p>
+The function FUNCALL-WITH-DESCRIBED-OBJECT takes care of setting up
+the proper context. There is some syntax for it in the form of
+WITH-DESCRIBED-OBJECT :
+</p>
+
+
+<pre class="src">
+(<span style="color: #a020f0;">let</span> ((description (find-description t))
+           (object <span style="color: #bc8f8f;">"Hello World"</span>))
+       (<span style="color: #a020f0;">with-described-object</span> (object description)
+         (<span style="color: #a020f0;">dolist</span> (a (attributes description))
+           (format t <span style="color: #bc8f8f;">"~@[~A: ~]~A~%"</span> 
+                   (attribute-label a)
+                   (attribute-value a)))))
+=&gt;
+Hello World
+Type: (SIMPLE-ARRAY CHARACTER (11))
+Class: #&lt;BUILT-IN-CLASS SB-KERNEL::SIMPLE-CHARACTER-STRING&gt;
+
+NIL
+</pre>
+
+
+<p>
+FUNCALL-WITH-DESCRIBED-OBJECT binds two specials, <b>DESCRIPTION</b> and
+<b>OBJECT</b>, to its arguments. Knowing this, we can shorten our code
+somewhat. Later on we'll be far away from the lexical bindings of
+description and object, so these special variables are essential.
+</p>
+<p>
+Another reason for the <b>description</b> variable is that
+WITH-DESCRIBED-OBJECT will use DESCRIPTION-OF to determine the
+description if the DESCRIPTION argument is NIL
+</p>
+
+
+<pre class="src">(<span style="color: #a020f0;">with-described-object</span> (<span style="color: #bc8f8f;">"Hello World"</span> nil)
+  (<span style="color: #a020f0;">dolist</span> (a (attributes *description*))
+    (format t <span style="color: #bc8f8f;">"~@[~A: ~]~A~%"</span> 
+            (attribute-label a)
+            (attribute-value a))))
+
+Lets wrap that up in a function that we can re-use. LoL includes an
+entire DISPLAY mechanism that is slightly more involved, but this
+serves as an excellent example with not bogging us down in details.
+
+<span style="color: #b22222;">#+BEGIN_SRC lisp</span>
+(<span style="color: #a020f0;">defun</span> <span style="color: #0000ff;">present</span> (object <span style="color: #228b22;">&amp;optional</span> description) 
+  (<span style="color: #a020f0;">with-described-object</span> (object description)
+    (<span style="color: #a020f0;">dolist</span> (a (attributes *description*))
+      (format t <span style="color: #bc8f8f;">"~@[~A: ~]~A~%"</span> 
+              (attribute-label a)
+              (attribute-value a)))))
+</pre>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-3.3" class="outline-3">
+<h3 id="sec-3.3">3.3 Contexts</h3>
+<div id="text-3.3">
+
+
+<p>
+MAO adds to MEWA the concept of dynamic context. By changing the
+context in which an object is described, we combine and specialize the
+generic displays, ultimately creating different views of our
+objects. LoL uses ContextL extensively. Descriptions are contextl
+layers, and attributes themselves are layered classes. Most of the
+exported functions are layered methods, and the idea of dynamic
+context-sensitivity is used throughout LoL. If you're not familiar
+with contextl, don't worry, LoL mostly stands on its own. Still,
+reading through the material on contextl won't hurt.
+</p>
+<p>
+Descriptions may have different attributes dependant on what
+description contexts (or layers) are currently active. Attributes
+themselves might have different properties.
+</p>
+<p>
+When an object is being described (using WITH-DESCRIBED-OBJECT), it is
+also activated as a layer context. One can also activate/deactivate
+contexts manually, using WITH-ACTIVE-DESCRIPTIONS and 
+WITH-INACTIVE-DESCRIPTIONS.
+</p>
+<p>
+Hopefully a little code will make this more clear :
+</p>
+
+
+<pre class="src">(present <span style="color: #bc8f8f;">"Hello World"</span>)
+=&gt;
+Hello World
+Type: (SIMPLE-ARRAY CHARACTER (11))
+Class: #&lt;BUILT-IN-CLASS SB-KERNEL::SIMPLE-CHARACTER-STRING&gt;
+Simple character string
+
+<span style="color: #b22222;">;; </span><span style="color: #b22222;">Now we'll activate a built-in description, INLINE.
+</span>
+(<span style="color: #a020f0;">with-active-descriptions</span> (<span style="color: #a020f0;">inline</span>)
+  (present <span style="color: #bc8f8f;">"Hello World"</span>))
+=&gt;
+Hello World
+</pre>
+
+
+<p>
+You can see that the behavior of PRESENT changed when the INLINE
+context was activated. This is the key innovation that makes LoL so
+useful. In the next chapter we'll create our own descriptions and
+demonstrate this further.
+</p>
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-4" class="outline-2">
+<h2 id="sec-4">4 Defining and Using Descriptions</h2>
+<div id="text-4">
+
+
+
+</div>
+
+<div id="outline-container-4.1" class="outline-3">
+<h3 id="sec-4.1">4.1 Defining a simple description </h3>
+<div id="text-4.1">
+
+<p>The basics of the MAO should now (hopefully) be clear, so lets start
+using it. First, we'll create our very own description.
+</p>
+
+
+<pre class="src">(<span style="color: #a020f0;">define-description</span> hello-world ()
+  ((title <span style="color: #da70d6;">:value</span> <span style="color: #bc8f8f;">"Lisp on Lines Demo"</span>)
+   (identity <span style="color: #da70d6;">:label</span> <span style="color: #bc8f8f;">"Message"</span>)
+   (length <span style="color: #da70d6;">:label</span> <span style="color: #bc8f8f;">"Length"</span> <span style="color: #da70d6;">:function</span> #'length)
+   (active-attributes <span style="color: #da70d6;">:value</span> '(title identity length))))
+</pre>
+
+
+<p>
+Descriptions are defined very much like CLOS classes, and are in fact
+implemented that way, inheritance rules apply. The object returned
+from FIND-DESCRIPTION is best described as a prototype-based
+singleton. In other words, there is only one instance, and it inherits
+attributes and properties from further up its hierarchy unless
+specifically overridden.
+</p>
+<p>
+Attributes can have any number of properties, (see the class
+STANDARD-ATTRIBUTE), but the three most important are accessed via the
+methods ATTRIBUTE-LABEL, ATTRIBUTE-VALUE and ATTRIBUTE-FUNCTION,and
+named (in DEFINE-DESCRIPTION forms and elsewhere) 
+by the :label, :value, and :function keywords. 
+</p>
+<p>
+ATTRIBUTE-LABEL is simply a textual label that describes the
+attribute. ATTRIBUTE-VALUE is defined to return the result of calling
+ATTRIBUTE-FUNCTION with the object as its argument. If
+ATTRIBUTE-FUNCTION is NIL, the value of the :value property is returned
+directly.
+</p>
+<p>
+In the example above, the IDENTITY and ACTIVE-ATTRIBUTES attributes
+are inherited from T, and we are simply overriding the default
+properties for our description. LENGTH and TITLE are specific to this
+description. A look at src/standard-descriptions/t.lisp may be
+instructive at this point.
+</p>
+<p>
+Now, we can present our object using our new description.
+</p>
+
+
+<pre class="src">(present <span style="color: #bc8f8f;">"Hello World"</span> (find-description 'hello-world))
+=&gt;
+Lisp on Lines Demo
+Message: Hello World
+Length: 11
+
+NIL
+</pre>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-4.2" class="outline-3">
+<h3 id="sec-4.2">4.2 Using descriptions as and with contexts.</h3>
+<div id="text-4.2">
+
+
+<p>
+A we mentioned earlier, when an object is being described, the
+'description context' is also made active. On top of that, one can
+define partial descriptions that are only active when other
+description contexts have been activated.
+</p>
+<p>
+We'll make a ONE-LINE description similar to the INLINE description
+demonstrated earlier.
+</p>
+
+
+<pre class="src">(<span style="color: #a020f0;">define-description</span> one-line ())
+
+(<span style="color: #a020f0;">define-description</span> hello-world ()
+  ((identity <span style="color: #da70d6;">:label</span> nil)
+   (active-attributes <span style="color: #da70d6;">:value</span> '(identity)))
+  (<span style="color: #da70d6;">:in-description</span> one-line))
+
+</pre>
+
+
+<p>
+Here we've defined a new description, ONE-LINE, and a
+context-sensitive extension to our HELLO-WORLD description. This
+partial desription will be active only when in the context of a
+one-line description. One can have attributes that only exist in
+certain description contexts, and attributes can have different
+properties. 
+</p>
+
+
+<pre class="src">(<span style="color: #a020f0;">let</span> ((message <span style="color: #bc8f8f;">"Hello World!"</span>)
+      (description (find-description 'hello-world)))
+  (print <span style="color: #da70d6;">:normal</span>)(terpri)
+  (present message description)       
+  (print <span style="color: #da70d6;">:one-line</span>)(terpri)
+  (<span style="color: #a020f0;">with-active-descriptions</span> (one-line)
+    (present message description)))
+=&gt;
+<span style="color: #da70d6;">:NORMAL</span> 
+Lisp on Lines Demo
+Message: Hello World!
+Length: 12
+
+<span style="color: #da70d6;">:ONE-LINE</span> 
+Hello World!
+
+NIL
+</pre>
+
+
+<p>
+By activating the description ONE-LINE, we've changed the context in
+which our object is displayed. We can create any number of
+descriptions and contexts and activate/deactivate them in any order.
+</p>
+<p>
+Descriptions are implemented as ContextL 'layers', so if all
+this seems weird, reading the ContextL papers might help.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-4.3" class="outline-3">
+<h3 id="sec-4.3">4.3 T : The root of all descriptions.</h3>
+<div id="text-4.3">
+
+
+<p>
+Because all descriptions inherit from T, we can define contexts for T
+and they will apply to every description. The INLINE description can
+be found in standard-descriptions/inline.lisp, where we define
+a desription for T in the context of the INLINE description :
+</p>
+
+
+<pre class="src"><span style="color: #b22222;">;; </span><span style="color: #b22222;">Defined by LoL in inline.lisp :
+</span>(<span style="color: #a020f0;">define-description</span> t ()
+  ((identity <span style="color: #da70d6;">:label</span> nil)
+   (active-attributes <span style="color: #da70d6;">:value</span> '(identity))
+   (attribute-delimiter <span style="color: #da70d6;">:value</span> <span style="color: #bc8f8f;">", "</span>)
+   (label-formatter <span style="color: #da70d6;">:value</span> (curry #'format nil <span style="color: #bc8f8f;">"~A: "</span>))
+   (value-formatter <span style="color: #da70d6;">:value</span> (curry #'format nil <span style="color: #bc8f8f;">"~A"</span>)))
+  (<span style="color: #da70d6;">:in-description</span> inline))}
+
+</pre>
+
+
+<p>
+The does for the LoL DISPLAY mechanism what ONE-LINE did for PRESENT,
+only with more magic. By exetending T in this way, it's easy to create
+contexts the redefine the behavior of LoL while still reusing the basics.
+</p>
+</div>
+
+</div>
+
+<div id="outline-container-4.4" class="outline-3">
+<h3 id="sec-4.4">4.4 DESCRIPTION-OF : Permanently Associate a description with a class.</h3>
+<div id="text-4.4">
+
+
+<p>
+The LAYERED-FUNCTION DESCRIPTION-OF will return the description
+associated with an object. 
+</p>
+
+
+<pre class="src">
+(description-of nil)
+=&gt;
+#&lt;DESCRIPTION NULL {AA04F49}&gt;
+
+(description-of t)
+=&gt;
+#&lt;DESCRIPTION SYMBOL {AA04541}&gt;
+
+(description-of '(1 2 3))
+=&gt;
+#&lt;DESCRIPTION CONS {AA04C29}&gt;
+
+<span style="color: #b22222;">;;</span><span style="color: #b22222;">etc
+</span>
+</pre>
+
+
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-5" class="outline-2">
+<h2 id="sec-5">5 The DISPLAY Protocol</h2>
+<div id="text-5">
+
+
+<p>
+Our function, PRESENT, is very basic, though pretty powerful when
+combined with descriptions and contexts. LoL includes a superset of
+such functionality built-in.
+</p>
+<p>
+The main entry point into this protocol is the DISPLAY
+function. The signature for this functions is :
+</p>
+
+
+<pre class="src">(display DISPLAY OBJECT <span style="color: #228b22;">&amp;REST</span> ARGS <span style="color: #228b22;">&amp;KEY</span> DEACTIVATE ACTIVATE <span style="color: #228b22;">&amp;ALLOW-OTHER-KEYS</span>)
+</pre>
+
+
+<p>
+The first argument, DISPLAY, is the place where we will display
+to/on/in/with. It could be a stream, a UCW component, a CLIM gadget,
+or anything else you might want to use.
+</p>
+<p>
+One can specialize on this argument (though it's better to specialize
+DISPLAY-USING-DESCRIPTION&hellip; more on that later) to use generic
+descriptions to display objects in different environments.
+</p>
+<p>
+The second argument is simply the object to be displayed. Here's a
+simple example :
+</p>
+
+
+<pre class="src">(display t t)
+=&gt;
+T
+Type:BOOLEAN
+Class:#&lt;BUILT-IN-CLASS SYMBOL&gt;
+Symbol
+Name:T
+Value:T
+Package:#&lt;PACKAGE <span style="color: #bc8f8f;">"COMMON-LISP"</span>&gt;
+Function:&lt;UNBOUND&gt;
+<span style="color: #b22222;">; </span><span style="color: #b22222;">No value
+</span></pre>
+
+
+<p>
+The two arguments specified in the lambda-list, ACTIVATE and
+DEACTIVATE, are used to activate and deactivate description contexts in
+the scope of the display function. 
+</p>
+
+
+<pre class="src">
+(display nil t <span style="color: #da70d6;">:activate</span> '(<span style="color: #a020f0;">inline</span>))
+=&gt; 
+<span style="color: #bc8f8f;">"t"</span>
+(<span style="color: #a020f0;">with-active-descriptions</span> (<span style="color: #a020f0;">inline</span>) 
+ (display nil t <span style="color: #da70d6;">:deactivate</span> '(<span style="color: #a020f0;">inline</span>))) 
+=&gt;
+<span style="color: #bc8f8f;">"T
+Type:BOOLEAN
+Class:#&lt;BUILT-IN-CLASS SYMBOL&gt;
+Symbol
+Name:T
+Value:T
+Package:#&lt;PACKAGE \"COMMON-LISP\"&gt;
+Function:&lt;UNBOUND&gt;"</span>
+
+</pre>
+
+
+<p>
+Any other keyword arguments passed will be used to set the value of an
+attribute with a :keyword property, in the dynamic context of the
+DISPLAY function call. Once such attribute, and a very useful one is
+ACTIVE-ATTRIBUTES with its :attributes keyword :
+</p>
+
+
+<pre class="src">
+(display t t <span style="color: #da70d6;">:attributes</span> '(class package))
+=&gt;
+Class:#&lt;BUILT-IN-CLASS SYMBOL&gt;
+Package:#&lt;PACKAGE <span style="color: #bc8f8f;">"COMMON-LISP"</span>&gt;
+
+</pre>
+
+
+<p>
+The properties of attributes that do not have a :keyword property can
+also be set dynamically. Since :attributes is the :keyword property of
+the ACTIVE-ATTRIBUTES attribute, the following form is equivalent to
+the previous :
+</p>
+
+
+<pre class="src">(display t t  <span style="color: #da70d6;">:attributes</span> '((active-attributes 
+                             <span style="color: #da70d6;">:value</span> (class package))))
+=&gt;
+Class:#&lt;BUILT-IN-CLASS SYMBOL&gt;
+Package:#&lt;PACKAGE <span style="color: #bc8f8f;">"COMMON-LISP"</span>&gt;
+</pre>
+
+
+<p>
+Setting the attributes this way is almost like creating an anonymous
+description context&hellip; you can express just about anything you would
+in a DEFINE-DESCRIPTION. Here's a more involved example :
+</p>
+
+
+<pre class="src">(display t t  <span style="color: #da70d6;">:attributes</span> `((identity <span style="color: #da70d6;">:label</span> <span style="color: #bc8f8f;">"The Object"</span>) 
+                            (class <span style="color: #da70d6;">:label</span> <span style="color: #bc8f8f;">"CLOS Class"</span>)
+                            (package <span style="color: #da70d6;">:value</span> <span style="color: #bc8f8f;">"COMMON LISP"</span> <span style="color: #da70d6;">:function</span> nil)
+                            (type <span style="color: #da70d6;">:value-formatter</span> 
+                                  ,(<span style="color: #a020f0;">lambda</span> (a)
+                                    (format nil <span style="color: #bc8f8f;">"Got a value? ~A"</span> a)))))
+=&gt;
+                                 
+The Object:T
+CLOS Class:#&lt;BUILT-IN-CLASS SYMBOL&gt;
+Package:COMMON LISP
+Type:Got a value? BOOLEAN
+
+</pre>
+
+
+<p>
+I hope that serves well to demonstrate the concepts behind LoL, as
+there is no API documentation available at the moment&hellip; use the
+source luke!
+</p>
+
+</div>
+
+</div>
+
+<div id="outline-container-6" class="outline-2">
+<h2 id="sec-6">6 Automatic Descriptions for CLOS classes.</h2>
+<div id="text-6">
+
+
+<p>
+Lisp-on-Lines includes a compose-able metaclass, DESCRIBED-CLASS. It
+can be combined with <u>any</u> other metaclass without affecting the
+behavior of that class. DESCRIBED-CLASS has been used with the
+metaclasses provided by CLSQL, ROFL, Rucksack and UCW simply by
+defining a class that inherits from both metaclasses.
+</p>
+<p>
+DESCRIBED-CLASS creates a base description for the class, named
+DESCRIPTION-FOR-&lt;class&gt;, and another description with the same name
+as the class that has the previous description as a superclass. The
+then defines a method on DESCRIPTION-OF that returns the second
+description.
+</p>
+<p>
+LoL includes DESCRIBED-STANDARD-CLASS, which is subclass of
+STANDARD-CLASS and DESCRIBED-CLASS. We'll use this to create a class
+and its description.
+</p>
+
+
+<pre class="src">
+(<span style="color: #a020f0;">defclass</span> <span style="color: #228b22;">person</span> ()
+  (first-name last-name company-name 
+   date-of-birth phone fax email 
+   address city province postal-code)
+  (<span style="color: #da70d6;">:metaclass</span> described-standard-class))
+=&gt;
+#&lt;DESCRIBED-STANDARD-CLASS PERSON&gt;
+
+(display t (make-instance 'person))
+=&gt;
+First name:#&lt;UNBOUND&gt;
+Last name:#&lt;UNBOUND&gt;
+Company name:#&lt;UNBOUND&gt;
+Date of birth:#&lt;UNBOUND&gt;
+Phone:#&lt;UNBOUND&gt;
+Fax:#&lt;UNBOUND&gt;
+Email:#&lt;UNBOUND&gt;
+Address:#&lt;UNBOUND&gt;
+City:#&lt;UNBOUND&gt;
+Province:#&lt;UNBOUND&gt;
+Postal code:#&lt;UNBOUND&gt;
+
+</pre>
+
+
+
+</div>
+
+<div id="outline-container-6.1" class="outline-3">
+<h3 id="sec-6.1">6.1 Described CLOS objects an the EDITABLE description</h3>
+<div id="text-6.1">
+
+
+<p>
+The slots of an object are SETF'able places, and LoL takes
+advantage of that to provide EDITABLE descriptions
+automatically. When the EDITABLE description is active, and editor
+will be presented. The REPL based editor is pretty basic, but still
+useful. The HTML based editor will be described later.
+</p>
+
+
+
+<pre class="src">(<span style="color: #a020f0;">defun</span> <span style="color: #0000ff;">edit-object</span> (object <span style="color: #228b22;">&amp;rest</span> args)
+  (<span style="color: #a020f0;">with-active-descriptions</span> (editable)
+    (apply #'display t object args)))
+
+(<span style="color: #a020f0;">let</span> ((object (make-instance 'person)))
+  (edit-object object)
+  (terpri)
+  (display t object))
+
+<span style="color: #b22222;">;; </span><span style="color: #b22222;">What follows are prompts and the information i entered
+</span>       
+First name:Drew
+
+Last name:Crampsie
+
+Company name:The Tech Co-op
+
+Date of birth:1978-07-31
+
+Phone:555-5555
+
+Fax:555-5555
+
+Email:drewc@tech.coop
+
+Address:s/v Kanu, Lower Fraser River
+
+City:Richmond
+
+Province:BC
+
+Postal code:V1V3T6
+
+<span style="color: #b22222;">;; </span><span style="color: #b22222;">And this is what was displayed.
+</span>
+First name:Drew
+Last name:Crampsie
+Company name:The Tech Co-op
+Date of birth:1978-07-31
+Phone:555-5555
+Fax:555-5555
+Email:drewc@tech.coop
+Address:s/v Kanu, Lower Fraser River
+City:Richmond
+Province:BC
+Postal code:V1V3T6
+</pre>
+
+
+</div>
+
+</div>
+
+<div id="outline-container-6.2" class="outline-3">
+<h3 id="sec-6.2">6.2 Extending the generated description</h3>
+<div id="text-6.2">
+
+
+<p>
+We mentioned earlier that DESCRIBED-CLASS creates two descriptions :
+</p>
+
+
+<pre class="src">
+(find-description 'description-for-person)
+=&gt;
+#&lt;DESCRIPTION DESCRIPTION-FOR-PERSON {D296DE1}&gt;
+
+(find-description 'person)
+=&gt;
+#&lt;DESCRIPTION PERSON {ADFEDB1}&gt;
+
+(description-of (make-instance 'person))
+=&gt;
+#&lt;DESCRIPTION PERSON {ADFEDB1}&gt;
+
+</pre>
+
+
+
+<p>
+The reason for this is so we can redefine the description PERSON while
+keeping all the generated information from DESCRIPTION-FOR-PERSON.
+</p>
+<p>
+In this case, we will  add an attribute, PERSON-AGE, that calculates
+a persons age based on the data in the date-of-birth slot.
+</p>
+
+
+
+
+
+
+
+
+
+
+
+
+</div>
+</div>
+
+</div>
+
+<div id="outline-container-7" class="outline-2">
+<h2 id="sec-7">7 Using Lisp-on-Lines for the Web.</h2>
+<div id="text-7">
+
+
+<p>
+LoL was developed, and is primarily used, for implementing
+data-driven web applications. As such, it comes with a host of
+features for doing just that.
+</p>
+<p>
+LoL, by default, implements its web portion on top of the wonderful
+UnCommon Web meta-framework. The LISP-ON-LINES-UCW ASDF system
+should be loaded, as it provides the features we're going to
+discuss.
+</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</div>
+</div>
+<div id="postamble"><p class="author"> Author: Drew Crampsie
+<a href="mailto:Drew Crampsie <drewc@tech.coop>">&lt;Drew Crampsie <drewc@tech.coop>&gt;</a>
+</p>
+<p class="date"> Date: 2009/07/27 01:46:25 PM</p>
+<p>HTML generated by org-mode 6.05 in emacs 22<p>
+</div></body>
+</html>

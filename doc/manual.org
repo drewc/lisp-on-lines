@@ -1,0 +1,609 @@
+Lisp on Lines : The Missing Manual.
+
+/Abstract/: Lisp on Lines is a Common Lisp based framework for rapid
+development of data-driven applications. It is particularly useful
+for producing Web based applications, but is also useful elsewhere.
+
+
+* Introduction
+
+Lisp on Lines (LoL) is a framework for rapid development of data-driven
+applications, with a particular focus on web-based applications. It
+builds on the UncommonWeb engine and Contextl, and uses CLOS and the
+MOP extensively. Most of LoL can be used both at the REPL and through
+the browser, offering many options for development and testing.
+
+While the target audience for LoL is developers experienced with both
+web technologies and common lisp, a good programmer with a little
+experience in either should be able to pick things up fairly quickly.
+
+* Installation
+
+LoL has a load of dependencies, which themselves depend on others,
+etc. The best way to deal with this is to use [[http://common-lisp.net/project/clbuild/][clbuild]], a library
+management tool.
+
+If you'd prefer to manage your libraries manually, the dependencies,
+according to clbuild, are :
+
+alexandria arnesi bordeaux-threads cl-base64 cl-fad cl-mime cl-ppcre
+cl-qprint closer-mop contextl iterate lift local-time lw-compat
+net-telent-date parenscript parse-number portable-threads puri rfc2109
+slime split-sequence trivial-garbage ucw usocket yaclml
+
+All libraries should be installed from version control where available.
+
+* Describing the domain with the MAO protocol.
+
+  LoL uses a protocol it calls Meta-Attributed Objects, or MAO, as the
+  basis of its display mechanism. In MAO, we create context-aware
+  DESCRIPTIONs of objects, and those descriptions are used to generate
+  the display of the object itself. By having these external
+  descriptions change based on the context in which they are used, a few
+  generic components can come together to create complex interfaces.
+
+** Descriptions
+  Descriptions are a similar conceptually to classes. Every Lisp object
+  has one, and the root description that all descriptions inherit from
+  is known as T. FIND-DESCRIPTION is used to, well, find descriptions.
+  
+#+BEGIN_SRC lisp 
+  (find-description t) 
+  => #<DESCRIPTION T {B7B9861}>
+#+END_SRC
+
+** Attributes and Properties
+  A description is a collection of ATTRIBUTEs, among other things. Each
+  attribute describes a part of an object, and any number of attributes
+  may or may not be active. The ATTRIBUTES function is used to find a
+  the list attributes that are both active and applicable in the current
+  context.
+
+#+BEGIN_SRC lisp 
+(attributes (find-description t))
+=>(#<ATTRIBUTE IDENTITY {BBC9691}> 
+   #<ATTRIBUTE TYPE {BBC96A1}>
+   #<ATTRIBUTE CLASS {BBC96B1}>)
+#+END_SRC
+
+The functions DESCRIPTION-ATTRIBUTES, DESCRIPTION-ACTIVE-ATTRIBUTES
+and DESCRIPTION-CURRENT-ATTRIBUTES return all the descriptions
+attributes, Attributes that are currently active regardless of
+context, and attributes that exist in the current context but may or
+may not be active, respectively.
+
+Attributes have properties, for example ATTRIBUTE-LABEL and
+ATTRIBUTE-VALUE.  By simply iterating through the attributes of a
+described object, we can create a generic display for any lisp
+object. This is very similar, and was inspired by the technique
+outlined by Adrian Lienhard in [[http://www.adrian-lienhard.ch/files/mewa.pdf][MEWA: A Meta-level Architecture for
+Generic Web-Application Construction_]].
+
+
+For attribute properties to be useful, the description must be
+associated with the object it is meant to describe.
+
+The function FUNCALL-WITH-DESCRIBED-OBJECT takes care of setting up
+the proper context. There is some syntax for it in the form of
+WITH-DESCRIBED-OBJECT :
+
+#+BEGIN_SRC lisp
+
+(let ((description (find-description t))
+	   (object "Hello World"))
+       (with-described-object (object description)
+	 (dolist (a (attributes description))
+	   (format t "~@[~A: ~]~A~%" 
+		   (attribute-label a)
+		   (attribute-value a)))))
+=>
+Hello World
+Type: (SIMPLE-ARRAY CHARACTER (11))
+Class: #<BUILT-IN-CLASS SB-KERNEL::SIMPLE-CHARACTER-STRING>
+
+NIL
+#+END_SRC
+
+FUNCALL-WITH-DESCRIBED-OBJECT binds two specials, *DESCRIPTION* and
+*OBJECT*, to its arguments. Knowing this, we can shorten our code
+somewhat. Later on we'll be far away from the lexical bindings of
+description and object, so these special variables are essential.
+
+Another reason for the *description* variable is that
+WITH-DESCRIBED-OBJECT will use DESCRIPTION-OF to determine the
+description if the DESCRIPTION argument is NIL
+
+#+BEGIN_SRC lisp
+(with-described-object ("Hello World" nil)
+  (dolist (a (attributes *description*))
+    (format t "~@[~A: ~]~A~%" 
+            (attribute-label a)
+	    (attribute-value a))))
+
+Lets wrap that up in a function that we can re-use. LoL includes an
+entire DISPLAY mechanism that is slightly more involved, but this
+serves as an excellent example with not bogging us down in details.
+
+#+BEGIN_SRC lisp
+(defun present (object &optional description) 
+  (with-described-object (object description)
+    (dolist (a (attributes *description*))
+      (format t "~@[~A: ~]~A~%" 
+	      (attribute-label a)
+	      (attribute-value a)))))
+#+END_SRC
+
+** Contexts
+
+MAO adds to MEWA the concept of dynamic context. By changing the
+context in which an object is described, we combine and specialize the
+generic displays, ultimately creating different views of our
+objects. LoL uses ContextL extensively. Descriptions are contextl
+layers, and attributes themselves are layered classes. Most of the
+exported functions are layered methods, and the idea of dynamic
+context-sensitivity is used throughout LoL. If you're not familiar
+with contextl, don't worry, LoL mostly stands on its own. Still,
+reading through the material on contextl won't hurt.
+
+Descriptions may have different attributes dependant on what
+description contexts (or layers) are currently active. Attributes
+themselves might have different properties.
+ 
+When an object is being described (using WITH-DESCRIBED-OBJECT), it is
+also activated as a layer context. One can also activate/deactivate
+contexts manually, using WITH-ACTIVE-DESCRIPTIONS and 
+WITH-INACTIVE-DESCRIPTIONS.
+
+Hopefully a little code will make this more clear :
+
+#+BEGIN_SRC lisp
+(present "Hello World")
+=>
+Hello World
+Type: (SIMPLE-ARRAY CHARACTER (11))
+Class: #<BUILT-IN-CLASS SB-KERNEL::SIMPLE-CHARACTER-STRING>
+Simple character string
+
+;; Now we'll activate a built-in description, INLINE.
+
+(with-active-descriptions (inline)
+  (present "Hello World"))
+=>
+Hello World
+#+END_SRC
+
+You can see that the behavior of PRESENT changed when the INLINE
+context was activated. This is the key innovation that makes LoL so
+useful. In the next chapter we'll create our own descriptions and
+demonstrate this further.
+
+* Defining and Using Descriptions
+
+** Defining a simple description 
+The basics of the MAO should now (hopefully) be clear, so lets start
+using it. First, we'll create our very own description.
+
+#+BEGIN_SRC lisp
+(define-description hello-world ()
+  ((title :value "Lisp on Lines Demo")
+   (identity :label "Message")
+   (length :label "Length" :function #'length)
+   (active-attributes :value '(title identity length))))
+#+END_SRC
+
+Descriptions are defined very much like CLOS classes, and are in fact
+implemented that way, inheritance rules apply. The object returned
+from FIND-DESCRIPTION is best described as a prototype-based
+singleton. In other words, there is only one instance, and it inherits
+attributes and properties from further up its hierarchy unless
+specifically overridden.
+
+Attributes can have any number of properties, (see the class
+STANDARD-ATTRIBUTE), but the three most important are accessed via the
+methods ATTRIBUTE-LABEL, ATTRIBUTE-VALUE and ATTRIBUTE-FUNCTION,and
+named (in DEFINE-DESCRIPTION forms and elsewhere) 
+by the :label, :value, and :function keywords. 
+
+ATTRIBUTE-LABEL is simply a textual label that describes the
+attribute. ATTRIBUTE-VALUE is defined to return the result of calling
+ATTRIBUTE-FUNCTION with the object as its argument. If
+ATTRIBUTE-FUNCTION is NIL, the value of the :value property is returned
+directly.
+
+In the example above, the IDENTITY and ACTIVE-ATTRIBUTES attributes
+are inherited from T, and we are simply overriding the default
+properties for our description. LENGTH and TITLE are specific to this
+description. A look at src/standard-descriptions/t.lisp may be
+instructive at this point.
+
+Now, we can present our object using our new description.
+
+#+BEGIN_SRC lisp 
+(present "Hello World" (find-description 'hello-world))
+=>
+Lisp on Lines Demo
+Message: Hello World
+Length: 11
+
+NIL
+#+END_SRC
+
+** Using descriptions as and with contexts.
+
+A we mentioned earlier, when an object is being described, the
+'description context' is also made active. On top of that, one can
+define partial descriptions that are only active when other
+description contexts have been activated.
+
+We'll make a ONE-LINE description similar to the INLINE description
+demonstrated earlier.
+
+#+BEGIN_SRC lisp
+(define-description one-line ())
+
+(define-description hello-world ()
+  ((identity :label nil)
+   (active-attributes :value '(identity)))
+  (:in-description one-line))
+
+#+END_SRC
+
+Here we've defined a new description, ONE-LINE, and a
+context-sensitive extension to our HELLO-WORLD description. This
+partial desription will be active only when in the context of a
+one-line description. One can have attributes that only exist in
+certain description contexts, and attributes can have different
+properties. 
+
+#+BEGIN_SRC lisp
+(let ((message "Hello World!")
+      (description (find-description 'hello-world)))
+  (print :normal)(terpri)
+  (present message description)       
+  (print :one-line)(terpri)
+  (with-active-descriptions (one-line)
+    (present message description)))
+=>
+:NORMAL 
+Lisp on Lines Demo
+Message: Hello World!
+Length: 12
+
+:ONE-LINE 
+Hello World!
+
+NIL
+#+END_SRC
+
+By activating the description ONE-LINE, we've changed the context in
+which our object is displayed. We can create any number of
+descriptions and contexts and activate/deactivate them in any order.
+
+Descriptions are implemented as ContextL 'layers', so if all
+this seems weird, reading the ContextL papers might help.
+
+** T : The root of all descriptions.
+
+Because all descriptions inherit from T, we can define contexts for T
+and they will apply to every description. The INLINE description can
+be found in standard-descriptions/inline.lisp, where we define
+a desription for T in the context of the INLINE description :
+
+#+BEGIN_SRC lisp
+;; Defined by LoL in inline.lisp :
+(define-description t ()
+  ((identity :label nil)
+   (active-attributes :value '(identity))
+   (attribute-delimiter :value ", ")
+   (label-formatter :value (curry #'format nil "~A: "))
+   (value-formatter :value (curry #'format nil "~A")))
+  (:in-description inline))}
+
+#+END_SRC
+
+The does for the LoL DISPLAY mechanism what ONE-LINE did for PRESENT,
+only with more magic. By exetending T in this way, it's easy to create
+contexts the redefine the behavior of LoL while still reusing the basics.
+
+** DESCRIPTION-OF : Permanently Associate a description with a class.
+
+The LAYERED-FUNCTION DESCRIPTION-OF will return the description
+associated with an object. 
+
+#+BEGIN_SRC lisp
+
+(description-of nil)
+=>
+#<DESCRIPTION NULL {AA04F49}>
+
+(description-of t)
+=>
+#<DESCRIPTION SYMBOL {AA04541}>
+
+(description-of '(1 2 3))
+=>
+#<DESCRIPTION CONS {AA04C29}>
+
+;;etc
+
+#+END_SRC
+
+* The DISPLAY Protocol
+
+  Our function, PRESENT, is very basic, though pretty powerful when
+  combined with descriptions and contexts. LoL includes a superset of
+  such functionality built-in.
+  
+  The main entry point into this protocol is the DISPLAY
+  function. The signature for this functions is :
+  
+#+BEGIN_SRC lisp
+(display DISPLAY OBJECT &REST ARGS &KEY DEACTIVATE ACTIVATE &ALLOW-OTHER-KEYS)
+#+END_SRC
+  
+  The first argument, DISPLAY, is the place where we will display
+  to/on/in/with. It could be a stream, a UCW component, a CLIM gadget,
+  or anything else you might want to use.
+
+  One can specialize on this argument (though it's better to specialize
+  DISPLAY-USING-DESCRIPTION... more on that later) to use generic
+  descriptions to display objects in different environments.
+  
+  The second argument is simply the object to be displayed. Here's a
+  simple example :
+  
+#+BEGIN_SRC lisp
+(display t t)
+=>
+T
+Type:BOOLEAN
+Class:#<BUILT-IN-CLASS SYMBOL>
+Symbol
+Name:T
+Value:T
+Package:#<PACKAGE "COMMON-LISP">
+Function:<UNBOUND>
+; No value
+#+END_SRC
+
+   The two arguments specified in the lambda-list, ACTIVATE and
+   DEACTIVATE, are used to activate and deactivate description contexts in
+   the scope of the display function. 
+
+#+BEGIN_SRC lisp
+
+(display nil t :activate '(inline))
+=> 
+"t"
+(with-active-descriptions (inline) 
+ (display nil t :deactivate '(inline))) 
+=>
+"T
+Type:BOOLEAN
+Class:#<BUILT-IN-CLASS SYMBOL>
+Symbol
+Name:T
+Value:T
+Package:#<PACKAGE \"COMMON-LISP\">
+Function:<UNBOUND>"
+
+#+END_SRC
+
+Any other keyword arguments passed will be used to set the value of an
+attribute with a :keyword property, in the dynamic context of the
+DISPLAY function call. Once such attribute, and a very useful one is
+ACTIVE-ATTRIBUTES with its :attributes keyword :
+
+#+BEGIN_SRC lisp
+
+(display t t :attributes '(class package))
+=>
+Class:#<BUILT-IN-CLASS SYMBOL>
+Package:#<PACKAGE "COMMON-LISP">
+
+#+END_SRC
+
+The properties of attributes that do not have a :keyword property can
+also be set dynamically. Since :attributes is the :keyword property of
+the ACTIVE-ATTRIBUTES attribute, the following form is equivalent to
+the previous :
+
+#+BEGIN_SRC lisp
+(display t t  :attributes '((active-attributes 
+			     :value (class package))))
+=>
+Class:#<BUILT-IN-CLASS SYMBOL>
+Package:#<PACKAGE "COMMON-LISP">
+#+END_SRC
+
+Setting the attributes this way is almost like creating an anonymous
+description context... you can express just about anything you would
+in a DEFINE-DESCRIPTION. Here's a more involved example :
+
+#+BEGIN_SRC lisp
+(display t t  :attributes `((identity :label "The Object") 
+			    (class :label "CLOS Class")
+			    (package :value "COMMON LISP" :function nil)
+			    (type :value-formatter 
+				  ,(lambda (a)
+				    (format nil "Got a value? ~A" a)))))
+=>
+				 
+The Object:T
+CLOS Class:#<BUILT-IN-CLASS SYMBOL>
+Package:COMMON LISP
+Type:Got a value? BOOLEAN
+
+#+END_SRC
+
+I hope that serves well to demonstrate the concepts behind LoL, as
+there is no API documentation available at the moment... use the
+source luke!
+
+
+* Automatic Descriptions for CLOS classes.
+
+  Lisp-on-Lines includes a compose-able metaclass, DESCRIBED-CLASS. It
+  can be combined with _any_ other metaclass without affecting the
+  behavior of that class. DESCRIBED-CLASS has been used with the
+  metaclasses provided by CLSQL, ROFL, Rucksack and UCW simply by
+  defining a class that inherits from both metaclasses.
+
+  DESCRIBED-CLASS creates a base description for the class, named
+  DESCRIPTION-FOR-<class>, and another description with the same name
+  as the class that has the previous description as a superclass. The
+  then defines a method on DESCRIPTION-OF that returns the second
+  description.
+
+  LoL includes DESCRIBED-STANDARD-CLASS, which is subclass of
+  STANDARD-CLASS and DESCRIBED-CLASS. We'll use this to create a class
+  and its description.
+
+#+BEGIN_SRC lisp
+
+(defclass person ()
+  (first-name last-name company-name 
+   date-of-birth phone fax email 
+   address city province postal-code)
+  (:metaclass described-standard-class))
+=>
+#<DESCRIBED-STANDARD-CLASS PERSON>
+
+(display t (make-instance 'person))
+=>
+First name:#<UNBOUND>
+Last name:#<UNBOUND>
+Company name:#<UNBOUND>
+Date of birth:#<UNBOUND>
+Phone:#<UNBOUND>
+Fax:#<UNBOUND>
+Email:#<UNBOUND>
+Address:#<UNBOUND>
+City:#<UNBOUND>
+Province:#<UNBOUND>
+Postal code:#<UNBOUND>
+
+#+END_SRC
+
+** Described CLOS objects an the EDITABLE description
+
+   The slots of an object are SETF'able places, and LoL takes
+   advantage of that to provide EDITABLE descriptions
+   automatically. When the EDITABLE description is active, and editor
+   will be presented. The REPL based editor is pretty basic, but still
+   useful. The HTML based editor will be described later.
+
+
+#+BEGIN_SRC lisp
+(defun edit-object (object &rest args)
+  (with-active-descriptions (editable)
+    (apply #'display t object args)))
+
+(let ((object (make-instance 'person)))
+  (edit-object object)
+  (terpri)
+  (display t object))
+
+;; What follows are prompts and the information i entered
+       
+First name:Drew
+
+Last name:Crampsie
+
+Company name:The Tech Co-op
+
+Date of birth:1978-07-31
+
+Phone:555-5555
+
+Fax:555-5555
+
+Email:drewc@tech.coop
+
+Address:s/v Kanu, Lower Fraser River
+
+City:Richmond
+
+Province:BC
+
+Postal code:V1V3T6
+
+;; And this is what was displayed.
+
+First name:Drew
+Last name:Crampsie
+Company name:The Tech Co-op
+Date of birth:1978-07-31
+Phone:555-5555
+Fax:555-5555
+Email:drewc@tech.coop
+Address:s/v Kanu, Lower Fraser River
+City:Richmond
+Province:BC
+Postal code:V1V3T6
+#+END_SRC
+
+** Extending the generated description
+
+We mentioned earlier that DESCRIBED-CLASS creates two descriptions :
+
+#+BEGIN_SRC lisp
+
+(find-description 'description-for-person)
+=>
+#<DESCRIPTION DESCRIPTION-FOR-PERSON {D296DE1}>
+
+(find-description 'person)
+=>
+#<DESCRIPTION PERSON {ADFEDB1}>
+
+(description-of (make-instance 'person))
+=>
+#<DESCRIPTION PERSON {ADFEDB1}>
+
+#+END_SRC
+
+
+The reason for this is so we can redefine the description PERSON while
+keeping all the generated information from DESCRIPTION-FOR-PERSON.
+
+In this case, we will  add an attribute, PERSON-AGE, that calculates
+a persons age based on the data in the date-of-birth slot.
+
+
+
+
+
+
+
+
+
+  
+
+
+
+* Using Lisp-on-Lines for the Web.
+
+  LoL was developed, and is primarily used, for implementing
+  data-driven web applications. As such, it comes with a host of
+  features for doing just that.
+
+  LoL, by default, implements its web portion on top of the wonderful
+  UnCommon Web meta-framework. The LISP-ON-LINES-UCW ASDF system
+  should be loaded, as it provides the features we're going to
+  discuss.
+
+  
+  
+
+
+
+
+
+
+
+
+
+
+ 
+   
