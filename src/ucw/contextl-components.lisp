@@ -1,5 +1,14 @@
 (in-package :lisp-on-lines-ucw)
 
+(defmacro dlambda ((&rest args) &body body)
+  (let ((env (gensym)))
+    `(let ((,env (capture-dynamic-environment)))
+       (lambda (,@args)
+	 (with-dynamic-environment (,env)
+	   ,@body)))))
+
+(export '(dlambda) :lisp-on-lines-ucw)
+
 (defclass contextl-application (standard-application) 
   ()
   (:default-initargs 
@@ -23,9 +32,10 @@
   (with-dynamic-environment ((action-dynamic-environment action))
     (call-next-method)))
 
-(defmethod ucw-core:call-callbacks ((action contextl-action) frame request)
+(defmethod ucw-core:call-callbacks :around ((action contextl-action) frame request)
   (with-dynamic-environment ((action-dynamic-environment action))
     (call-next-method)))
+
 
 (defclass contextl-component (standard-component) 
   ((component-dynamic-environment :accessor component-dynamic-environment

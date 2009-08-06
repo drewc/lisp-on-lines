@@ -4,7 +4,7 @@
   ()
   (:default-initargs :action-class 'lisp-on-lines-action))
 
-(defclass lisp-on-lines-action (contextl-action) 
+(defclass lisp-on-lines-action (action-with-isolation-support contextl-action ) 
   ()
   (:metaclass closer-mop:funcallable-standard-class))
 

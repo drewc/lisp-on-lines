@@ -1,7 +1,8 @@
 (in-package :contextl)
 
 
-
+(defmethod contextl:layer-name :around (layer)
+  (or (call-next-method) layer))
 
 ;;; HACK:
 ;;; Since i'm not using deflayer, ensure-layer etc, 
@@ -26,7 +27,7 @@
       (call-next-method)))
 
 
-;;; HACK: We are ending up with classes named NIL in the superclass list.
+;;; HACK: There are classes named NIL (partial classes) in the superclass list.
 ;;; These cannot be given the special object superclass when re-initializing
 ;;; is it will be in the subclasses superclasses AFTER this class, causing
 ;;; a confict.
