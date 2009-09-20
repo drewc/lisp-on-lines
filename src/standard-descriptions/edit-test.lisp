@@ -8,11 +8,11 @@
 	   ((string :input (:type string))
 	    (number :input (:type number)))))
 
-  (is (string= (display nil (make-instance 'lol-test::edit-test))
+  #+nil(is (string= (display nil (make-instance 'lol-test::edit-test))
 	       "String #<UNBOUND>
 Number #<UNBOUND>"))
 
-  (progn (let ((i (make-instance 'lol-test::edit-test)))
+  #+nil(progn (let ((i (make-instance 'lol-test::edit-test)))
 	      (with-input-from-string (*standard-input* 
 "drew
 1
