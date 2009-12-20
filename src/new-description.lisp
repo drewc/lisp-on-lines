@@ -1,10 +1,13 @@
 (in-package :lisp-on-lines)
 
+;;;; A simpler implementation of descriptions based on plists
+
 (setf (find-class 'simple-attribute nil) nil)
 
 (define-layered-class simple-attribute ()
   ((%property-access-function 
-    :initarg property-access-function)))
+    :initarg property-access-function)
+   (%initial-slot-values-plist)))
 
 (defun ensure-property-access-function (attribute)
   (if (slot-boundp attribute '%property-access-function)
@@ -17,9 +20,7 @@
 
 (define-layered-method 
     contextl:slot-value-using-layer (class (attribute simple-attribute) slotd reader)
-  (if (or *symbol-access*  
-	  (eq (slot-definition-name slotd) 
-	      '%property-access-function)
+  (if (or contextl:*symbol-access*  
 	  (not (slot-definition-layeredp slotd)))
       (call-next-method)
       (let ((value (getf (funcall (ensure-property-access-function attribute))
@@ -29,80 +30,48 @@
 	    (call-next-method)
 	    value))))
 
-(defvar *test-attribute-definitions*
-  `((t :label "foo" :value "foo")
-    (simple-test-layer :label "BAZ" :value "BAZ")))
+(define-layered-method 
+    contextl:slot-value-using-layer (class (attribute simple-attribute) slotd reader)
+  (if (or contextl:*symbol-access*  
+	  (not (slot-definition-layeredp slotd))
+	  (dynamic-symbol-boundp (with-symbol-access (call-next-method))))
+      (call-next-method)     
+      (let ((value (getf (ignore-errors (funcall (ensure-property-access-function attribute)))
+			 (slot-definition-name slotd)
+			 +property-not-found+)))
+	(if (eq value +property-not-found+)
+	    (let ((value (get (ensure-property-access-function attribute) 
+			      (slot-definition-name slotd)
+			      +property-not-found+)))
+	      	(if (eq value +property-not-found+)
+		    (call-next-method)
+		    value))
+	    value))))
+
+(define-layered-method 
+    (setf contextl:slot-value-using-layer) (value class (attribute simple-attribute) slotd reader)
+ (if (and (not contextl:*symbol-access*)
+	  (slot-definition-layeredp slotd)) 
+     (setf (get (ensure-property-access-function attribute) (slot-definition-name slotd))
+	   value)
+     (call-next-method)))
 
 (defmethod initialize-attribute-for-layer (attribute layer-name &rest args)
   (let* ((class (class-of attribute))
-	 (slotds (class-slots class)))
-    
+	 (slotds (class-slots class)))    
     (ensure-layered-method 
      (ensure-property-access-function attribute)
      `(lambda ()
 	',(loop 
-		     :for (key val) :on args :by #'cddr 
-		     :nconc (list 
-			     (loop :for slotd :in slotds 
-				:do (when (find key (slot-definition-initargs slotd))
-				      (return  (slot-definition-name slotd))))
-			     val))) 
+	     :for (key val) :on args :by #'cddr 
+	     :nconc (list 
+		     (loop 
+			:for slotd :in slotds 
+			:do (when (find key (slot-definition-initargs slotd))
+			      (return  (slot-definition-name slotd))))
+		     val))) 
      :qualifiers '(append)
      :in-layer layer-name)))
-
-
-
-(define-layered-class simple-standard-attribute (simple-attribute)
- ((label 
-   :layered-accessor attribute-label 
-   :initarg :label
-   :initform nil
-   :layered t
-   :special t)
-  (label-formatter 
-   :layered-accessor attribute-label-formatter
-   :initarg :label-formatter
-   :initform  nil 
-   :layered t
-   :special t)
-  (function 
-   :initarg :function 
-   :layered-accessor attribute-function
-   :layered t
-   :special t)
-  (value 
-   :layered-accessor attribute-value 
-   :initarg :value
-   :layered t
-   :special t)
-  (value-formatter 
-   :layered-accessor attribute-value-formatter
-   :initarg :value-formatter
-   :initform nil
-   :layered t
-   :special t)
-  (activep 
-   :layered-accessor attribute-active-p
-   :initarg :active
-   :initform t
-   :layered t
-   :special t
-   :documentation
-   "Can be T, NIL or :WHEN. In the latter case, attribute is only active if the attribute value is non-null.")
-  (active-attributes :layered-accessor attribute-active-attributes
-		       :initarg :attributes
-		       :layered t
-		       :special t)
-  (active-descriptions :layered-accessor attribute-active-descriptions
-		       :initarg :activate
-		       :initform nil
-		       :layered t
-		       :special t)
-  (inactive-descriptions :layered-accessor attribute-inactive-descriptions
-		       :initarg :deactivate
-		       :initform nil
-		       :layered t
-		       :special t)))
 
 
 (define-layered-class direct-attribute-slot-definition-class 
@@ -140,10 +109,12 @@
            ((class description-access-class) &key &allow-other-keys)
   (find-class 'effective-attribute-slot-definition-class))
 (fmakunbound 'initialize-slot-definition-attribute)
+
 (defmethod initialize-slot-definition-attribute ((slotd effective-attribute-slot-definition-class) name direct-slot-definitions)
   (let ((tbl (make-hash-table))
 	(attribute (make-instance 'simple-standard-attribute :name name)))
-    (loop for ds in direct-slot-definitions 
+    (loop for ds in direct-slot-definitions
+	 :when (typep ds 'direct-attribute-slot-definition-class)
        :do (setf (gethash (slot-definition-layer ds) tbl)
 		 (append (gethash (slot-definition-layer ds) tbl '()) 
 			 (slot-definition-attribute-properties ds))))
@@ -156,7 +127,7 @@
            ((class description-access-class) name direct-slot-definitions)
   (declare (ignore name))
   (let ((slotd (call-next-method)))
-    (initialize-slot-definition-attribute slotd) 
+    (initialize-slot-definition-attribute slotd name direct-slot-definitions) 
     slotd))
 
 (defclass standard-description-class (description-access-class layered-class)
@@ -172,9 +143,6 @@
   ((described-object :accessor described-object 
 		     :special t)))
 
-(defun initialize-description-class-attribute (description attribute initargs)
-  )
-
 (defmethod initialize-instance :around ((class standard-description-class) &rest initargs &key (direct-superclasses '()))
   (declare (dynamic-extent initargs))
   (prog1
@@ -186,8 +154,7 @@
 	       :direct-superclasses
 	       (append direct-superclasses
 		       (list (find-class 'standard-description-object)))
-	       initargs))
-    (break "initializing ~A ~A" class initargs)))
+	       initargs))))
 
 
 (defmethod reinitialize-instance :around ((class standard-description-class) &rest initargs &key (direct-superclasses '() direct-superclasses-p))
@@ -203,13 +170,11 @@
 		 :direct-superclasses
 		 (append direct-superclasses
 			 (list (find-class 'standard-description-object)))
-		 initargs))
-    (break "RE-initializing ~A ~A" class initargs)))
+		 initargs))))
 
-(defmethod finalize-inheritance :after ((class standard-description-class))
-  (break "Finalizing ~S" (class-name  class)))
 
-;;;; A simpler implementation of descriptions based on plists
+
+
 
 
 

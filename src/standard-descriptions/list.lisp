@@ -1,7 +1,7 @@
 (in-package :lisp-on-lines)
 
 
-(define-layered-class list-attribute (standard-attribute)
+(define-layered-class list-attribute (define-description-attribute)
  ((item-args :initform nil :initarg :item :layered t :special t)))
 
 (define-layered-method display-attribute-value 

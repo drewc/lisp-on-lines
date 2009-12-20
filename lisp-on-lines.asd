@@ -38,21 +38,30 @@ OTHER DEALINGS IN THE SOFTWARE."
   :components ((:static-file "lisp-on-lines.asd")
 	       
 	       (:module :src
-			:components ((:file "contextl-hacks")
+			:components (#-lol-mao(:file "contextl-hacks")
 
 				     (:file "packages")
 				     
 
 				     (:file "utilities")
 				     
-				     (:file "display")
 				     
-				     (:file "attribute")
-				    
-				     (:file "description-class")
-				     (:file "description")
-
-
+				     #+lol-mao 
+				     (:module :mao
+					      :components ((:file "simple-plist-attribute") 
+							   (:file "attribute")				    
+							   (:file "description-class")
+							   (:file "description")
+							   (:module :display
+							    :components ((:file "display-attribute") 
+									 (:file "display-description")				    
+									 (:file "define-description-compat"))
+							    :serial t))
+					      :serial t)
+				     (:file "display")
+				     #-lol-mao(:file "attribute")				    
+				     #-lol-mao(:file "description-class")
+				     #-lol-mao(:file "description")
 
 				    (:module :standard-descriptions
 					      :components ((:file "t")

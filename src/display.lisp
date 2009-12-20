@@ -39,7 +39,7 @@
      (apply #'display-using-description (description-of object) display object args))))
 
 (define-layered-method display-using-description 
-  :around (description display object &rest args)
+  :around ((description standard-description-object) display object &rest args)
   (declare (ignorable args))
 #+nil  (break "Entering DISPLAY for ~A on ~A using ~A" object display description)
   (let ((*display* display))
@@ -47,6 +47,7 @@
      (lambda ()
        (call-next-method))
      object description args)))
+
 
 
 
@@ -80,7 +81,7 @@ OMGWTF! If you didn't do this, it's a bug!" description display object args))
 		        (list (first description-spec)
 		 	     (if (eq 'description (second description-spec))
 				     'description
-				     (defining-description (second description-spec)))))
+				     (contextl::defining-layer (defining-description (second description-spec))))))
 		   ,display-spec
 		   ,object-spec &rest args)
 		   (declare (ignorable args))

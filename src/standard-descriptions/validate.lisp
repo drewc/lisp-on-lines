@@ -1,8 +1,7 @@
 (in-package :lisp-on-lines)
 
-(defclass #.(defining-description 'validate) () 
-  ((invalid-object-condition-map :layered t :special t ))
-  (:metaclass standard-description-class))
+(define-description validate () 
+  ((invalid-object-condition-map :layered t :special t )))
 
 (define-layered-class standard-attribute
   :in-layer #.(defining-description 'validate)

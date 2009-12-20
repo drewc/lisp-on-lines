@@ -11,12 +11,16 @@
    
 ;; Descriptions
    #:*description*
+   #:description
+   #:defdescription
    #:find-description   
+   #:current-description
    #:description-of
    #:define-description
    #:defining-description
    #:described-object
    #:with-described-object
+   #:funcall-with-described-object
    #:described-class
    #:described-standard-class
    #:with-active-descriptions

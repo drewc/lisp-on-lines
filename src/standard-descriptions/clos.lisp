@@ -13,7 +13,13 @@
    (class-slots :label "Slots" 
 		:function (compose 'class-slots 'class-of))))
 
-(define-layered-class slot-definition-attribute (standard-attribute)
+(define-description standard-object ()
+  ((editp :value t)
+   (class-slots :label "Slots" 
+		:function (compose 'class-slots 'class-of)))
+  (:in-description editable))
+
+(define-layered-class slot-definition-attribute (define-description-attribute)
  ((slot-name :initarg :slot-name 
 	     :accessor attribute-slot-name
 	     :layered t)))
@@ -38,11 +44,12 @@
 
 (defmethod shared-initialize :around ((object slot-definition-attribute) 
 				      slots &rest args)
-  (prog1 (call-next-method)
-    (unless (attribute-setter object)
-      (setf (attribute-setter object) 
-	    (lambda (v o)
-	      (setf (slot-value o (attribute-slot-name object)) v))))))
+  (with-active-descriptions (editable) 
+    (prog1 (call-next-method)
+      (unless (attribute-setter object)
+	(setf (attribute-setter object) 
+	      (lambda (v o)
+		(setf (slot-value o (attribute-slot-name object)) v)))))))
 		  
 
 (define-layered-method attribute-value-using-object (object (attribute slot-definition-attribute))
@@ -62,7 +69,7 @@
 			      (delete nil (mapcar (rcurry #'find-description nil) 
 						  (mapcar #'class-name direct-superclasses)))))
 	 (desc-class 
-	  (ensure-class (defining-description name) 
+	  (ensure-layer (defining-description name) 
 		:direct-superclasses (or super-descriptions (list (class-of (find-description 'standard-object))))
 		:direct-slots 
 		(loop 
@@ -97,12 +104,11 @@
 				 :finally (return (cons `(:name active-attributes
 							  :value ',(or attributes names))
 							slots)))	
-		:metaclass 'standard-description-class)))    
+		:metaclass 'define-description-class)))    
     (unless (ignore-errors (find-description (class-name class)))
-      (ensure-class (defining-description (class-name class))
-		    :direct-superclasses (list desc-class)
-		    :metaclass 'standard-description-class))
-    (find-description name)))
+      (find-layer  (ensure-layer (defining-description (class-name class))
+				 :direct-superclasses (list desc-class)
+				 :metaclass 'define-description-class)))))
 
 
 (defclass described-class ()

@@ -4,18 +4,19 @@
   ()
   (:mixinp t))
 
-(define-layered-class standard-attribute
+(define-layered-class define-description-attribute
   :in-layer #.(defining-description 'editable)
   ()
   ((edit-attribute-p 
     :initform :inherit 
     :layered-accessor attribute-editp
     :initarg :editp
-    :layered t)
+    :layered t
+    :special t)
    (setter
     :initarg :setter
     :layered t
-    :accessor attribute-setter
+    :layered-accessor attribute-setter
     :initform nil)
    (attribute-editor 
     :initarg :editor
@@ -23,6 +24,9 @@
     :accessor attribute-editor
     :initform (make-instance 'attribute-editor)
     :documentation "This ones a bit odd")))
+
+(define-layered-method attribute-setter (object)
+  nil)
 
 (defmethod shared-initialize :after ((object standard-attribute) 
 				      slots &rest args &key input &allow-other-keys)
@@ -114,12 +118,13 @@
   :in-layer #.(defining-description 'editable)
   ((attribute standard-attribute))
   (let ((value (attribute-value attribute)))
-  (unless (or (unbound-slot-value-p value)
-	      (typep value 
+    (unless (or (unbound-slot-value-p value)
+		(typep value 
 		     (attribute-editor-type 
 		      (attribute-editor attribute))))
-    (return-from attribute-editp nil)))
+      (return-from attribute-editp nil)))
   (let ((edit?       (call-next-method)))
+
     (if (eq :inherit edit?)
 	(attribute-value (find-attribute 
 			  (attribute-description attribute) 

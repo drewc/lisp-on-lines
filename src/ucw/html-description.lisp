@@ -88,7 +88,7 @@
 (define-layered-method display-using-description 
   :in-layer #.(defining-description 'html-description)
   :around ((attribute standard-attribute) display object &rest args)
- (declare (ignore args))
+ (declare (ignore args)) 
  (display-html-attribute object attribute))
 
 
@@ -99,15 +99,17 @@
        (apply function args)))))
 
 (defun make-attribute-value-writer (attribute)
- (let ((obj (described-object (attribute-description attribute)))
-       (value (attribute-value attribute)))
+  (let ((obj (described-object (attribute-description attribute)))
+	(value (attribute-value attribute))
+	(desc (attribute-description attribute)))
    (lambda (val)
-     (dletf (((described-object attribute) obj))
+     (dletf (((described-object (attribute-description attribute)) obj))
        (with-active-descriptions (editable)
 	 (unless (and (unbound-slot-value-p value)
 		      (equal "" val))
-	 (setf (attribute-value attribute) 
-	     (parse-attribute-value attribute val))))))))
+	   (with-described-object (obj desc)
+	     (setf (attribute-value attribute) 
+		   (parse-attribute-value attribute val)))))))))
 
 
 (defmethod html-attribute-value (attribute)
@@ -129,9 +131,6 @@
 	      :reader (html-attribute-value attribute)
 	      :writer (make-attribute-value-writer attribute)))
 
-
-
-
 (define-layered-method display-attribute-editor 
    :in-layer #.(defining-description 'html-description) (attribute)
    (display-html-attribute-editor attribute (attribute-editor attribute)))
@@ -140,20 +139,17 @@
 (define-layered-method display-html-attribute-value 
   :in-layer #.(defining-description 'editable) (object attribute)
 
-
+  (<:as-html (princ-to-string (attribute-editp attribute)))
     (if (attribute-editp attribute)	
 	    (<:td
-	     :class "lol-attribute-value"(display-attribute-editor attribute))
+	     :class "lol-attribute-value" (display-attribute-editor attribute))
 	(call-next-method)))
 
 (define-layered-function display-html-description (description display object &optional next-method)
   (:method (description display object &optional (next-method #'display-using-description))
-    
-		       
-    (with-attributes (css-class dom-id) description
-   
-
-      (<:table
+      (let ((dom-id (find-attribute description 'dom-id))
+	(css-class (find-attribute description 'dom-id)))
+	      (<:table
        :class (list (attribute-value css-class) "lol-description" "t")
        :id    (attribute-value dom-id)
        (funcall next-method)
@@ -162,11 +158,12 @@
 
 (define-layered-method display-html-description 
   :in-layer #.(defining-description 'inline) (description display object &optional next-method)
-  (with-attributes (css-class dom-id) description
+  (let ((dom-id (find-attribute description 'dom-id))
+	(css-class (find-attribute description 'dom-id)))
     (<:span
-     :class (list (attribute-value css-class) "lol-description")
-     :id    (attribute-value dom-id)
-     (funcall next-method))))
+		      :class (list (attribute-value css-class) "lol-description")
+		      :id    (attribute-value dom-id)
+		      (funcall next-method))))
 
 
 (define-display 
