@@ -1,5 +1,8 @@
 (in-package :lisp-on-lines)
 
+(defmethod described-object ((attribute standard-attribute))
+  (described-object (attribute-description attribute)))
+
 (define-description T ()
   ((label :label nil 
 	  :function (lambda (object)

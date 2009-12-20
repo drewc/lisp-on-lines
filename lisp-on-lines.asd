@@ -36,17 +36,9 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE."
   :components ((:static-file "lisp-on-lines.asd")
-	       
 	       (:module :src
-			:components (#-lol-mao(:file "contextl-hacks")
-
-				     (:file "packages")
-				     
-
+			:components ((:file "packages")
 				     (:file "utilities")
-				     
-				     
-				     #+lol-mao 
 				     (:module :mao
 					      :components ((:file "simple-plist-attribute") 
 							   (:file "attribute")				    
@@ -59,10 +51,6 @@ OTHER DEALINGS IN THE SOFTWARE."
 							    :serial t))
 					      :serial t)
 				     (:file "display")
-				     #-lol-mao(:file "attribute")				    
-				     #-lol-mao(:file "description-class")
-				     #-lol-mao(:file "description")
-
 				    (:module :standard-descriptions
 					      :components ((:file "t")
 							   (:file "inline")
