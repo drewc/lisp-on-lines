@@ -80,6 +80,7 @@
 (defmethod description-class-attribute-class (description)
   'standard-attribute)
 
+
 (defmethod initialize-slot-definition-attribute 
     (class (slotd effective-attribute-slot-definition-class) 
      name direct-slot-definitions)
@@ -90,7 +91,11 @@
 		 (append (gethash (slot-definition-layer ds) tbl '()) 
 			 (slot-definition-attribute-properties ds))))
 
-    (let* ((attribute-class (or (getf (gethash t tbl) :attribute-class)
+    (let* ((attribute-class (or (block nil  
+				  (maphash (lambda (k v)
+					     (let ((class (getf v :attribute-class)))
+					       (when class (return class))))
+					   tbl))
 				(description-class-attribute-class class)))
 	   (attribute (apply #'make-instance attribute-class :name name 'description-class class (gethash t tbl))))
       (maphash (lambda (layer properties)
