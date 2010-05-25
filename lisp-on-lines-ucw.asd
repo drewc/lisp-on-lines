@@ -22,4 +22,4 @@
   :serial t
 
 
-  :depends-on (:lisp-on-lines :ucw :puri :parenscript))
+  :depends-on (:lisp-on-lines :ucw :puri :parenscript-classic))
