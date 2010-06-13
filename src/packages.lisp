@@ -42,6 +42,7 @@
    #:attribute-object
    #:attribute-label
    #:attribute-delimiter
+   #:attribute-setter
    #:attribute-slot-name
    #:label
    #:attribute-active-p
