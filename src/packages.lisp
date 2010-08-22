@@ -1,8 +1,7 @@
 (defpackage #:lisp-on-lines
   (:use 
-   :common-lisp
    #:contextl
-   #:closer-mop
+   #:closer-common-lisp
 
    #:alexandria)
   (:nicknames #:lol)
