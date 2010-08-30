@@ -49,7 +49,9 @@
       (unless (attribute-setter object)
 	(setf (attribute-setter object) 
 	      (lambda (v o)
-		(setf (slot-value o (attribute-slot-name object)) v)))))))
+		(if (unbound-slot-value-p v)
+		    (slot-makunbound o (attribute-slot-name object))
+		    (setf (slot-value o (attribute-slot-name object)) v))))))))
 		  
 
 (define-layered-method attribute-value-using-object (object (attribute slot-definition-attribute))
