@@ -138,8 +138,7 @@
 
 (define-layered-method display-html-attribute-value 
   :in-layer #.(defining-description 'editable) (object attribute)
-
-  (<:as-html (princ-to-string (attribute-editp attribute)))
+  #+nil(<:as-html (princ-to-string (attribute-editp attribute)))
     (if (attribute-editp attribute)	
 	    (<:td
 	     :class "lol-attribute-value" (display-attribute-editor attribute))
