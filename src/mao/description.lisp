@@ -106,9 +106,11 @@
 		   (without-special-symbol-access 
 		     (funcall  function))))))))))))
 
-(defmacro with-described-object ((object &optional (description `(description-of ,object)))
+(defmacro with-described-object ((object &optional description)
 				 &body body)
-  `(funcall-with-described-object (lambda (),@body) ,object ,description))
+  (once-only (object)
+    `(funcall-with-described-object (lambda (),@body) ,object ,(or description
+							      `(description-of ,object)))))
 
 
 
