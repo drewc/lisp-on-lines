@@ -117,8 +117,8 @@
 
 (define-display :around ((description t) (display null) object)
  (with-output-to-string (*standard-output*)
-   (call-next-layered-method description t object))
-)		
+   (apply #'call-next-layered-method description t object args)))
+
 
 
 
