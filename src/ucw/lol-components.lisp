@@ -1,5 +1,7 @@
 (in-package :lol-ucw)
 
+;;; Not sure what the intent of this is, unused in maxclaims --clinton
+
 (defclass lol-component ()
   ()
   (:metaclass standard-component-class))

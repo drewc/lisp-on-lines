@@ -7,8 +7,6 @@
 	 (with-dynamic-environment (,env)
 	   ,@body)))))
 
-(export '(dlambda) :lisp-on-lines-ucw)
-
 (defclass contextl-application (standard-application) 
   ()
   (:default-initargs 
@@ -36,7 +34,6 @@
   (with-dynamic-environment ((action-dynamic-environment action))
     (call-next-method)))
 
-
 (defclass contextl-component (standard-component) 
   ((component-dynamic-environment :accessor component-dynamic-environment
 				  :initform nil))
@@ -50,7 +47,7 @@
 	      (call-next-method))))
 
 (defmethod/cc call-component :before ((from t) (to contextl-component))
- (setf (component-dynamic-environment to) (capture-dynamic-environment)))
+  (setf (component-dynamic-environment to) (capture-dynamic-environment)))
 
 
 

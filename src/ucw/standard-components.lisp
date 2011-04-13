@@ -44,12 +44,6 @@
 		     (list (find-class 'lisp-on-lines-component)))
 	     initargs)))
 
-(defclass described-component-class (described-class standard-component-class )
-  ())
-
-
-
-
 (defmethod ucw-core:handle-action :wrap-around ((action lisp-on-lines-action) application session frame)
      (let ((lol::*invalid-objects* (make-hash-table)))
        (handler-bind ((lol::validation-condition 
@@ -63,15 +57,17 @@
 				       (gethash object lol::*invalid-objects*)))))))
        (call-next-method))))
 
-
-
-
-
-
-
-
-(defclass described-component-class (described-class standard-component-class )
+(defclass described-component-class (described-class standard-component-class)
   ())
+
+
+
+
+
+
+
+
+
 
 
 
