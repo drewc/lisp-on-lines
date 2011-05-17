@@ -15,22 +15,35 @@
     (setf context (remove-layer (find-description d)
 				context)))
   (dolist (d activate context)
-    (setf context (adjoin-layer (find-description d)
+    (setf context (adjoin-layer (find-description (if (consp d) (car d) d))
 				context))))
 
 (defun funcall-with-attribute-context (attribute thunk)
   (funcall-with-layer-context 
-   (modify-layer-context (current-layer-context) 
+   (modify-layer-context (current-layer-context)
 			 :activate (attribute-active-descriptions attribute)
 			 :deactivate (attribute-inactive-descriptions attribute))
-   thunk))
+   (lambda ()
+     (with-special-symbol-access
+       (contextl::funcall-with-special-initargs
+	(mappend (lambda (desc)
+		   (when (consp desc)
+		     (let ((description (find-description (car desc))))
+		       (loop 
+			  :for (key val) :on (cdr desc) :by #'cddr
+			  :collect (list (find key (description-attributes description) 
+					       :key #'attribute-keyword)
+				  :value val)))))
+		 (attribute-active-descriptions attribute))
+	(lambda ()
+	  (without-special-symbol-access
+	    (funcall thunk))))))))
 
 (defmacro with-attribute-context ((attribute) &body body)
   `(funcall-with-attribute-context ,attribute (lambda () ,@body)))
   
   
 (defun display (display object &rest args &key deactivate activate &allow-other-keys)
-
   (funcall-with-layer-context 
    (modify-layer-context (current-layer-context) 
 			 :activate activate 

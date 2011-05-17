@@ -87,9 +87,10 @@
     (display-attribute-label attribute))
   (display-attribute-value attribute))
 
-(define-layered-method display-attribute :around
-  ((attribute standard-attribute))
-    (funcall-with-layer-context 
+(define-layered-method display-attribute :around ((attribute standard-attribute))
+  (with-attribute-context (attribute)
+    (call-next-method))
+    #+nil(funcall-with-layer-context 
    (modify-layer-context (current-layer-context) 
 			 :activate (attribute-active-descriptions attribute)
 			 :deactivate (attribute-inactive-descriptions attribute))
