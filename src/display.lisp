@@ -26,15 +26,16 @@
    (lambda ()
      (with-special-symbol-access
        (contextl::funcall-with-special-initargs
-	(mappend (lambda (desc)
-		   (when (consp desc)
-		     (let ((description (find-description (car desc))))
-		       (loop 
-			  :for (key val) :on (cdr desc) :by #'cddr
-			  :collect (list (find key (description-attributes description) 
-					       :key #'attribute-keyword)
-				  :value val)))))
-		 (attribute-active-descriptions attribute))
+	(without-special-symbol-access
+	  (mappend (lambda (desc)
+		     (when (consp desc)
+		       (let ((description (find-description (car desc))))
+			 (loop 
+			    :for (key val) :on (cdr desc) :by #'cddr
+			    :collect (list (find key (description-attributes description) 
+						 :key #'attribute-keyword)
+					   :value val)))))
+		   (attribute-active-descriptions attribute)))
 	(lambda ()
 	  (without-special-symbol-access
 	    (funcall thunk))))))))
