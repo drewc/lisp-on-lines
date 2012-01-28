@@ -79,6 +79,13 @@
 			 (attribute-object attribute) 
 			 lol::*invalid-objects*)
 			:key #'car)))
+    (setf 
+     conditions 
+     (loop with string for c in conditions
+	   :unless (find (validation-condition-format-string (cdr  c)) string
+			 :test #'string-equal)
+	   :collect c
+	   :do (push (validation-condition-format-string (cdr  c)) string)))
     (dolist (c conditions)
       (<:div :style "color:red"
 	      (<:as-html 
